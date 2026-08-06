@@ -359,6 +359,44 @@
             color: #ffffff;
         }
 
+        .portal-left-nav .portal-nav-link.is-active {
+            background: rgba(255, 255, 255, 0.18);
+            color: #ffffff;
+            border-color: rgba(147, 197, 253, 0.62);
+            box-shadow: inset 3px 0 0 #58a6ff, 0 8px 18px rgba(8, 47, 118, 0.22);
+        }
+
+        .portal-left-nav .portal-nav-link.is-active:before {
+            transform: scaleY(1);
+        }
+
+        .portal-current-view {
+            margin: 0 0 10px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: #f7fbff;
+            border: 1px solid #d7e8fa;
+            box-shadow: 0 1px 4px rgba(15, 94, 168, 0.08);
+        }
+
+        .portal-current-view-label {
+            display: block;
+            color: #64748b;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+
+        .portal-current-view-title {
+            display: block;
+            color: #102a43;
+            font-size: 18px;
+            font-weight: 800;
+            line-height: 1.25;
+        }
+
         .portal-main-workspace {
             flex: 1;
             min-width: 0;
@@ -1124,21 +1162,6 @@
                     word-break: normal;
                 }
 
-                .status-confidence {
-                    margin-top: 2px;
-                }
-
-                .confidence-badge {
-                    display: inline-block;
-                    padding: 4px 8px;
-                    border-radius: 999px;
-                    background: #f1f8ee;
-                    color: #19692f;
-                    font-size: 11px;
-                    font-weight: 700;
-                    border: 1px solid #d9efd2;
-                }
-
                 .issue-grid-toolbar {
                     display: flex;
                     align-items: center;
@@ -1754,12 +1777,36 @@
     padding-right: 28px;
     font-size: 20px;
     color: #1b2a3a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.ai-summary-confidence-inline {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #eef6ff;
+    border: 1px solid #c8def6;
+    color: #0f5ea8;
+    font-size: 12px;
+    font-weight: 800;
 }
 
 .ai-summary-meta-row {
     margin-bottom: 10px;
     color: #23364b;
     font-size: 13px;
+}
+
+.ai-summary-meta-combined {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
 }
 
 .ai-summary-meta-row strong {
@@ -4551,6 +4598,25 @@ td:nth-child(odd), th:nth-child(odd) {
             }
         }
 
+        function prepareAiSummaryForDrawer(summary) {
+            var text = summary || '';
+            var confidence = '';
+            var confidenceMatch = text.match(/\*\*\s*AI\s+summary\s*\(\s*Confidence\s*:\s*([0-9]{1,3}%?)\s*\)\s*\*\*/i)
+                || text.match(/AI\s+summary\s*\(\s*Confidence\s*:\s*([0-9]{1,3}%?)\s*\)/i);
+
+            if (confidenceMatch && confidenceMatch[1]) {
+                confidence = confidenceMatch[1];
+                if (confidence.indexOf('%') < 0) confidence += '%';
+            }
+
+            text = text.replace(/^\s*\*\*\s*AI\s+summary\s*\(\s*Confidence\s*:\s*[0-9]{1,3}%?\s*\)\s*\*\*\s*$/im, '');
+            text = text.replace(/^\s*AI\s+summary\s*\(\s*Confidence\s*:\s*[0-9]{1,3}%?\s*\)\s*$/im, '');
+            text = text.replace(/^\s*Sighting\s+ID\s*:\s*.*?CMF\s+Ask\s+date\s*:\s*.*$/im, '');
+            text = text.replace(/\n{3,}/g, '\n\n').trim();
+
+            return { confidence: confidence, body: text || summary || '' };
+        }
+
         function openAiSummaryModal(issueId, title, submittedDate, status, sysdebug) {
             var issueIdNode = document.getElementById('aiSummaryIssueId');
             var titleNode = document.getElementById('aiSummaryTitle');
@@ -4558,6 +4624,7 @@ td:nth-child(odd), th:nth-child(odd) {
             var dateNode = document.getElementById('aiSummarySubmittedDate');
             var bodyNode = document.getElementById('aiSummaryBody');
             var actionsNode = document.getElementById('aiSummaryActions');
+            var confidenceNode = document.getElementById('aiSummaryConfidence');
             var drawerBg = document.getElementById('aiSummaryDrawerBg');
             var drawer = document.getElementById('aiSummaryDrawer');
 
@@ -4569,6 +4636,7 @@ td:nth-child(odd), th:nth-child(odd) {
             if (titleNode) titleNode.textContent = '';
             if (titleRow) titleRow.style.display = 'none';
             dateNode.textContent = submittedDate || 'N/A';
+            if (confidenceNode) confidenceNode.textContent = 'Confidence: --';
             bodyNode.textContent = 'Generating AI summary...';
             bodyNode.className = 'ai-summary-body markdown-content';
             if (actionsNode) actionsNode.style.display = 'none';
@@ -4610,9 +4678,14 @@ td:nth-child(odd), th:nth-child(odd) {
                     return;
                 }
                 var summary = result.Summary || 'No summary content returned.';
-                bodyNode.innerHTML = renderMarkdown(summary);
+                var preparedSummary = prepareAiSummaryForDrawer(summary);
+                var confidenceNode = document.getElementById('aiSummaryConfidence');
+                if (confidenceNode && preparedSummary.confidence) {
+                    confidenceNode.textContent = 'Confidence: ' + preparedSummary.confidence;
+                }
+                bodyNode.innerHTML = renderMarkdown(preparedSummary.body);
                 bodyNode.className = 'ai-summary-body markdown-content';
-                window._aiSummaryLastText = summary;
+                window._aiSummaryLastText = preparedSummary.body;
                 if (actionsNode) actionsNode.style.display = '';
             })
             .catch(function () {
@@ -5630,6 +5703,10 @@ Submit
                     </button>
 
                     <div class="portal-main-workspace">
+                        <div class="portal-current-view" aria-live="polite">
+                            <span class="portal-current-view-label">Current View</span>
+                            <asp:Label ID="lblActiveViewTitle" runat="server" CssClass="portal-current-view-title" Text="Issue List" />
+                        </div>
                         <asp:Panel ID="homeWelcomePanel" runat="server" Visible="false" CssClass="welcome-home-panel">
                             <div class="home-dashboard-shell">
                                 <div class="home-dashboard-hero">
@@ -5928,10 +6005,9 @@ Submit
                 <div id="aiSummaryDrawerBg" class="ai-summary-drawer-bg" onclick="closeAiSummaryDrawer()"></div>
                 <aside id="aiSummaryDrawer" class="ai-summary-drawer" aria-hidden="true" role="dialog" aria-label="AI Issue Summary">
                     <button type="button" class="ai-summary-drawer-close" onclick="closeAiSummaryDrawer()" aria-label="Close">&times;</button>
-                    <h2 class="ai-summary-drawer-title">AI Summary</h2>
-                    <div class="ai-summary-meta-row"><strong>Issue ID:</strong> <span id="aiSummaryIssueId">-</span></div>
+                    <h2 class="ai-summary-drawer-title"><span>AI Summary</span><span id="aiSummaryConfidence" class="ai-summary-confidence-inline">Confidence: --</span></h2>
+                    <div class="ai-summary-meta-row ai-summary-meta-combined"><strong>Sighting ID:</strong> <span id="aiSummaryIssueId">-</span><strong>CMF Ask Date:</strong> <span id="aiSummarySubmittedDate">-</span></div>
                     <div class="ai-summary-meta-row" id="aiSummaryTitleRow" style="display:none"><strong>Title:</strong> <span id="aiSummaryTitle">-</span></div>
-                    <div class="ai-summary-meta-row"><strong>CMF Ask Date:</strong> <span id="aiSummarySubmittedDate">-</span></div>
                     <div class="ai-summary-body" id="aiSummaryBody">Generating AI summary...</div>
                     <div class="ai-summary-actions" id="aiSummaryActions" style="display:none">
                         <button type="button" class="ai-action-btn ai-action-copy" onclick="copyAiSummaryForReport()" title="Copy summary as plain text for pasting into reports">

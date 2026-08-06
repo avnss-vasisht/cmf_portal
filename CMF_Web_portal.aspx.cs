@@ -618,28 +618,47 @@ public partial class CMF_Web_portal : System.Web.UI.Page
     private void SetActiveFocusedTab(string tabKey)
     {
         string baseClass = "modern-button tab-pill";
+        string navBaseClass = "portal-nav-link";
         btnShowGridView1.CssClass = baseClass;
         btnShowGridView4.CssClass = baseClass;
         btnShowGridView8.CssClass = baseClass;
         btnShowGridView9.CssClass = baseClass;
+        lnkNavHome.CssClass = navBaseClass;
+        lnkNavIssueList.CssClass = navBaseClass;
+        lnkNavPendingList.CssClass = navBaseClass;
+        lnkNavReports.CssClass = navBaseClass;
+        lnkNavConfigRules.CssClass = navBaseClass;
         Session[ActiveFocusedTabSessionKey] = tabKey;
         SyncFocusedViewDropdown(tabKey);
 
         if (tabKey == "issue")
         {
             btnShowGridView1.CssClass = baseClass + " is-active";
+            lnkNavIssueList.CssClass = navBaseClass + " is-active";
+            lblActiveViewTitle.Text = "Issue List";
         }
         else if (tabKey == "pending")
         {
             btnShowGridView4.CssClass = baseClass + " is-active";
+            lnkNavPendingList.CssClass = navBaseClass + " is-active";
+            lblActiveViewTitle.Text = "CMF Pending";
         }
         else if (tabKey == "reports")
         {
             btnShowGridView8.CssClass = baseClass + " is-active";
+            lnkNavReports.CssClass = navBaseClass + " is-active";
+            lblActiveViewTitle.Text = "Reports";
         }
         else if (tabKey == "config")
         {
             btnShowGridView9.CssClass = baseClass + " is-active";
+            lnkNavConfigRules.CssClass = navBaseClass + " is-active";
+            lblActiveViewTitle.Text = "Config/CMF Rules";
+        }
+        else
+        {
+            lnkNavHome.CssClass = navBaseClass + " is-active";
+            lblActiveViewTitle.Text = "Dashboard";
         }
     }
 
@@ -3957,18 +3976,6 @@ LEFT JOIN " + designTable + @" AS d
         string oneLineUpdate = BuildOneLineStatusUpdate(status, sysdebug);
         if (string.IsNullOrWhiteSpace(oneLineUpdate)) oneLineUpdate = BuildFallbackStatusSentence(status, Convert.ToString(titleValue));
 
-        // Simple confidence heuristic: presence of sysdebug -> higher confidence, otherwise lower
-        int confidence = 40;
-        if (!string.IsNullOrWhiteSpace(sysdebug))
-        {
-            confidence = 75;
-            string lc = sysdebug.ToLowerInvariant();
-            if (lc.Contains("fixed") || lc.Contains("resolved") || lc.Contains("verified") || lc.Contains("fix applied"))
-            {
-                confidence = 90;
-            }
-        }
-
         string onclick = "openAiSummaryModal(\"" + JsEncode(sightingIdValue) + "\", \"" + JsEncode(titleValue) + "\", \"" + JsEncode(FormatDateOnly(submittedDateValue)) + "\", \"" + JsEncode(statusValue) + "\", \"" + JsEncode(sysdebugValue) + "\")";
 
         return "<div class=\"status-cell-wrap status-cell-wrap-compact\">" +
@@ -3976,8 +3983,7 @@ LEFT JOIN " + designTable + @" AS d
                 "<span class=\"status-pill\">" + HttpUtility.HtmlEncode(status) + "</span>" +
                 "<button type=\"button\" class=\"ai-summary-btn ai-summary-btn-inline\" onclick='" + onclick + "' title=\"AI Summary\" aria-label=\"AI Summary\">✦</button>" +
             "</div>" +
-            "<div class=\"status-one-line\">" + HttpUtility.HtmlEncode(oneLineUpdate) + "</div>" +
-            "<div class=\"status-confidence\"><span class=\"confidence-badge\">" + confidence.ToString() + "%</span></div>" +
+                "<div class=\"status-one-line\">" + HttpUtility.HtmlEncode(oneLineUpdate) + "</div>" +
             "</div>";
     }
 
@@ -4280,6 +4286,7 @@ WHERE main.cp_id = @issueId", con))
                     AppendSummaryContextLine(builder, "Impact", row, "impact");
                     AppendSummaryContextLine(builder, "Processor", row, "processor");
                     AppendSummaryContextLine(builder, "Reproducibility", row, "reproducibility", "repro_on_rvp");
+                    AppendSummaryContextLine(builder, "RVP Platform Debug Details", row, "repro_on_rvp");
 
                     string promotedId = FirstNonEmptyColumnValue(row, "promoted_id", "merge_id");
                     if (string.IsNullOrWhiteSpace(promotedId))

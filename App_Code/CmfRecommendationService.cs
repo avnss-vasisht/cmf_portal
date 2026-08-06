@@ -112,7 +112,7 @@ threshold_for_cmf_tag: 0.70";
             rules = GetActiveRulesText();
         }
 
-        string hash = ComputeHash("cmf-recommendation-threshold-v3|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + rules);
+        string hash = ComputeHash("cmf-recommendation-threshold-v4|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + rules);
         string cacheKey = "cmf-recommendation:" + hash;
 
         CmfRecommendationResponse cached = TryGetCached(cacheKey);
@@ -144,7 +144,7 @@ threshold_for_cmf_tag: 0.70";
         }
         int parsedThresholdScore = GetThresholdScore(rules);
         result.ThresholdScore = parsedThresholdScore;
-        if (result.OverallQualityScore < parsedThresholdScore || HasFailedHighWeightRule(result.RuleScores))
+        if (result.OverallQualityScore < parsedThresholdScore || HasBlockingRuleFailure(result.RuleScores))
         {
             result.Recommendation = "Do not tag as CMF";
         }
@@ -152,10 +152,7 @@ threshold_for_cmf_tag: 0.70";
         {
             result.Recommendation = "Tag as CMF";
         }
-        if (string.IsNullOrWhiteSpace(result.Evidence))
-        {
-            result.Evidence = BuildReasoningFromScores(result.Recommendation, result.OverallQualityScore, parsedThresholdScore, result.RuleScores);
-        }
+        result.Evidence = BuildReasoningFromScores(result.Recommendation, result.OverallQualityScore, parsedThresholdScore, result.RuleScores);
         result.NextSteps = BuildNextSteps(result.Recommendation, result.RuleScores);
         result.Message = "AI recommendation generated.";
 
@@ -704,6 +701,46 @@ threshold_for_cmf_tag: 0.70";
         return false;
     }
 
+    private static bool IsGatingRule(string ruleId)
+    {
+        return IsHighWeightRule(ruleId)
+            || string.Equals(ruleId, "R3", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasBlockingRuleFailure(List<CmfRecommendationRuleScore> ruleScores)
+    {
+        if (ruleScores == null) return false;
+
+        foreach (CmfRecommendationRuleScore rule in ruleScores)
+        {
+            if (rule == null) continue;
+
+            string ruleId = SafeText(rule.RuleId);
+            string evaluation = SafeText(rule.Evaluation);
+            bool failed = evaluation.StartsWith("FAIL", StringComparison.OrdinalIgnoreCase);
+            bool partial = evaluation.StartsWith("PARTIAL", StringComparison.OrdinalIgnoreCase);
+
+            int score;
+            bool hasScore = int.TryParse((rule.Score ?? string.Empty).Replace("%", string.Empty).Trim(), out score);
+            if (hasScore && score <= 0)
+            {
+                failed = true;
+            }
+
+            if (failed)
+            {
+                return true;
+            }
+
+            if (partial && IsGatingRule(ruleId))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static int GetThresholdScore(string rules)
     {
         if (string.IsNullOrWhiteSpace(rules)) return 70;
@@ -759,16 +796,17 @@ threshold_for_cmf_tag: 0.70";
         string primary = blockers.Count > 0 ? BuildPlainReasonFromRuleText(blockers[0]) : (strengths.Count > 0 ? BuildPlainReasonFromRuleText(strengths[0]) : "the available fields were checked against the active CMF policy");
         string secondary = blockers.Count > 1 ? BuildPlainReasonFromRuleText(blockers[1]) : (strengths.Count > 1 ? BuildPlainReasonFromRuleText(strengths[1]) : string.Empty);
         StringBuilder reasoning = new StringBuilder();
+        bool shouldTag = string.Equals(recommendation, "Tag as CMF", StringComparison.OrdinalIgnoreCase);
         reasoning.Append("The recommendation is based on whether the issue has enough CMF-worthy evidence, not just whether details are present. ");
         reasoning.Append("It scored ").Append(overallQualityScore).Append("/100 against a ").Append(thresholdScore).Append("/100 threshold. ");
         reasoning.Append(string.IsNullOrWhiteSpace(recommendation) ? "Do not tag as CMF" : recommendation).Append(" was selected because ");
-        if (blockers.Count == 0)
+        if (shouldTag)
         {
             reasoning.Append(BuildPositiveRecommendationBasis(hasReproStrength, hasImpactStrength, hasIntentStrength, hasContextStrength, hasLowSignalStrength));
-            reasoning.Append(" Supporting signals include ").Append(TrimTrailingSentencePunctuation(primary));
+            reasoning.Append(" Supporting signals include ").Append(TrimTrailingSentencePunctuation(strengths.Count > 0 ? BuildPlainReasonFromRuleText(strengths[0]) : primary));
             if (!string.IsNullOrWhiteSpace(secondary))
             {
-                reasoning.Append(" and ").Append(TrimTrailingSentencePunctuation(secondary));
+                reasoning.Append(" and ").Append(TrimTrailingSentencePunctuation(strengths.Count > 1 ? BuildPlainReasonFromRuleText(strengths[1]) : secondary));
             }
             reasoning.Append(".");
         }
