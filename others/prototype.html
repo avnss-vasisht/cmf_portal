@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CMF Portal — AI Modernized</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  :root{
+    --blue:#0068b5; --blue-d:#00377c; --cyan:#00c7fd; --ai:#7c3aed;
+    --bg:#eef2f7; --panel:#fff; --ink:#1b2a3a; --muted:#6b7a90; --line:#e3e8f0;
+    --good:#16a34a; --warn:#f59e0b; --bad:#dc2626;
+    --shadow:0 1px 3px rgba(16,31,52,.08),0 8px 24px rgba(16,31,52,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",Roboto,system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+  /* top bar */
+  .topbar{height:56px;background:linear-gradient(90deg,var(--blue-d),var(--blue));display:flex;align-items:center;
+    padding:0 18px;gap:14px;color:#fff;position:sticky;top:0;z-index:40}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:16px;white-space:nowrap}
+  .logo .dot{width:26px;height:26px;border-radius:7px;background:var(--cyan);display:grid;place-items:center;color:var(--blue-d);font-weight:900}
+  .global-search{flex:1;max-width:520px;position:relative}
+  .global-search input{width:100%;height:36px;border:none;border-radius:18px;padding:0 14px 0 38px;outline:none;background:rgba(255,255,255,.95)}
+  .global-search .ic{position:absolute;left:13px;top:8px;color:var(--ai);font-weight:800}
+  .spacer{flex:1}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--cyan);color:var(--blue-d);display:grid;place-items:center;font-weight:800}
+  /* tabs */
+  .tabs{display:flex;gap:2px;background:var(--panel);border-bottom:1px solid var(--line);padding:0 14px;position:sticky;top:56px;z-index:39;overflow-x:auto}
+  .tab{padding:13px 16px;cursor:pointer;color:var(--muted);font-weight:600;border-bottom:3px solid transparent;white-space:nowrap;display:flex;gap:7px;align-items:center}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+  .tab .ai-dot{width:6px;height:6px;border-radius:50%;background:var(--ai)}
+  /* page */
+  .page{padding:20px 22px;max-width:1400px;margin:0 auto;display:none}
+  .page.active{display:block}
+  h1{font-size:21px;margin:0 0 3px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+  .card h3{margin:0 0 3px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .ai-tag{font-size:10px;background:var(--ai);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.03em}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;color:var(--ink)}
+  .btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .btn.ai{background:var(--ai);color:#fff;border-color:var(--ai)}
+  .btn.sm{padding:5px 10px;font-size:12px}
+  /* grid */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .chart{width:100%;height:280px}
+  .chart.sm{height:200px}
+  /* prompt bar */
+  .prompt{display:flex;gap:8px;margin-top:6px}
+  .prompt input{flex:1;height:42px;border:1px solid #d9c9ff;border-radius:10px;padding:0 14px;outline:none;font-size:14px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .chip{font-size:12px;background:#f4efff;border:1px solid #e6dcff;color:var(--ai);padding:5px 11px;border-radius:14px;cursor:pointer}
+  .chip:hover{background:#ece2ff}
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em;padding:10px 10px;border-bottom:1px solid var(--line)}
+  td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr:hover td{background:#f8fafd}
+  .pill{display:inline-block;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:700}
+  .pill.good{background:#e7f7ee;color:var(--good)} .pill.warn{background:#fef3e2;color:#b45309}
+  .pill.bad{background:#fdeaea;color:var(--bad)} .pill.info{background:#e4f0ff;color:var(--blue)}
+  .pill.ai{background:#f0e8ff;color:var(--ai)}
+  .score{font-weight:800}
+  /* AI panel / drawer */
+  .drawer-bg{position:fixed;inset:0;background:rgba(16,31,52,.35);display:none;z-index:60}
+  .drawer-bg.show{display:block}
+  .drawer{position:fixed;top:0;right:0;width:520px;max-width:94vw;height:100%;background:#fff;box-shadow:-8px 0 30px rgba(0,0,0,.15);
+    transform:translateX(100%);transition:.28s;z-index:61;overflow:auto;padding:20px}
+  .drawer.show{transform:translateX(0)}
+  .drawer .x{position:absolute;top:14px;right:16px;cursor:pointer;font-size:20px;color:var(--muted)}
+  .kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .kv b{color:var(--ink)}
+  .insight{border:1px solid var(--line);border-left:3px solid var(--ai);border-radius:8px;padding:11px 13px;margin:10px 0;font-size:13px;background:#fcfbff}
+  .insight.good{border-left-color:var(--good);background:#f6fef9}
+  .insight.bad{border-left-color:var(--bad);background:#fff8f8}
+  .insight.warn{border-left-color:var(--warn);background:#fffdf5}
+  .insight .meta{color:var(--muted);font-size:11px;margin-top:6px}
+  .logbox{background:#0e1726;color:#c7d2e0;font-family:Consolas,monospace;font-size:12px;border-radius:8px;padding:12px;white-space:pre-wrap;line-height:1.5;max-height:180px;overflow:auto}
+  .logbox .miss{color:#f87171} .logbox .fill{color:#4ade80;font-weight:700}
+  /* chat */
+  .chatlog{border:1px solid var(--line);border-radius:10px;padding:12px;height:300px;overflow:auto;background:#fbfcfe}
+  .msg{border-radius:10px;padding:10px 13px;margin:8px 0;font-size:13px;max-width:85%;line-height:1.5}
+  .msg.user{background:#e4f0ff;margin-left:auto} .msg.ai{background:#f4efff}
+  .flag{color:var(--bad);font-weight:700}
+  textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;font-family:inherit;font-size:13px;resize:vertical}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;opacity:0;transition:.3s;z-index:100;font-size:13px}
+  .toast.show{opacity:1}
+  .stat{font-size:12px;color:var(--muted)}
+  .val{font-size:24px;font-weight:800}
+  @media(max-width:900px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo"><span class="dot">i</span> CMF Portal <span style="opacity:.6;font-weight:400;font-size:12px">· AI</span></div>
+  <div class="global-search"><span class="ic">✦</span><input placeholder="Ask AI anything across CMF… (sightings, issues, reports)"></div>
+  <div class="spacer"></div>
+  <label style="font-size:12px;opacity:.9">Role:
+    <select id="role" onchange="applyRole()" style="border:none;border-radius:6px;padding:5px 8px;font-weight:600;cursor:pointer">
+      <option value="pm">Program Manager</option>
+      <option value="admin">Admin</option>
+    </select>
+  </label>
+  <div class="avatar" id="avatar">PM</div>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" data-t="infographics"><span class="ai-dot"></span>Infographics</div>
+  <div class="tab" data-t="pending"><span class="ai-dot"></span>CMF Pending List</div>
+  <div class="tab" data-t="issues"><span class="ai-dot"></span>Issue List</div>
+  <div class="tab" data-t="reports"><span class="ai-dot"></span>Reports &amp; Analytics</div>
+  <div class="tab" id="tab-config" data-t="config" style="display:none">🔒 Config / CMF Rules</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 1. INFOGRAPHICS  (Req 1) -->
+<!-- ============================================================ -->
+<section class="page active" id="p-infographics">
+  <h1>Infographics</h1>
+  <div class="sub">Default indicators below — or generate any chart/indicator <b>on the fly</b> from a natural-language prompt.</div>
+
+  <div class="card" style="border-color:#d9c9ff;background:linear-gradient(180deg,#faf7ff,#fff)">
+    <h3>✦ AI Indicator Builder <span class="ai-tag">ON-THE-FLY</span></h3>
+    <div class="sub" style="margin-bottom:8px">Describe the indicator you need. AI builds the query + chart spec live — no pre-defined scenario required.</div>
+    <div class="prompt">
+      <input id="nlq" placeholder='e.g. "CMF tag rate by platform last 6 months as bar" or "top 5 defect categories as pie"'>
+      <button class="btn ai" onclick="genIndicator()">✦ Generate</button>
+    </div>
+    <div class="chips">
+      <span class="chip" onclick="quick('cmf tag rate by platform as bar')">CMF tag rate by platform</span>
+      <span class="chip" onclick="quick('sighting inflow trend over months')">Sighting inflow trend</span>
+      <span class="chip" onclick="quick('defect category mix as pie')">Defect category mix</span>
+      <span class="chip" onclick="quick('replication rate gauge')">Replication-rate gauge</span>
+      <span class="chip" onclick="quick('pending vs closed by week')">Pending vs closed</span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3 id="genTitle">Generated Indicator</h3>
+      <div class="sub" id="genSub">AI-generated · source: CMF DB (read-only, validated)</div>
+      <div id="genChart" class="chart"></div>
+    </div>
+    <div class="card">
+      <h3>Default Indicators</h3>
+      <div class="sub">Predefined scenarios (existing behavior, retained)</div>
+      <div id="defChart" class="chart"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 2/3/4. CMF PENDING LIST -->
+<!-- ============================================================ -->
+<section class="page" id="p-pending">
+  <h1>CMF Pending List</h1>
+  <div class="sub">AI reads each sighting + internal DB, evaluates quality against <b>CMF rules</b>, recommends tagging, detects duplicates, parses logs for root cause, and auto-completes SysScope fields.</div>
+
+  <div class="grid4" style="margin-bottom:16px">
+    <div class="card"><div class="stat">Pending sightings</div><div class="val">42</div></div>
+    <div class="card"><div class="stat">✦ AI: Qualify for CMF</div><div class="val" style="color:var(--good)">11</div></div>
+    <div class="card"><div class="stat">✦ AI: Likely duplicate</div><div class="val" style="color:var(--warn)">6</div></div>
+    <div class="card"><div class="stat">✦ Incomplete SysScope</div><div class="val" style="color:var(--bad)">9</div></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h3>Pending Sightings <span class="ai-tag">AI-EVALUATED</span></h3>
+      <button class="btn ai sm" onclick="toast('✦ AI re-evaluating all 42 sightings against CMF rules…')">✦ Re-evaluate all</button>
+    </div>
+    <table>
+      <thead><tr><th>Sighting</th><th>Title</th><th>Repl. rate</th><th>Impact</th><th>✦ AI Quality</th><th>✦ CMF Rec.</th><th></th></tr></thead>
+      <tbody id="pendingRows"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 5/6/7. ISSUE LIST -->
+<!-- ============================================================ -->
+<section class="page" id="p-issues">
+  <h1>Issue List</h1>
+  <div class="sub">Status stays in its <b>current format</b>. Use <b>✦ AI Assist</b> for a 1–2 bullet current debug status you can drop into a report. AI also <span class="flag">flags stale updates</span> and auto-summarizes closed issues.</div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h3>Issues <span class="ai-tag">AI-ASSISTED</span></h3>
+      <div>
+        <button class="btn ai sm" onclick="toast('✦ AI checking all issues for stale updates…')">✦ Flag stale updates</button>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Issue</th><th>Title</th><th>Owner</th><th>Last update</th><th>Status</th><th>Impact</th><th></th></tr></thead>
+      <tbody id="issueRows"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 8. REPORTS & ANALYTICS -->
+<!-- ============================================================ -->
+<section class="page" id="p-reports">
+  <h1>Reports &amp; Analytics</h1>
+  <div class="sub">Chatbot generates reports/charts from a prompt. Define a reusable <b>report format</b> and AI fills it.</div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>✦ Report Chatbot <span class="ai-tag">GENERATIVE</span></h3>
+      <div class="chatlog" id="repChat">
+        <div class="msg ai">Hi PM! Ask me for any report or chart. e.g. <i>"Weekly CMF summary for Platform X"</i> or <i>"Trend of closed issues by root-cause category"</i>. I'll use your saved format if set.</div>
+      </div>
+      <div class="prompt" style="margin-top:10px">
+        <input id="repMsg" placeholder="Ask for a report or chart…" onkeydown="if(event.key==='Enter')repSend()">
+        <button class="btn ai" onclick="repSend()">Send</button>
+      </div>
+      <div class="chips">
+        <span class="chip" onclick="repQuick('Weekly CMF status report')">Weekly CMF status</span>
+        <span class="chip" onclick="repQuick('Closed issues by root cause chart')">Closed-by-rootcause chart</span>
+        <span class="chip" onclick="repQuick('Top 5 platforms by pending sightings')">Top platforms pending</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Report Format Template</h3>
+      <div class="sub">Program managers define the structure once; AI populates it every run. Type below or <b>upload a sample format</b>.</div>
+      <textarea id="fmt" rows="10">## Weekly CMF Report — {{platform}} — {{week}}
+
+1. Executive Summary (AI, 3 bullets)
+2. New CMF-tagged sightings (table: id, issue, repl.rate, impact)
+3. Pending → qualifying next (AI recommendation)
+4. Closed this week (root cause + fixed SW version)
+5. Top risks / stale issues (AI-flagged)
+6. Chart: CMF tag rate trend</textarea>
+      <input type="file" id="fmtFile" accept=".txt,.md,.csv,.json,.docx,.xlsx,.html" style="display:none" onchange="uploadFormat(event)">
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn ai" onclick="document.getElementById('fmtFile').click()">⬆ Upload sample format</button>
+        <button class="btn primary" onclick="toast('✔ Report format saved. AI will use this template.')">Save format</button>
+        <button class="btn ai" onclick="runFormat()">✦ Generate from format</button>
+      </div>
+      <div class="sub" id="fmtName" style="margin-top:8px;display:none"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3 id="repChartTitle">Generated Report Chart</h3>
+    <div class="sub">Rendered from your last prompt</div>
+    <div id="repChart" class="chart"></div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- CONFIG / CMF RULES -->
+<!-- ============================================================ -->
+<section class="page" id="p-config">
+  <h1>Config — CMF Rules</h1>
+  <div class="sub">End-user-provided rules that drive AI quality evaluation & tagging recommendations (Req 2). Editable, versioned.</div>
+  <div class="grid2">
+    <div class="card">
+      <h3>CMF Qualification Rules</h3>
+      <textarea rows="14">rules:
+  - id: R1
+    name: Minimum replication rate
+    condition: replication_rate >= 30%
+    weight: high
+  - id: R2
+    name: User impact severity
+    condition: impact in [High, Critical]
+    weight: high
+  - id: R3
+    name: Reproducible on latest build
+    condition: repro_on_latest == true
+    weight: medium
+  - id: R4
+    name: Not a known duplicate
+    condition: duplicate_score < 0.75
+    weight: high
+  - id: R5
+    name: Complete SysScope log
+    condition: syscope_completeness >= 0.9
+    weight: medium
+threshold_for_cmf_tag: 0.70</textarea>
+      <button class="btn primary" style="margin-top:10px" onclick="toast('✔ CMF rules saved (v14). AI will re-score sightings.')">Save rules</button>
+    </div>
+    <div class="card">
+      <h3>Data Sources &amp; Guardrails</h3>
+      <div class="kv"><span>Sightings DB (read-only)</span><b class="pill good">Connected</b></div>
+      <div class="kv"><span>SysScope log store</span><b class="pill good">Connected</b></div>
+      <div class="kv"><span>Historical root-cause KB</span><b class="pill good">Connected</b></div>
+      <div class="kv"><span>Duplicate vector index</span><b class="pill good">Connected</b></div>
+      <div class="kv"><span>LLM endpoint</span><b class="pill info">Intel internal GenAI</b></div>
+      <div class="kv"><span>SQL execution</span><b class="pill info">Allow-listed / read-only</b></div>
+      <div class="kv"><span>Human-in-the-loop approval</span><b class="pill ai">Required for tagging</b></div>
+      <div class="insight warn" style="margin-top:12px">All AI recommendations are <b>advisory</b>. A program manager confirms before any CMF tag, status change, or auto-fill is committed.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DRAWER (AI sighting/issue detail) ============ -->
+<div class="drawer-bg" id="drawerBg" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer"><span class="x" onclick="closeDrawer()">✕</span><div id="drawerBody"></div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const C={blue:'#0068b5',cyan:'#00c7fd',purple:'#7c3aed',green:'#16a34a',amber:'#f59e0b',red:'#dc2626'};
+
+/* -------- tabs -------- */
+document.getElementById('tabs').addEventListener('click',e=>{
+  const t=e.target.closest('.tab'); if(!t)return;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('p-'+t.dataset.t).classList.add('active');
+  setTimeout(resizeAll,50);
+});
+
+/* -------- role-based access: Config tab is admin-only -------- */
+function applyRole(){
+  const isAdmin=document.getElementById('role').value==='admin';
+  const tab=document.getElementById('tab-config');
+  tab.style.display=isAdmin?'flex':'none';
+  document.getElementById('avatar').textContent=isAdmin?'AD':'PM';
+  if(!isAdmin && tab.classList.contains('active')){
+    document.querySelector('.tab[data-t="infographics"]').click();
+    toast('Config / CMF Rules is admin-only');
+  }
+}
+applyRole();
+
+/* ==========================================================
+   1. INFOGRAPHICS — on-the-fly indicator generation
+========================================================== */
+const genChart=echarts.init(document.getElementById('genChart'));
+const defChart=echarts.init(document.getElementById('defChart'));
+const platforms=['Alder','Raptor','Meteor','Lunar','Arrow'];
+
+function bar(t,sub,data,color){document.getElementById('genTitle').textContent=t;document.getElementById('genSub').textContent=sub;
+  genChart.setOption({tooltip:{trigger:'axis'},grid:{left:44,right:16,top:20,bottom:30},xAxis:{type:'category',data:platforms},
+  yAxis:{type:'value'},series:[{type:'bar',data,itemStyle:{color:color||C.blue,borderRadius:[6,6,0,0]},barWidth:'45%'}]},true);}
+function line(t,sub){document.getElementById('genTitle').textContent=t;document.getElementById('genSub').textContent=sub;
+  genChart.setOption({tooltip:{trigger:'axis'},grid:{left:44,right:16,top:20,bottom:30},xAxis:{type:'category',data:['Jan','Feb','Mar','Apr','May','Jun']},
+  yAxis:{type:'value'},series:[{type:'line',smooth:true,data:[120,138,151,142,167,180],lineStyle:{color:C.purple,width:3},areaStyle:{color:'rgba(124,58,237,.12)'},symbol:'circle',symbolSize:7,itemStyle:{color:C.purple}}]},true);}
+function pie(t,sub){document.getElementById('genTitle').textContent=t;document.getElementById('genSub').textContent=sub;
+  genChart.setOption({tooltip:{trigger:'item'},legend:{bottom:0},series:[{type:'pie',radius:['40%','68%'],center:['50%','44%'],
+  data:[{value:38,name:'Particle'},{value:24,name:'Timeout'},{value:18,name:'Crash'},{value:12,name:'Perf'},{value:8,name:'Other'}],itemStyle:{borderColor:'#fff',borderWidth:2}}]},true);}
+function gauge(t,sub){document.getElementById('genTitle').textContent=t;document.getElementById('genSub').textContent=sub;
+  genChart.setOption({series:[{type:'gauge',min:0,max:100,progress:{show:true,width:16},axisLine:{lineStyle:{width:16}},pointer:{width:5},
+  detail:{valueAnimation:true,formatter:'{value}%',fontSize:24},data:[{value:64}]}]},true);}
+function stacked(t,sub){document.getElementById('genTitle').textContent=t;document.getElementById('genSub').textContent=sub;
+  genChart.setOption({tooltip:{trigger:'axis'},legend:{bottom:0},grid:{left:40,right:16,top:20,bottom:40},xAxis:{type:'category',data:['W1','W2','W3','W4','W5']},
+  yAxis:{type:'value'},series:[{name:'Pending',type:'bar',stack:'a',data:[40,42,39,44,42],itemStyle:{color:C.amber}},{name:'Closed',type:'bar',stack:'a',data:[22,25,28,24,30],itemStyle:{color:C.green}}]},true);}
+
+function genIndicator(){const q=(document.getElementById('nlq').value||'').toLowerCase();
+  if(/pie|mix|categor|breakdown/.test(q)){pie('Defect Category Mix','✦ AI-generated pie · source: CMF.DefectCat');toast('✦ Generated pie indicator');}
+  else if(/trend|inflow|over|month|time/.test(q)){line('Sighting Inflow Trend','✦ AI-generated line · source: CMF.SightingDaily');toast('✦ Generated trend indicator');}
+  else if(/gauge|rate|replication|percent/.test(q)){gauge('Replication Rate','✦ AI-generated gauge · live');toast('✦ Generated gauge indicator');}
+  else if(/pending|closed|vs|week/.test(q)){stacked('Pending vs Closed by Week','✦ AI-generated stacked bar');toast('✦ Generated comparison indicator');}
+  else{bar('CMF Tag Rate by Platform','✦ AI-generated bar · source: CMF.TagRate',[68,54,72,61,58]);toast('✦ Generated bar indicator');}
+  genChart.resize();
+}
+function quick(t){document.getElementById('nlq').value=t;genIndicator();}
+bar('CMF Tag Rate by Platform','✦ AI-generated bar · source: CMF.TagRate',[68,54,72,61,58]);
+defChart.setOption({tooltip:{trigger:'item'},legend:{bottom:0,textStyle:{fontSize:11}},series:[{type:'pie',radius:['42%','70%'],center:['50%','44%'],
+  data:[{value:11,name:'Qualify'},{value:25,name:'Under review'},{value:6,name:'Duplicate'}],color:[C.green,C.blue,C.amber],itemStyle:{borderColor:'#fff',borderWidth:2}}]});
+
+/* ==========================================================
+   2/3/4. CMF PENDING LIST
+========================================================== */
+const pending=[
+ {id:'SIGHT-4821',title:'GPU hang on resume from S3',repl:'62%',impact:'Critical',q:88,rec:'Qualify',recCls:'good',dup:null,
+  summary:'Display controller fails to re-init after S3 resume, causing a full GPU hang. Reproduces on 62% of resume cycles on Meteor SKUs.',
+  status:'Under triage',
+  root:'Log shows <b>PSR exit timeout</b> then <b>GT reset failed</b>. Historical match: SIGHT-3199 (same PSR path) fixed via firmware bump.',
+  steps:['Capture GT register dump at resume','Disable PSR to confirm isolation','Check pcode heartbeat around resume'],
+  log:{missing:['platform_stepping','bios_version'],filled:{platform_stepping:'C0',bios_version:'MTL.0087'}}},
+ {id:'SIGHT-4802',title:'Audio dropout under load',repl:'18%',impact:'Medium',q:41,rec:'Not yet',recCls:'warn',dup:null,
+  summary:'Intermittent audio buffer underrun when CPU >85%. Low replication (18%) and Medium impact — below CMF threshold.',
+  status:'Monitoring',
+  root:'Log indicates <b>DMA underrun</b> under scheduler pressure. Likely power-state transition latency.',
+  steps:['Pin audio DMA to P-core','Log C-state residency during dropout'],
+  log:{missing:['syscope_version'],filled:{syscope_version:'2.7.1'}}},
+ {id:'SIGHT-4795',title:'Camera init failure (rare)',repl:'55%',impact:'High',q:76,rec:'Qualify',recCls:'good',dup:'SIGHT-4610',
+  summary:'IPU fails to enumerate sensor on cold boot. 55% replication, High user impact. Meets rules R1, R2, R3.',
+  status:'Under triage',
+  root:'Matches known IPU I2C arbitration issue. Historical KB: 3 prior sightings, root cause = I2C clock stretch.',
+  steps:['Scope I2C bus at cold boot','Compare against SIGHT-4610 timing'],
+  log:{missing:[],filled:{}}},
+ {id:'SIGHT-4770',title:'WiFi disconnect on roam',repl:'28%',impact:'Medium',q:58,rec:'Review',recCls:'info',dup:'SIGHT-4655',
+  summary:'WiFi drops during AP roam. Possible duplicate of SIGHT-4655 (duplicate score 0.81). Recommend merge before tagging.',
+  status:'Needs info',
+  root:'Roaming supplicant timeout. Historical duplicate pattern detected.',
+  steps:['Diff supplicant logs vs SIGHT-4655','Confirm same AP firmware'],
+  log:{missing:['driver_version'],filled:{driver_version:'23.60.1'}}},
+];
+const prows=document.getElementById('pendingRows');
+pending.forEach((s,i)=>{
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><b>${s.id}</b>${s.dup?'<br><span class="pill warn">dup? '+s.dup+'</span>':''}</td>
+   <td>${s.title}</td><td>${s.repl}</td>
+   <td><span class="pill ${s.impact==='Critical'||s.impact==='High'?'bad':'warn'}">${s.impact}</span></td>
+   <td><span class="score" style="color:${s.q>=70?C.green:s.q>=50?C.amber:C.red}">${s.q}/100</span></td>
+   <td><span class="pill ${s.recCls}">${s.rec}</span></td>
+   <td><button class="btn ai sm" onclick="openSighting(${i})">✦ AI review</button></td>`;
+  prows.appendChild(tr);
+});
+function openSighting(i){
+  const s=pending[i];
+  const logHtml=(s.log.missing.length? 
+    `<div class="logbox">SysScope parse:\n`+
+     s.log.missing.map(m=>`<span class="miss">✗ MISSING: ${m}</span>`).join('\n')+`\n\n`+
+     Object.entries(s.log.filled).map(([k,v])=>`<span class="fill">✓ AUTO-FILLED: ${k} = ${v}</span>`).join('\n')+`</div>`
+    : `<div class="logbox"><span class="fill">✓ SysScope complete — all required fields present.</span></div>`);
+  document.getElementById('drawerBody').innerHTML=`
+    <h2 style="margin:0 0 2px">${s.id} <span class="ai-tag">AI REVIEW</span></h2>
+    <div class="sub">${s.title}</div>
+
+    <div class="insight ${s.recCls==='good'?'good':s.recCls==='warn'?'warn':''}">
+      <b>CMF Recommendation: ${s.rec==='Qualify'?'✔ Qualifies for CMF tag':s.rec==='Not yet'?'✕ Does not yet qualify':'⚠ Review before tagging'}</b>
+      <div class="meta">Quality score ${s.q}/100 · evaluated against CMF rules R1–R5</div>
+    </div>
+
+    <h3 style="margin-top:16px">✦ AI Summary</h3>
+    <div class="kv"><span>Issue</span></div><div style="font-size:13px;margin:4px 0 8px">${s.summary}</div>
+    <div class="kv"><span>Replication rate</span><b>${s.repl}</b></div>
+    <div class="kv"><span>User impact</span><b>${s.impact}</b></div>
+    <div class="kv"><span>Current status</span><b>${s.status}</b></div>
+
+    ${s.dup?`<div class="insight warn"><b>⚠ Possible duplicate</b> of <b>${s.dup}</b> (similarity 0.81). AI suggests merge/confirm before tagging.</div>`:'<div class="insight good"><b>No duplicate</b> found in existing databases (top similarity 0.34).</div>'}
+
+    <h3 style="margin-top:16px">✦ Root Cause &amp; Debug Steps <span class="ai-tag">LOG + KB</span></h3>
+    <div class="insight">${s.root}</div>
+    <div style="font-size:13px"><b>Suggested next debug steps:</b><ul style="margin:6px 0 0">${s.steps.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+
+    <h3 style="margin-top:16px">✦ SysScope Log Completion <span class="ai-tag">AUTO-FILL</span></h3>
+    ${logHtml}
+
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn primary" onclick="toast('✔ Tagged CMF (pending PM confirm)')">Approve CMF tag</button>
+      <button class="btn" onclick="toast('✔ Auto-filled fields committed to SysScope')">Commit auto-fill</button>
+    </div>`;
+  showDrawer();
+}
+
+/* ==========================================================
+   5/6/7. ISSUE LIST
+========================================================== */
+const issues=[
+ {id:'ISS-9012',title:'S3 resume GPU hang',owner:'A. Rao',upd:'2 days ago',stale:false,status:'In progress',closed:false,
+   impact:'Critical',impactBullets:['Full GPU hang on resume forces a hard reboot — blocks any user returning from sleep.','Hits 62% of S3 resume cycles on Meteor SKUs; high field-return risk.','Blocks OS power-management certification for the platform.'],
+   debug:['Root-caused to PSR exit timeout on S3 resume; GT reset fails to recover the display controller.','Firmware fix drafted (matches SIGHT-3199 path); awaiting build for validation.']},
+ {id:'ISS-8990',title:'Audio dropout under load',owner:'M. Chen',upd:'19 days ago',stale:true,status:'In progress',closed:false,
+   impact:'Medium',impactBullets:['Brief audible glitches during heavy CPU load; annoyance rather than blocker.','Only 18% replication and limited to sustained >85% CPU scenarios.','No data loss or crash; workaround available (power plan change).'],
+   debug:['DMA underrun reproduces only at CPU >85%; isolated to power-state transition latency.','Next: pin audio DMA to a P-core and capture C-state residency during dropout.']},
+ {id:'ISS-8977',title:'Camera init failure',owner:'S. Iyer',upd:'4 days ago',stale:false,status:'Fix in validation',closed:false,
+   impact:'High',impactBullets:['Camera unusable after cold boot until a retry — hits video-call and login (Windows Hello) flows.','55% cold-boot replication; visible to end users on first use of the day.','Fix in validation; residual risk low once MTL.0089 ships.'],
+   debug:['Confirmed I2C clock-stretch on cold boot causing IPU sensor enumeration to fail.','Fix in validation on MTL.0089; 0 repros in last 40 cold-boot cycles.']},
+ {id:'ISS-8950',title:'WiFi roam disconnect',owner:'J. Park',upd:'1 day ago',stale:false,status:'Closed',closed:true,
+   impact:'Medium',impactBullets:['Momentary WiFi drop while roaming between APs; auto-reconnects within seconds.','Affected mobile users in multi-AP environments (offices/campus).','Resolved — no longer reproduces after driver fix.'],
+   root:'Supplicant roam timeout too aggressive; AP firmware race.',fix:'Increased roam scan dwell + retry backoff.',ver:'WiFi-DRV 23.70.2 / BIOS MTL.0091',missing:false},
+ {id:'ISS-8931',title:'Thermal throttle regression',owner:'K. Singh',upd:'27 days ago',stale:true,status:'Closed',closed:true,
+   impact:'High',impactBullets:['Early thermal throttling cut sustained performance by ~12% under load.','Affected benchmark scores and heavy-workload users.','Resolved — closure data incomplete, impact pending confirmation.'],
+   root:'Unknown — DB field empty.',fix:'',ver:'',missing:true},
+];
+const irows=document.getElementById('issueRows');
+issues.forEach((it,i)=>{
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><b>${it.id}</b></td><td>${it.title}</td><td>${it.owner}</td>
+   <td>${it.stale?`<span class="pill bad">⚑ stale · ${it.upd}</span>`:it.upd}</td>
+   <td><span class="pill ${it.status==='Closed'?'good':'info'}">${it.status}</span></td>
+   <td><span class="pill ${it.impact==='Critical'||it.impact==='High'?'bad':'warn'}">${it.impact}</span>
+       <button class="btn ai sm" style="margin-left:6px" onclick="openImpact(${i})">✦ AI</button></td>
+   <td><button class="btn ai sm" onclick="openIssue(${i})">${it.closed?'✦ Closure summary':'✦ AI Assist'}</button></td>`;
+  irows.appendChild(tr);
+});
+function openIssue(i){
+  const it=issues[i];
+  let body=`<h2 style="margin:0 0 2px">${it.id} <span class="ai-tag">AI ASSIST</span></h2><div class="sub">${it.title}</div>`;
+  if(it.stale) body+=`<div class="insight bad"><b>⚑ Stale update flagged.</b> Last update was <b>${it.upd}</b> — exceeds the 14-day freshness rule. AI recommends pinging owner (${it.owner}) for a status refresh.</div>`;
+  if(!it.closed){
+    body+=`<div class="kv"><span>Current status (unchanged)</span><b>${it.status}</b></div>
+      <h3 style="margin-top:14px">✦ AI Assist — Current Debug Status <span class="ai-tag">FOR REPORT</span></h3>
+      <div class="insight"><ul style="margin:0;padding-left:18px">${it.debug.map(d=>`<li style="margin-bottom:6px">${d}</li>`).join('')}</ul>
+        <div class="meta">Summarized from latest DB updates, linked sighting activity & logs. Status field is left in its current format.</div></div>
+      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary" onclick="copyDebug(${i})">Copy for report</button><button class="btn" onclick="toast('Regenerating debug status…')">Regenerate</button></div>`;
+  } else {
+    if(it.missing){
+      body+=`<h3 style="margin-top:14px">✦ Closure Summary <span class="ai-tag">AUTO</span></h3>
+        <div class="insight bad"><b>⚠ Incomplete closure data.</b> AI could not find required fields in the database:
+        <ul style="margin:6px 0 0"><li class="flag">Root cause — missing</li><li class="flag">Fix description — missing</li><li class="flag">Fixed SW version — missing</li></ul>
+        <div class="meta">Flagged for owner to complete before this closure is accepted.</div></div>`;
+    } else {
+      body+=`<h3 style="margin-top:14px">✦ Closure Summary <span class="ai-tag">AUTO</span></h3>
+        <div class="insight good"><b>Root cause:</b> ${it.root}</div>
+        <div class="insight good"><b>Fix:</b> ${it.fix}</div>
+        <div class="insight good"><b>Fixed in SW version:</b> ${it.ver}</div>
+        <div style="margin-top:12px"><button class="btn primary" onclick="toast('✔ Closure summary published to report')">Publish to report</button></div>`;
+    }
+  }
+  document.getElementById('drawerBody').innerHTML=body;
+  showDrawer();
+}
+function copyDebug(i){
+  const it=issues[i];
+  const text=`${it.id} — ${it.title} [${it.status}]\n`+it.debug.map(d=>'• '+d).join('\n');
+  if(navigator.clipboard) navigator.clipboard.writeText(text).catch(()=>{});
+  toast('✔ Debug status copied — ready to paste into your report');
+}
+function openImpact(i){
+  const it=issues[i];
+  document.getElementById('drawerBody').innerHTML=`
+    <h2 style="margin:0 0 2px">${it.id} <span class="ai-tag">IMPACT</span></h2>
+    <div class="sub">${it.title}</div>
+    <div class="kv"><span>Impact (current field, retained)</span><b><span class="pill ${it.impact==='Critical'||it.impact==='High'?'bad':'warn'}">${it.impact}</span></b></div>
+    <h3 style="margin-top:16px">✦ AI Assist — Impact Summary <span class="ai-tag">FOR REPORT</span></h3>
+    <div class="insight"><ul style="margin:0;padding-left:18px">${it.impactBullets.map(b=>`<li style="margin-bottom:6px">${b}</li>`).join('')}</ul>
+      <div class="meta">Derived from replication rate, affected user flows & linked sighting data. Impact field left in its current format.</div></div>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary" onclick="copyImpact(${i})">Copy for report</button><button class="btn" onclick="toast('Regenerating impact summary…')">Regenerate</button></div>`;
+  showDrawer();
+}
+function copyImpact(i){
+  const it=issues[i];
+  const text=`${it.id} — ${it.title} — Impact: ${it.impact}\n`+it.impactBullets.map(b=>'• '+b).join('\n');
+  if(navigator.clipboard) navigator.clipboard.writeText(text).catch(()=>{});
+  toast('✔ Impact summary copied — ready to paste into your report');
+}
+
+/* ==========================================================
+   8. REPORTS & ANALYTICS
+========================================================== */
+const repChart=echarts.init(document.getElementById('repChart'));
+repChart.setOption({tooltip:{trigger:'axis'},grid:{left:44,right:16,top:20,bottom:30},xAxis:{type:'category',data:['W1','W2','W3','W4','W5','W6']},yAxis:{type:'value'},
+  series:[{type:'line',smooth:true,data:[52,55,58,61,64,68],lineStyle:{color:C.blue,width:3},areaStyle:{color:'rgba(0,104,181,.12)'},symbol:'circle',symbolSize:7,itemStyle:{color:C.blue}}]});
+function repSend(){const inp=document.getElementById('repMsg');const q=inp.value.trim();if(!q)return;
+  const log=document.getElementById('repChat');log.innerHTML+=`<div class="msg user">${q}</div>`;inp.value='';
+  let a="Generated. Rendering the chart below and drafting the narrative in your saved format.";
+  if(/root cause/i.test(q)){a="Here's <b>closed issues by root-cause category</b>. Top: PSR/display (32%), I2C (21%), power-state (18%). Chart updated below.";
+    repChart.setOption({series:[{type:'bar',data:[32,21,18,15,14],itemStyle:{color:C.purple,borderRadius:[6,6,0,0]}}],xAxis:{type:'category',data:['PSR','I2C','Power','Thermal','Other']}},true);document.getElementById('repChartTitle').textContent='Closed Issues by Root Cause';}
+  else if(/platform|pending/i.test(q)){a="<b>Top 5 platforms by pending sightings</b>: Meteor (14), Raptor (11), Arrow (8), Lunar (5), Alder (4).";
+    repChart.setOption({series:[{type:'bar',data:[14,11,8,5,4],itemStyle:{color:C.amber,borderRadius:[6,6,0,0]}}],xAxis:{type:'category',data:['Meteor','Raptor','Arrow','Lunar','Alder']}},true);document.getElementById('repChartTitle').textContent='Top Platforms by Pending Sightings';}
+  else{document.getElementById('repChartTitle').textContent='CMF Tag Rate Trend';}
+  setTimeout(()=>{log.innerHTML+=`<div class="msg ai">${a}</div>`;log.scrollTop=log.scrollHeight;},350);repChart.resize();}
+function repQuick(t){document.getElementById('repMsg').value=t;repSend();}
+function runFormat(){toast('✦ AI populating your report template with live data…');
+  const log=document.getElementById('repChat');log.innerHTML+=`<div class="msg ai">✔ Generated <b>Weekly CMF Report</b> from your saved format — 6 sections filled: exec summary, new CMF tags (3), qualifying-next (2), closed (2 with SW versions), stale risks (2 flagged), and the tag-rate trend chart.</div>`;log.scrollTop=log.scrollHeight;}
+function uploadFormat(e){
+  const f=e.target.files[0]; if(!f) return;
+  const name=document.getElementById('fmtName');
+  name.style.display='block'; name.innerHTML=`📎 Loaded format: <b>${f.name}</b> (${(f.size/1024).toFixed(1)} KB)`;
+  const textLike=/\.(txt|md|csv|json|html)$/i.test(f.name);
+  if(textLike){
+    const r=new FileReader();
+    r.onload=()=>{ document.getElementById('fmt').value=String(r.result).slice(0,4000); toast('✔ Sample format loaded — AI will use this structure'); };
+    r.readAsText(f);
+  } else {
+    // binary formats (docx/xlsx): in the real build the backend parses these; here we acknowledge + set a placeholder
+    document.getElementById('fmt').value=`## Report format from: ${f.name}\n(AI will parse the uploaded template structure and populate each section with live CMF data.)`;
+    toast('✔ '+f.name+' uploaded — AI will parse this template');
+  }
+}
+
+/* -------- drawer + toast + resize -------- */
+function showDrawer(){document.getElementById('drawerBg').classList.add('show');document.getElementById('drawer').classList.add('show');}
+function closeDrawer(){document.getElementById('drawerBg').classList.remove('show');document.getElementById('drawer').classList.remove('show');}
+let tT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('show'),2400);}
+function resizeAll(){[genChart,defChart,repChart].forEach(c=>c&&c.resize());}
+window.addEventListener('resize',resizeAll);
+</script>
+</body>
+</html>

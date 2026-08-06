@@ -1,0 +1,1176 @@
+﻿        :root {
+            --portal-bg: #edf3f8;
+            --portal-surface: #ffffff;
+            --portal-surface-soft: #f7fafc;
+            --portal-ink: #19324a;
+            --portal-ink-muted: #5c7087;
+            --portal-primary: #0f5ea8;
+            --portal-primary-deep: #083d74;
+            --portal-accent: #00a6b2;
+            --portal-border: #cdd9e5;
+            --portal-shadow: 0 18px 42px rgba(17, 43, 70, 0.12);
+            --portal-radius: 18px;
+        }
+
+        body {
+            overflow-x: hidden;
+            font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--portal-ink);
+            background:
+                radial-gradient(circle at top left, rgba(0, 166, 178, 0.10), transparent 24%),
+                radial-gradient(circle at top right, rgba(15, 94, 168, 0.12), transparent 28%),
+                linear-gradient(180deg, #f4f8fb 0%, var(--portal-bg) 100%);
+        }
+
+        header {
+            z-index: 100;
+            min-height: 88px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(120deg, var(--portal-primary-deep) 0%, var(--portal-primary) 48%, var(--portal-accent) 100%);
+            color: white;
+            padding: 20px 30px;
+            box-shadow: 0 14px 35px rgba(8, 61, 116, 0.28);
+            position: sticky;
+            top: 0;
+        }
+
+        .header-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            text-align: center;
+            z-index: 110;
+            text-shadow: 0 1px 12px rgba(0, 0, 0, 0.16);
+        }
+
+        .sidebar-toggle {
+            background: rgba(255, 255, 255, 0.14);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            font-size: 16px;
+            cursor: pointer;
+            z-index: 10;
+            border-radius: 999px;
+            width: 42px;
+            height: 42px;
+            backdrop-filter: blur(8px);
+        }
+
+        .sidebar-toggle-div {
+            position: absolute;
+            right: 1.2rem;
+        }
+
+        .sidebar {
+            font-size: 12px;
+            position: fixed;
+            top: 0;
+            right: -280px;
+            height: 100%;
+            width: 250px;
+            background: linear-gradient(180deg, #0b417b 0%, #0f5ea8 100%);
+            padding-top: 68px;
+            transition: right 0.3s ease-in-out;
+            z-index: 120;
+            overflow-y: auto;
+            box-shadow: -16px 0 32px rgba(5, 25, 48, 0.22);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            background-color: transparent;
+            color: white;
+            font-size: 20px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .sidebar a {
+            color: #eef7ff;
+            padding: 12px 20px;
+            text-decoration: none;
+            display: block;
+            font-size: 12px;
+        }
+
+        .sidebar a:hover {
+            background-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .content-wrapper {
+            margin: 18px 18px 28px;
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.74);
+            border: 1px solid rgba(205, 217, 229, 0.9);
+            border-radius: 24px;
+            box-shadow: var(--portal-shadow);
+            min-height: calc(100vh - 160px);
+            backdrop-filter: blur(10px);
+        }
+
+        .table-container {
+            margin-top: 0;
+            position: relative;
+            width: 100%;
+            max-height: 75vh;
+            overflow-y: auto;
+            border-radius: var(--portal-radius);
+            box-shadow: 0 12px 30px rgba(21, 49, 79, 0.10);
+            background-color: var(--portal-surface);
+            border: 1px solid var(--portal-border);
+            padding: 10px;
+        }
+
+            /* Make the header sticky */
+            .table-container thead {
+                position: sticky;
+                top: 0;
+                background-color: #fff; /* Set a background color to cover any content scrolling beneath */
+                z-index: 1; /* Keep the header above the rows */
+            }
+
+        
+        .table-primary {
+            font-weight: 600;
+            font-family: "Segoe UI", sans-serif;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: .82em;
+            border-radius: 14px;
+            overflow: hidden;
+            transition: box-shadow 0.3s ease;
+            border: 1px solid var(--portal-border);
+            margin-bottom: 10px;
+            background: var(--portal-surface);
+        }
+
+        .table-primary th, .table-primary td {
+            padding: 12px 14px;
+            text-align: left;
+            border: 1px solid #d7e0ea;
+        }
+
+        .table-primary thead {
+            position: sticky;
+            top: 0; /* Stick the header to the top */
+            background-color: #fff; /* Ensure header has a solid background */
+            z-index: 2; /* Make sure header stays on top of rows */
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1); /* Optional, to add a shadow */
+        }
+
+        .table-primary th {
+            background: linear-gradient(180deg, #1568b3 0%, #0f5ea8 100%);
+            color: white;
+            font-weight: 700;
+        }
+
+        .table-primary tr {
+            border-bottom: 1px solid #d7e0ea;
+        }
+
+                /* Status: allow breaks and give it room */
+        .table-primary .field-status           { min-width: 420px; }
+        .table-primary .status-column {
+            display: block;
+            white-space: normal;
+            overflow-wrap: anywhere;    /* modern, breaks long tokens */
+            word-break: break-word;     /* fallback */
+        }
+
+        /* Optional: cap extremely long single cells to avoid super tall rows */
+        .table-primary .status-column--clamp {
+            display: -webkit-box;
+            -webkit-line-clamp: 8;      /* show up to 8 lines */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            white-space: pre-wrap;
+        }
+/* Add these new styles */
+.tab-content-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 0;
+    margin-top: 0;
+}
+
+.pane-heading {
+    display: block !important;
+    position: relative;
+    z-index: 10;
+    background: linear-gradient(90deg, rgba(15, 94, 168, 0.10), rgba(0, 166, 178, 0.06));
+    padding: 14px 18px;
+    margin: 8px 0 18px;
+    border: 1px solid rgba(15, 94, 168, 0.18);
+    border-radius: 16px;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--portal-primary-deep);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.modal-body.popup {
+    position: relative;
+    top: 0;
+    margin-top: 0;
+    padding-top: 0; /* Changed from 10px to 0 */
+    padding-bottom: 10px;
+}
+
+.filter-header-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    width: 100%;
+    min-height: 60px;
+}
+
+.filter-header-text {
+    font-weight: bold;
+    margin-bottom: 5px;
+    align-self: center;
+}
+
+.filter-container {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.header-dropdown {
+    font-size: 11px;
+    padding: 4px 8px;
+    width: 132px;
+    height: 30px;
+    border: 1px solid #bfd0df;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--portal-ink);
+}
+
+/* RESTORE ORIGINAL TABLE STYLING FOR OTHER TABS */
+.table-primary th {
+    vertical-align: top;
+    padding: 8px;
+}
+
+.gridview-container {
+    position: relative;
+    margin-top: 0;
+    padding-top: 0;
+    overflow-x: auto;
+    width: 100%;
+}
+
+.empty-data-container {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 0;
+}
+
+.empty-data-container table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0;
+}
+
+.empty-data-container th {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    padding: 8px;
+    text-align: left;
+}
+
+.empty-data-container td {
+    border: 1px solid #dee2e6;
+    padding: 8px;
+}
+
+/* ONLY MODIFY THE ISSUE LIST TABLE - DON'T BREAK FILTERS */
+#overall_request_details {
+    margin-top: 20px !important;
+    position: relative !important;
+    z-index: 100 !important;
+    border-collapse: collapse !important;
+}
+
+#overall_request_details thead {
+    display: table-header-group !important;
+    background-color: #4472C4 !important;
+    position: relative !important;
+    z-index: 101 !important;
+}
+
+#overall_request_details th {
+    background-color: #4472C4 !important;
+    color: white !important;
+    font-size: 12px !important;
+    padding: 12px 8px !important;
+    height: auto !important;
+    min-height: 40px !important;
+    border-top: 1px solid #000 !important;
+    border-bottom: 1px solid #000 !important;
+    border-left: 2px solid #000 !important;
+    border-right: 2px solid #000 !important;
+    display: table-cell !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 102 !important;
+    text-align: center !important;
+    font-weight: bold !important;
+    vertical-align: middle !important;
+}
+
+#overall_request_details td {
+    border-top: 1px solid #000 !important;
+    border-bottom: 1px solid #000 !important;
+    border-left: 2px solid #000 !important;
+    border-right: 2px solid #000 !important;
+    padding: 8px !important;
+}
+
+/* PRESERVE FILTER DROPDOWN STYLING IN HEADERS */
+#overall_request_details th .filter-header-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    width: 100% !important;
+    min-height: 60px !important;
+}
+
+#overall_request_details th .filter-header-text {
+    font-weight: bold !important;
+    margin-bottom: 5px !important;
+    align-self: center !important;
+    color: white !important;
+}
+
+#overall_request_details th .filter-container {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+}
+
+#overall_request_details th .header-dropdown {
+    font-size: 11px !important;
+    padding: 2px 4px !important;
+    width: 120px !important;
+    height: 25px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 3px !important;
+    background-color: white !important;
+    color: black !important;
+}
+
+/* Fix for empty data template */
+.empty-data-container #overall_request_details th {
+    background-color: #4472C4 !important;
+    color: white !important;
+    padding: 12px 8px !important;
+    border-top: 1px solid #000 !important;
+    border-bottom: 1px solid #000 !important;
+    border-left: 2px solid #000 !important;
+    border-right: 2px solid #000 !important;
+}
+
+.empty-data-container #overall_request_details td {
+    border-top: 1px solid #000 !important;
+    border-bottom: 1px solid #000 !important;
+    border-left: 2px solid #000 !important;
+    border-right: 2px solid #000 !important;
+}
+
+/* Ensure the gridview container doesn't hide content */
+#overall_request_details + .gridview-container,
+.gridview-container:has(#overall_request_details) {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+}
+
+        /* Footer */
+        footer {
+            background-color: #2D3748;
+            color: white;
+            padding-top: 2px;
+            font-size: 10px;
+            position: fixed;
+            text-align: center;
+            width: 100%;
+            height: 3vh;
+            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+
+        /* Modal */
+        .modal .modal-body {
+            max-height: 80%;
+            overflow-y: auto;
+        }
+
+        .searchable-dropdown {
+            width: 200px;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Modern Dropdown */
+        .dropdown {
+            font-size: 12px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid #8fb7db;
+            background-color: rgba(255, 255, 255, 0.98);
+            color: var(--portal-ink);
+            width: auto;
+            min-width: 110px;
+            max-height: 42px;
+            transition: all 0.3s ease;
+            margin-left: 0;
+            margin-top: 0;
+            margin-bottom: 0;
+            box-shadow: 0 8px 18px rgba(15, 94, 168, 0.10);
+        }
+
+            .dropdown:focus {
+                outline: none;
+                border-color: #005d99; /* Darker shade of blue */
+                box-shadow: 0 0 8px rgba(0, 93, 153, 0.5);
+            }
+
+        /* Modern Buttons */
+        .modern-button {
+            background: linear-gradient(180deg, #1672be 0%, #0f5ea8 100%);
+            color: white;
+            border: 1px solid rgba(8, 61, 116, 0.15);
+            padding: 9px 16px;
+            font-size: 11px;
+            border-radius: 999px;
+            cursor: pointer;
+            margin: 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 18px rgba(15, 94, 168, 0.18);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+            .modern-button:hover {
+                background: linear-gradient(180deg, #0f5ea8 0%, #0b4c87 100%);
+                transform: translateY(-1px);
+            }
+
+            .modern-button:focus {
+                outline: none;
+                box-shadow: 0 0 8px rgba(0, 93, 153, 0.6);
+            }
+
+        .modern-button1 {
+            background-color: #1d4f91; /* Intel's blue */
+            color: white;
+            border: none;
+            padding: 8px 16px; /* Smaller padding */
+            font-size: 10px; /* Smaller font */
+            border-radius: 6px; /* Slightly smaller rounded corners */
+            cursor: pointer;
+            margin: 0 8px; /* Horizontal space between buttons */
+            transition: all 0.3s ease;
+        }
+
+             .modern-button1:hover {
+                 background-color: #1172b3; /* Darker Intel Blue on hover */
+             }
+
+             .modern-button1:focus {
+                 outline: none;
+                 box-shadow: 0 0 8px rgba(0, 93, 153, 0.6);
+             }
+
+             .modern-title-container {
+                 display: flex;
+                 justify-content: space-between;
+                 align-items: center;
+                 width: 100%;
+             }
+
+             .export-btn {
+                 margin-left: auto;
+             }
+
+             .modal-header {
+                 position: relative;
+             }
+
+#btnExportDesignToExcel {
+    position: absolute;
+    top: 10px;
+    right: 50px;
+    z-index: 1050;
+}
+
+#btnExportOEMToExcel {
+    position: absolute;
+    top: 10px;
+    right: 50px;
+    z-index: 1050;
+}
+
+#btnExportIngredientToExcel {
+    position: absolute;
+    top: 10px;
+    right: 50px;
+    z-index: 1050;
+}
+
+            /* Modern Buttons */
+.modern-button2 {
+    background-color: green; /* Intel's blue */
+    color: white;
+    border: none;
+    padding: 8px 16px; /* Smaller padding */
+    font-size: 10px; /* Smaller font */
+    border-radius: 6px; /* Slightly smaller rounded corners */
+    cursor: pointer;
+    margin: 0 8px; /* Horizontal space between buttons */
+    transition: all 0.3s ease;
+}
+
+    .modern-button2:hover {
+        background-color: greenyellow; /* Darker Intel Blue on hover */
+    }
+
+    .modern-button2:focus {
+        outline: none;
+        box-shadow: 0 0 8px rgba(0, 93, 153, 0.6);
+    }
+
+        /* Button container for layout */
+        .button-container {
+                    display: flex;
+                    justify-content: center;
+                    gap: 10px;
+                    margin-top: 18px;
+                    margin-bottom: 16px;
+                    padding: 14px;
+                    flex-wrap: wrap;
+                    background: rgba(255, 255, 255, 0.68);
+                    border: 1px solid rgba(205, 217, 229, 0.9);
+                    border-radius: 18px;
+                    box-shadow: 0 10px 28px rgba(21, 49, 79, 0.08);
+        }
+
+         /* Button container for layout */
+.button-container2 {
+    display: flex;
+justify-content: center; /* Center the buttons horizontally */
+gap: 10px; /* Space between buttons */
+margin-top: -150px;
+
+}
+
+.link-container {
+            display: flex;
+            justify-content: flex-end;
+            gap: 14px;
+            padding: 12px 14px;
+            margin-top: 16px;
+            background: rgba(255, 255, 255, 0.68);
+            border: 1px solid rgba(205, 217, 229, 0.9);
+            border-radius: 18px;
+            box-shadow: 0 10px 24px rgba(18, 42, 66, 0.08);
+            flex-wrap: wrap;
+        }
+
+        /* Style for individual links */
+        .link-container a {
+            text-decoration: none;
+            color: var(--portal-primary);
+            font-weight: 700;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(15, 94, 168, 0.08);
+        }
+
+        /* Hover effect for links */
+        .link-container a:hover {
+            color: var(--portal-primary-deep);
+            background: rgba(15, 94, 168, 0.14);
+        }
+
+        /* Responsive design for smaller screens */
+        @media screen and (max-width: 600px) {
+            .dropdown {
+                width: 100%;
+            }
+
+            .button-container {
+                flex-wrap: wrap; /* Allow buttons to wrap in small screens */
+                justify-content: center; /* Center buttons in smaller screen */
+            }
+
+             .button-container2 {
+     flex-wrap: wrap; /* Allow buttons to wrap in small screens */
+     justify-content: center; /* Center buttons in smaller screen */
+ }
+
+            .modern-button {
+                margin: 5px; /* Adjust margin for smaller screen */
+                font-size: 12px; /* Slightly smaller font size */
+                padding: 6px 12px; /* Adjust padding for smaller screen */
+            }
+        }
+
+        .metricsPanel {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center; /* Aligns the content horizontally */
+            align-items: center; /* Optionally centers the content vertically */
+        }
+
+        .super-header {
+            background-color: #f1f1f1;
+            font-weight: bold;
+            text-align: center;
+            padding: 10px;
+        }
+
+        /*.main-header-cell {
+            border: 2px solid black !important;
+            padding: 10px !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+            font-weight: bold !important;
+        }
+
+        .table-primary th {
+            background-color: #2a62c2;
+            color: white;
+            font-weight: 500;
+            vertical-align: middle;
+            text-align: center;
+            line-height: 1.2;
+            padding: 8px 4px;
+            border: 2px solid black !important;
+        }*/
+
+        /* Make sure the sub-headers are properly styled */
+        /*.table-primary thead tr:nth-child(2) th {
+            background-color: #4a7bc8;*/ /* Slightly lighter blue for sub-headers */
+            /*font-size: 0.9em;
+        }
+
+        .table-primary-header {
+            border: 2px solid black !important;
+            padding: 10px !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+            font-weight: bold !important;
+            background-color: #2a62c2 !important;
+            color: white !important;
+        }*/
+ .table-primary {
+     height: 100%; /* Make the table fill the container's height */
+     width: 100%; /* Ensure the table takes up the full width of the container */
+     border-collapse: collapse; /* Ensures borders are merged between cells */
+ }
+
+     .table-primary th {
+         color: white; /* White text color */
+         font-weight: bold; /* Bold text for headers */
+         padding: 10px; /* Padding for better readability */
+         text-align: left; /* Align text to the left */
+         border: 1px solid #ddd; /* Border around headers */
+     }
+
+     .table-primary td {
+         padding: 8px; /* Padding for cells */
+         border: 1px solid #ddd; /* Border around table cells */
+     }
+
+ td:nth-child(even), th:nth-child(even) {
+     border-left: solid 2px black;
+ }
+
+ td:nth-child(odd), th:nth-child(odd) {
+     border-left: solid 2px black;
+ }
+
+ /* First row within .table-primary */
+ .table-primary tr:first-child {
+     background-color: #ffebcc; /* Mild yellow background for the first row */
+     border-bottom: solid 2px black;
+ }
+
+ /* Even rows within .table-primary */
+ .table-primary tr:nth-child(even) {
+     background-color: #c2e0f7; /* Mild blue background for even rows */
+     border-bottom: solid 2px black;
+ }
+
+ /* Odd rows within .table-primary */
+ .table-primary tr:nth-child(odd) {
+     background-color: #e0f1fb; /* Very light blue background for odd rows */
+     border-bottom: solid 2px black;
+ }
+
+
+
+.gridview-container3 {
+    table-layout: fixed;
+    display: inline-block;
+    width: 100%;
+    vertical-align: top;
+    height: 400px;
+    margin-bottom: 2vh;
+}
+
+.table-primary7 {
+    height: 100%; /* Make the table fill the container's height */
+    width: 100%; /* Ensure the table takes up the full width of the container */
+    border-collapse: collapse; /* Ensures borders are merged between cells */
+    /*table-layout: fixed;*/
+}
+
+.table-primary7 th {
+    color: white; /* White text color */
+    font-weight: bold; /* Bold text for headers */
+    padding: 10px; /* Padding for better readability */
+    text-align: left; /* Align text to the left */
+    border: 1px solid #ddd; /* Border around headers */
+    /*vertical-align: middle;*/
+}
+
+.table-primary7 td {
+    padding: 8px; /* Padding for cells */
+    border: 1px solid #ddd; /* Border around table cells */
+    /*text-align: left;  Changed from center to left to match css1 */
+}
+
+/* Driver group borders - every 3 columns (matching the nth-child pattern from css1) */
+.table-primary7 td:nth-child(3n+1), 
+.table-primary7 th:nth-child(3n+1) {
+    border-left: solid 2px black;
+}
+
+/* Apply the same border pattern as css1 for consistency */
+.table-primary7 td:nth-child(even), 
+.table-primary7 th:nth-child(even) {
+    border-left: solid 2px black;
+}
+
+.table-primary7 td:nth-child(odd), 
+.table-primary7 th:nth-child(odd) {
+    border-left: solid 2px black;
+}
+
+
+/* First row within .table-primary7 - matching css1 */
+.table-primary7 tr:first-child {
+    background-color: #ffebcc; /* Mild yellow background for the first row */
+    border-bottom: solid 2px black;
+}
+
+/* Second header row - slightly different yellow to distinguish */
+.table-primary7 tr:nth-child(2) {
+    background-color: #e0f1fb !important; /* Same mild yellow as first row */
+    border-bottom: solid 2px black;
+}
+
+/* Even rows within .table-primary7 - starting from 3rd row (after headers) */
+.table-primary7 tr:nth-child(n+3):nth-child(even) {
+    background-color: #c2e0f7; /* Mild blue background for even rows */
+    border-bottom: solid 2px black;
+}
+
+/* Odd rows within .table-primary7 - starting from 3rd row (after headers) */
+.table-primary7 tr:nth-child(n+3):nth-child(odd) {
+    background-color: #e0f1fb; /* Very light blue background for odd rows */
+    border-bottom: solid 2px black;
+}
+
+/* Total row styling - keeping orange but with consistent borders */
+.total-row {
+    background-color: orange !important;
+    color: black !important;
+    font-weight: bold !important;
+    border-bottom: solid 2px black !important;
+}
+
+/* Merged cells in total row */
+.table-primary7 .total-row td[colspan="2"] {
+    background-color: orange !important;
+    border: 1px solid #ddd !important; /* Changed to match standard cell borders */
+    border-left: solid 2px black !important; /* Maintain the left border pattern */
+    font-weight: bold !important;
+    padding: 8px; /* Match standard cell padding */
+}
+
+/* Ensure total row cells follow the same border pattern */
+.table-primary7 .total-row td {
+    border: 1px solid #ddd !important;
+    border-bottom: solid 2px black !important;
+}
+
+       
+.table-primary2 {
+    height: 100%; /* Make the table fill the container's height */
+    width: 100%; /* Ensure the table takes up the full width of the container */
+    border-collapse: collapse; /* Ensures borders are merged between cells */
+}
+
+.table-primary2 th {
+    color: white; /* White text color */
+    font-weight: bold; /* Bold text for headers */
+    padding: 10px; /* Padding for better readability */
+    text-align: left; /* Align text to the left */
+    border: 1px solid #ddd; /* Border around headers */
+}
+
+.table-primary2 td {
+    padding: 8px; /* Padding for cells */
+    border: 1px solid #ddd; /* Border around table cells */
+}
+
+td:nth-child(even), th:nth-child(even) {
+    border-left: solid 2px black;
+}
+
+td:nth-child(odd), th:nth-child(odd) {
+    border-left: solid 2px black;
+}
+
+/* First row within .table-primary2 */
+.table-primary2 tr:first-child {
+    background-color: #ffebcc; /* Mild yellow background for the first row */
+    border-bottom: solid 2px black;
+}
+
+/* Even rows within .table-primary2 */
+.table-primary2 tr:nth-child(even) {
+    background-color: #c2e0f7; /* Mild blue background for even rows */
+    border-bottom: solid 2px black;
+}
+
+/* Odd rows within .table-primary2 */
+.table-primary2 tr:nth-child(odd) {
+    background-color: #e0f1fb; /* Very light blue background for odd rows */
+    border-bottom: solid 2px black;
+}
+
+/* Last row should have an orange background */
+.table-primary2 tr:last-child {
+    background-color: orange; /* Orange background for the last row */
+    border-bottom: solid 2px black; /* Keep the border on the last row */
+}
+
+
+
+
+        .modal-import {
+            display: none;
+            position: fixed;
+            z-index: 1060;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content-import {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 30%;
+            text-align: center;
+        }
+
+        .close-import {
+            color: red;
+            float: right;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .gridview-container-wrapper {
+            display: flex;
+            gap: 20px; /* Adjust space between the two grid views */
+        }
+
+        .gridview-container3 {
+            flex: 1; /* Makes the two grid views take equal width */
+            padding: 10px; /* Optional, to give some space inside the grid containers */
+        }
+
+        /* Define a CSS class for the column */
+        .status-column {
+            width: 25vw !important; /* Force the width using !important */
+            display: inline-block; /* Prevent overflow issues */
+        }
+        .impact-column {
+            width: 25vw !important; /* Force the width using !important */
+            display: inline-block; /* Prevent overflow issues */
+        }
+
+        .los-column {
+    width: 5vw !important; /* Force the width using !important */
+    display: inline-block; /* Prevent overflow issues */
+}
+
+        .component-column {
+            width: 10vw !important; /* Force the width using !important */ /* Prevent overflow issues */
+            word-wrap: break-word !important; /* Ensure long words break and wrap */
+            word-wrap: break-word; /* Ensures long words will wrap */
+            white-space: normal; /* Allows wrapping within the cell */
+            overflow: hidden; /* Prevents content overflow */
+            max-width: 150px;
+        }
+
+        .owner-column {
+            width: 10vw !important; /* Force the width using !important */ /* Prevent overflow issues */
+            word-wrap: break-word !important; /* Ensure long words break and wrap */
+            word-wrap: break-word; /* Ensures long words will wrap */
+            white-space: normal; /* Allows wrapping within the cell */
+            overflow: hidden; /* Prevents content overflow */
+            max-width: 150px;
+        }
+
+        .idst-column {
+            width: 8vw !important; /* Force the width using !important */
+            display: inline-block; /* Prevent overflow issues */
+        }
+
+        .notes-box {
+            background-color: #e0f1fb;
+            border-radius: 8px;
+            padding: 16px;
+            width: 42.3vw;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .notes-label {
+            font-size: 14px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .notes-value {
+            font-size: 16px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-control {
+            font-size: 12px;
+        }
+
+        .form-control-impact {
+    font-size: 12px;
+}
+
+
+        .link {
+            position: relative;
+            top: -30px;
+            left: 92%;
+        }
+
+        .orange-background {
+    background-color: orange !important;
+    color: black !important;
+}
+
+        /* Update info styling */
+#updateinfo {
+    position: absolute;
+left: 1vw;
+    font-size: 10px; /* smaller to fit nicely */
+    font-family: sans-serif;
+    margin: 0;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.tptdefinitions {
+      padding: 15px;
+      border: 1px solid #ccc;
+      max-width: 550px;
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      font-size: 10px;
+      max-height: 100px;
+    }
+    .tptdefinitions h3 {
+      margin-top: 0;
+    }
+    .tptdefinitions p {
+      margin: 10px 0;
+    }
+
+    .button-wrapper {
+        float: right;
+        padding-right:35px;
+}
+
+    /* Custom modal styles */
+.custom-modal-dialog {
+  max-width: 85%; /* Set the width of the modal to 85% of the page */
+  width: 85%; /* You can adjust this value to get the desired width */
+}
+
+/* Optional: Adjust modal body height if content overflows */
+.custom-modal-body {
+  max-height: 80vh; /* Set max-height of the modal body */
+  overflow-y: auto; /* Enable scrolling if the content is too long */
+}
+
+/* Custom GridView scale */
+.custom-gridview {
+  transform: scale(0.8); /* Scale the entire GridView to 80% of its original size */
+  transform-origin: top left; /* Optional: This makes sure the scaling starts from the top-left corner */
+  margin: 0 auto; /* Center the GridView */
+  width: 120%; /* Ensure GridView still takes up the full width of its container */
+}
+
+/* Optional: Adjust for text overflow or padding inside the GridView */
+.custom-gridview td, .custom-gridview th {
+  padding: 0.5rem; /* Reduce padding for smaller text in scaled grid */
+}
+
+#selectallcheckbox {
+    visibility: hidden;
+}
+
+
+    /* Field visibility controls */
+
+    /* COMPLETE HIDING OF TABLE STRUCTURE FOR UNSELECTED FIELDS */
+    #<%= overall_request_details.ClientID %> .field-sno.hidden,
+    #<%= overall_request_details.ClientID %> .field-progress.hidden,
+    #<%= overall_request_details.ClientID %> .field-sightingid.hidden,
+    #<%= overall_request_details.ClientID %> .field-promotedid.hidden,
+    #<%= overall_request_details.ClientID %> .field-title.hidden,
+    #<%= overall_request_details.ClientID %> .field-component.hidden,
+    #<%= overall_request_details.ClientID %> .field-owner.hidden,
+    #<%= overall_request_details.ClientID %> .field-promoted_owner.hidden,
+    #<%= overall_request_details.ClientID %> .field-rvp_repro.hidden,
+    #<%= overall_request_details.ClientID %> .field-processor.hidden,
+    #<%= overall_request_details.ClientID %> .field-status.hidden,
+    #<%= overall_request_details.ClientID %> .field-idst.hidden,
+    #<%= overall_request_details.ClientID %> .field-los.hidden,
+    #<%= overall_request_details.ClientID %> .field-customer_company.hidden,
+    #<%= overall_request_details.ClientID %> .field-customer_detail.hidden,
+    #<%= overall_request_details.ClientID %> .field-imagefreeze.hidden,
+    #<%= overall_request_details.ClientID %> .field-component_group.hidden,
+    #<%= overall_request_details.ClientID %> .field-duplicatedetails.hidden,
+    #<%= overall_request_details.ClientID %> .field-impact.hidden,
+    #<%= overall_request_details.ClientID %> .field-milestone.hidden,
+    #<%= overall_request_details.ClientID %> .field-days_open.hidden,
+    #<%= overall_request_details.ClientID %> .field-cmf_request.hidden,
+    #<%= overall_request_details.ClientID %> .field-closed_reason.hidden,
+    #<%= overall_request_details.ClientID %> .field-edit_column.hidden {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        border-width: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* Hide empty data template columns as well */
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-sno.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-progress.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-sightingid.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-promotedid.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-title.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-component.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-owner.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-promoted_owner.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-rvp_repro.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-processor.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-status.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-idst.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-los.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-customer_company.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-customer_detail.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-duplicatedetails.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-component_group.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-imagefreeze.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-impact.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-milestone.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-days_open.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-cmf_request.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-closed_reason.hidden,
+    #<%= overall_request_details.ClientID %> .empty-data-container .field-edit_column.hidden {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        border-width: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* Force table layout to recalculate when columns are hidden */
+    #<%= overall_request_details.ClientID %> {
+        table-layout: auto !important;
+    }
+
+    #<%= overall_request_details.ClientID %> table {
+        table-layout: auto !important;
+        width: 100% !important;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .checkbox-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .panel-actions {
+            justify-content: center;
+        }
+    }
+
+    /* Second-pass dashboard polish */
+    .field-selector-panel {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(247, 250, 252, 0.96) 100%);
+        border: 1px solid rgba(205, 217, 229, 0.95);
+        border-radius: 18px;
+        margin: 12px 0 18px;
+        padding: 18px;
+        box-shadow: 0 12px 28px rgba(17, 43, 70, 0.08);
+    }
+
+    .field-selector-toggle {
+        background: linear-gradient(120deg, var(--portal-primary-deep) 0%, var(--portal-primary) 65%, var(--portal-accent) 100%);
+        color: white;
+        border: none;
+        padding: 12px 22px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 700;
+        transition: all 0.3s ease;
+        box-shadow: 0 12px 22px rgba(15, 94, 168, 0.22);
+}
+

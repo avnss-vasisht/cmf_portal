@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copy this file to Web.config for local development and fill in environment-specific values.
+  Do not commit real API keys, tokens, passwords, or internal connection strings.
+-->
+<configuration>
+  <appSettings>
+    <add key="ValidationSettings:UnobtrusiveValidationMode" value="None" />
+    <add key="Syncfusion:LicenseKey" value="YOUR_SYNCFUSION_LICENSE_KEY" />
+    <add key="DashboardRefreshSeconds" value="600" />
+
+    <add key="GitHubModels:Endpoint" value="https://models.inference.ai.azure.com/chat/completions" />
+    <add key="GitHubModels:Model" value="gpt-4o-mini" />
+    <add key="GitHubModels:ApiKey" value="YOUR_GITHUB_MODELS_PAT" />
+    <add key="GitHubModels:Proxy" value="http://proxy-chain.intel.com:911" />
+
+    <add key="GNAI:Endpoint" value="https://gnai.intel.com/api/providers/openai/v1/chat/completions" />
+    <add key="GNAI:Model" value="gpt-5-mini" />
+    <add key="GNAI:ApiKey" value="YOUR_GNAI_TOKEN" />
+    <add key="GNAI:Proxy" value="" />
+
+    <add key="Python:Executable" value="C:\\Program Files\\Python314\\python.exe" />
+  </appSettings>
+
+  <connectionStrings>
+    <add name="gfxitt" connectionString="YOUR_DATABASE_CONNECTION_STRING" providerName="System.Data.SqlClient" />
+  </connectionStrings>
+
+  <system.web>
+    <compilation debug="true" targetFramework="4.8" />
+    <httpRuntime targetFramework="4.8" maxRequestLength="102400" executionTimeout="3600" />
+    <pages validateRequest="false" />
+  </system.web>
+</configuration>

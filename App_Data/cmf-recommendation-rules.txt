@@ -1,0 +1,22 @@
+﻿rules:
+    - id: R1
+        name: Minimum replication / reproducibility evidence
+        condition: reproducibility is meaningful OR RVP repro is yes
+        weight: high
+    - id: R2
+        name: User or customer impact severity
+        condition: impact contains High, Critical, customer blocker, data loss, hang, crash, or certification risk
+        weight: high
+    - id: R3
+        name: Clear CMF request intent
+        condition: cmf_request is cmf_ok, requested, pending, or otherwise asks for CMF review
+        weight: medium
+    - id: R4
+        name: Enough issue context
+        condition: title, component, and impact/justification are populated
+        weight: medium
+    - id: R5
+        name: Not obviously low signal
+        condition: impact is not empty and does not indicate no customer/user impact
+        weight: medium
+threshold_for_cmf_tag: 0.7

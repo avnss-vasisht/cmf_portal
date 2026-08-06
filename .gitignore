@@ -1,0 +1,31 @@
+# Local IDE/runtime state
+.vs/
+.vscode/
+.pkgtemp/
+.venv/
+
+# Local secrets
+Web.config
+test_token.ps1
+*.user
+*.suo
+
+# Generated diagnostics and captures
+page500.html
+home_dashboard_response.html
+_page.html
+_page_after_wrap.html
+*.log
+
+# Generated report/data outputs
+Content/generated-reports/
+App_Data/reports-assistant/issues_*.csv
+App_Data/reports-assistant/template_*.md
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# OS files
+Thumbs.db
+.DS_Store
