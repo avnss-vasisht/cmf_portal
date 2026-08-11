@@ -112,7 +112,7 @@ threshold_for_cmf_tag: 0.70";
             rules = GetActiveRulesText();
         }
 
-        string hash = ComputeHash("cmf-recommendation-threshold-v4|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + rules);
+        string hash = ComputeHash("cmf-recommendation-reasoning-v5|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + rules);
         string cacheKey = "cmf-recommendation:" + hash;
 
         CmfRecommendationResponse cached = TryGetCached(cacheKey);
@@ -549,19 +549,17 @@ threshold_for_cmf_tag: 0.70";
         }
 
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine("## Recommendation: " + decision);
+        builder.AppendLine("## " + decision);
         builder.AppendLine();
-        builder.AppendLine("- Why: " + ruleSummary);
-        builder.AppendLine("- Decision driver: " + BuildRecommendationDecisionDriver(decision, hasContext, hasRequestIntent, meaningfulRepro, highImpact, hasSysScopeEvidence, lowImpact) + ".");
-        builder.AppendLine("- Evidence used: request state is \"" + safeRequest + "\"; RVP repro is \"" + SafeDisplay(reproOnRvp) + "\"; reproducibility is \"" + SafeDisplay(reproducibility) + "\"; iDST is \"" + SafeDisplay(idst) + "\"; impact is " + safeImpact + ".");
-        builder.AppendLine("- Admin rules used: " + BuildRulesSnippet(rules));
+        builder.AppendLine("- Decision: " + ruleSummary);
+        builder.AppendLine("- Evidence: request \"" + safeRequest + "\"; RVP \"" + SafeDisplay(reproOnRvp) + "\"; reproducibility \"" + SafeDisplay(reproducibility) + "\"; impact " + safeImpact + ".");
         if (decision == "Tag as CMF")
         {
-            builder.Append("Recommended next step: tag as CMF and record the owner ETA, because the rule evidence is complete enough for the tag.");
+            builder.Append("- Next: approve the tag after owner ETA is confirmed.");
         }
         else
         {
-            builder.Append("Recommended next step: do not tag as CMF unless the missing rule evidence is added and re-evaluated.");
+            builder.Append("- Next: collect missing rule evidence before approving the tag.");
         }
         return builder.ToString();
     }
@@ -766,11 +764,6 @@ threshold_for_cmf_tag: 0.70";
     {
         List<string> blockers = new List<string>();
         List<string> strengths = new List<string>();
-        bool hasReproStrength = false;
-        bool hasImpactStrength = false;
-        bool hasIntentStrength = false;
-        bool hasContextStrength = false;
-        bool hasLowSignalStrength = false;
         if (ruleScores != null)
         {
             foreach (CmfRecommendationRuleScore rule in ruleScores)
@@ -779,48 +772,69 @@ threshold_for_cmf_tag: 0.70";
                 string ruleId = rule == null ? string.Empty : SafeText(rule.RuleId);
                 if (evaluation.StartsWith("FAIL", StringComparison.OrdinalIgnoreCase) || evaluation.StartsWith("PARTIAL", StringComparison.OrdinalIgnoreCase))
                 {
-                    blockers.Add((rule.RuleId ?? "Rule") + ": " + evaluation);
+                    blockers.Add(BuildRecommendationReasonClause(ruleId, evaluation, false));
                 }
                 else if (evaluation.StartsWith("PASS", StringComparison.OrdinalIgnoreCase))
                 {
-                    strengths.Add((rule.RuleId ?? "Rule") + ": " + evaluation);
-                    if (string.Equals(ruleId, "R1", StringComparison.OrdinalIgnoreCase)) hasReproStrength = true;
-                    if (string.Equals(ruleId, "R2", StringComparison.OrdinalIgnoreCase)) hasImpactStrength = true;
-                    if (string.Equals(ruleId, "R3", StringComparison.OrdinalIgnoreCase)) hasIntentStrength = true;
-                    if (string.Equals(ruleId, "R4", StringComparison.OrdinalIgnoreCase)) hasContextStrength = true;
-                    if (string.Equals(ruleId, "R5", StringComparison.OrdinalIgnoreCase)) hasLowSignalStrength = true;
+                    strengths.Add(BuildRecommendationReasonClause(ruleId, evaluation, true));
                 }
             }
         }
 
-        string primary = blockers.Count > 0 ? BuildPlainReasonFromRuleText(blockers[0]) : (strengths.Count > 0 ? BuildPlainReasonFromRuleText(strengths[0]) : "the available fields were checked against the active CMF policy");
-        string secondary = blockers.Count > 1 ? BuildPlainReasonFromRuleText(blockers[1]) : (strengths.Count > 1 ? BuildPlainReasonFromRuleText(strengths[1]) : string.Empty);
-        StringBuilder reasoning = new StringBuilder();
         bool shouldTag = string.Equals(recommendation, "Tag as CMF", StringComparison.OrdinalIgnoreCase);
-        reasoning.Append("The recommendation is based on whether the issue has enough CMF-worthy evidence, not just whether details are present. ");
-        reasoning.Append("It scored ").Append(overallQualityScore).Append("/100 against a ").Append(thresholdScore).Append("/100 threshold. ");
-        reasoning.Append(string.IsNullOrWhiteSpace(recommendation) ? "Do not tag as CMF" : recommendation).Append(" was selected because ");
+        StringBuilder reasoning = new StringBuilder();
         if (shouldTag)
         {
-            reasoning.Append(BuildPositiveRecommendationBasis(hasReproStrength, hasImpactStrength, hasIntentStrength, hasContextStrength, hasLowSignalStrength));
-            reasoning.Append(" Supporting signals include ").Append(TrimTrailingSentencePunctuation(strengths.Count > 0 ? BuildPlainReasonFromRuleText(strengths[0]) : primary));
-            if (!string.IsNullOrWhiteSpace(secondary))
-            {
-                reasoning.Append(" and ").Append(TrimTrailingSentencePunctuation(strengths.Count > 1 ? BuildPlainReasonFromRuleText(strengths[1]) : secondary));
-            }
-            reasoning.Append(".");
+            reasoning.Append("The issue meets the CMF tagging bar because the strongest signals support both severity and actionability. ");
+            reasoning.Append("The score is ").Append(overallQualityScore).Append("/100 against a ").Append(thresholdScore).Append("/100 threshold, and ");
+            reasoning.Append(strengths.Count > 0 ? JoinReadableList(TakeFirstReasons(strengths, 2)) : "the active rule checks do not show a blocking gap").Append(". ");
+            reasoning.Append("Based on those signals, tagging is justified while the owner continues normal validation tracking.");
         }
         else
         {
-            reasoning.Append("one or more gating signals are weak or missing. ");
-            reasoning.Append("The main blocker is ").Append(primary);
-            if (!string.IsNullOrWhiteSpace(secondary))
-            {
-                reasoning.Append(". A second concern is ").Append(secondary);
-            }
-            reasoning.Append(". Because these are gating signals, the item should not move forward until the missing evidence is clarified.");
+            reasoning.Append("The issue should not be tagged yet because the evidence does not clear the CMF decision gates. ");
+            reasoning.Append("The score is ").Append(overallQualityScore).Append("/100 against a ").Append(thresholdScore).Append("/100 threshold, and ");
+            reasoning.Append(blockers.Count > 0 ? JoinReadableList(TakeFirstReasons(blockers, 2)) : "one or more required signals are still unclear").Append(". ");
+            reasoning.Append("Until those gaps are resolved, approving the CMF tag would be premature.");
         }
         return reasoning.ToString();
+    }
+
+    private static List<string> TakeFirstReasons(List<string> reasons, int maxCount)
+    {
+        List<string> selected = new List<string>();
+        if (reasons == null) return selected;
+        for (int index = 0; index < reasons.Count && selected.Count < maxCount; index++)
+        {
+            if (!string.IsNullOrWhiteSpace(reasons[index])) selected.Add(reasons[index]);
+        }
+        return selected;
+    }
+
+    private static string BuildRecommendationReasonClause(string ruleId, string evaluation, bool isPass)
+    {
+        string detail = ExtractRuleDetail(evaluation);
+        if (string.Equals(ruleId, "R1", StringComparison.OrdinalIgnoreCase))
+        {
+            return isPass ? "reproduction or RVP evidence makes the issue credible" : "reproduction or RVP evidence is not strong enough yet";
+        }
+        if (string.Equals(ruleId, "R2", StringComparison.OrdinalIgnoreCase))
+        {
+            return isPass ? "the customer or user impact is severe enough for CMF attention" : "the impact does not clearly show a CMF-level customer or user consequence";
+        }
+        if (string.Equals(ruleId, "R3", StringComparison.OrdinalIgnoreCase))
+        {
+            return isPass ? "the request state shows clear CMF intent" : "the CMF request intent still needs confirmation";
+        }
+        if (string.Equals(ruleId, "R4", StringComparison.OrdinalIgnoreCase))
+        {
+            return isPass ? "the issue has enough component and impact context for review" : "the issue context is incomplete for a confident decision";
+        }
+        if (string.Equals(ruleId, "R5", StringComparison.OrdinalIgnoreCase))
+        {
+            return isPass ? "there is no obvious low-signal wording blocking the tag" : "the wording suggests the issue may be low signal or low impact";
+        }
+        return isPass ? "the available evidence supports the active rules" : (string.IsNullOrWhiteSpace(detail) ? "a required rule signal is incomplete" : detail.Trim(' ', '(', ')'));
     }
 
     private static string BuildPlainReasonFromRuleText(string ruleText)
@@ -1125,7 +1139,7 @@ threshold_for_cmf_tag: 0.70";
         prompt.AppendLine("OVERALL QUALITY SCORE: [0-100 integer rollup based on the rule scores]");
         prompt.AppendLine();
         prompt.AppendLine("AI REASONING:");
-        prompt.AppendLine("[2-3 issue-specific sentences that answer why this recommendation was made. Connect the decision to the strongest supporting or blocking rule IDs, explain the causal decision driver, and avoid simply restating issue fields.] ");
+        prompt.AppendLine("[2-3 polished, issue-specific sentences that explain why the recommendation is justified. Use natural grammar. Connect the decision to the strongest supporting or blocking rules, and do not copy raw field values as the reasoning.] ");
         prompt.AppendLine();
         prompt.AppendLine("RULE SCORES:");
         prompt.AppendLine("For each rule defined above, provide:");

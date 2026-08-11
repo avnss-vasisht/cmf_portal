@@ -3,18 +3,15 @@
 .vscode/
 .pkgtemp/
 .venv/
+others/
 
 # Local secrets
 Web.config
-test_token.ps1
 *.user
 *.suo
 
 # Generated diagnostics and captures
-page500.html
-home_dashboard_response.html
-_page.html
-_page_after_wrap.html
+page500_ai_confidence.html
 *.log
 
 # Generated report/data outputs

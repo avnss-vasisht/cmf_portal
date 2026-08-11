@@ -138,6 +138,8 @@ public partial class CMF_Web_portal : System.Web.UI.Page
     private const string ActiveFocusedTabSessionKey = "activeFocusedTab";
     private const string UserModeSessionKey = "portalUserMode";
     private const string IssuePendingPlatformSessionKey = "issuePendingSelectedPlatform";
+    private const string IssueGridCacheKeySessionKey = "issueGridCacheKey";
+    private const string IssueGridCacheDataSessionKey = "issueGridCacheData";
 
     private static readonly HashSet<string> AllowedPlatformTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -153,21 +155,6 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         "CMF_NVL_S_ALL_COMPONENTS_TABLE",
         "CMF_NVL_H_ALL_COMPONENTS_TABLE",
         "CMF_NVL_U_ALL_COMPONENTS_TABLE"
-    };
-
-    private static readonly string[] HomeDashboardPlatformTables = new string[]
-    {
-        "CMF_PTL_ALL_COMPONENTS_TABLE",
-        "CMF_LNL_ALL_COMPONENTS_TABLE",
-        "CMF_ARL_S_ALL_COMPONENTS_TABLE",
-        "CMF_ARL_H_ALL_COMPONENTS_TABLE",
-        "CMF_ARL_U_ALL_COMPONENTS_TABLE",
-        "CMF_ARL_HX_ALL_COMPONENTS_TABLE",
-        "CMF_ARL_Refresh_ALL_COMPONENTS_TABLE",
-        "CMF_GNR_ALL_COMPONENTS_TABLE",
-        "CMF_WCL_ALL_COMPONENTS_TABLE",
-        "CMF_NVL_S_ALL_COMPONENTS_TABLE",
-        "CMF_NVL_H_ALL_COMPONENTS_TABLE"
     };
 
     private List<string> drivers = new List<string>();
@@ -612,7 +599,19 @@ public partial class CMF_Web_portal : System.Web.UI.Page
     protected override void OnPreRender(EventArgs e)
     {
         ApplyFocusedPortalMode();
+        RegisterActiveTabClientState();
         base.OnPreRender(e);
+    }
+
+    private void RegisterActiveTabClientState()
+    {
+        string activeTab = GetActiveFocusedTab();
+        string script = "window.CMF_PORTAL=window.CMF_PORTAL||{};" +
+            "window.CMF_PORTAL.activeFocusedTab='" + HttpUtility.JavaScriptStringEncode(activeTab) + "';" +
+            "setTimeout(function(){if(typeof syncIssuePendingSidePanelVisibility==='function')syncIssuePendingSidePanelVisibility();},0);" +
+            "setTimeout(function(){if(typeof syncIssuePendingSidePanelVisibility==='function')syncIssuePendingSidePanelVisibility();},120);";
+
+        ScriptManager.RegisterStartupScript(this, GetType(), "activeFocusedTabState", script, true);
     }
 
     private void SetActiveFocusedTab(string tabKey)
@@ -679,7 +678,7 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         selectedItem.Selected = true;
     }
 
-    private string GetActiveFocusedTab()
+    protected string GetActiveFocusedTab()
     {
         string activeTab = Session[ActiveFocusedTabSessionKey] as string;
         return string.IsNullOrWhiteSpace(activeTab) ? "issue" : activeTab;
@@ -692,7 +691,9 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         string activeTab = GetActiveFocusedTab();
         if (string.Equals(activeTab, "pending", StringComparison.OrdinalIgnoreCase))
         {
+            EnsurePendingTabVisibleForPostback();
             BindGridView_cmf_pending();
+            UpdateCmfPendingKpis();
             return;
         }
 
@@ -705,7 +706,14 @@ public partial class CMF_Web_portal : System.Web.UI.Page
             }
             return;
         }
+        
+        if (string.Equals(activeTab, "home", StringComparison.OrdinalIgnoreCase))
+        {
+            ShowWelcomeHome();
+            return;
+        }
 
+        EnsureIssueTabVisibleForPostback();
         BindAllFilters();
         BindGridView(null, null, bindRelatedGrids: false);
     }
@@ -735,9 +743,9 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         Session["losFilter"] = "All";
         Session["milestoneFilter"] = "All";
         Session["cmfRequestFilter"] = "All";
-        Session["CompanyFilter"] = "All";
-        Session["DetailFilter"] = "All";
-        Session["ComponentFilter"] = "All";
+        Session["companyFilter"] = "All";
+        Session["detailFilter"] = "All";
+        Session["componentFilter"] = "All";
     }
 
     private void SetIssuePagerVisible(bool isVisible)
@@ -818,6 +826,68 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         btnExportToExcel_cmf_pending.Visible = false;
     }
 
+    private void EnsureIssueTabVisibleForPostback()
+    {
+        if (homeWelcomePanel != null)
+        {
+            homeWelcomePanel.Visible = false;
+        }
+
+        SetMainDataWrapperVisible(true);
+        searchfilters.Visible = false;
+        analyticsPanel.Visible = false;
+
+        overall_request_details.Visible = true;
+        GridView_cmf_pending.Visible = false;
+        fieldSelectorPanel.Visible = true;
+        issueListHeaderPanel.Visible = true;
+        cmf_pending_header_panel.Visible = false;
+        SetIssuePagerVisible(true);
+
+        pane3.Visible = true;
+        pane4.Visible = false;
+        pane8.Visible = false;
+        pane9.Visible = false;
+
+        btnExportToExcel.Visible = true;
+        btnExportToExcel_cmf_pending.Visible = false;
+        reportsPlaceholderPanel.Visible = false;
+        configRulesPanel.Visible = false;
+
+        InitializeSharedFilterPanel();
+    }
+
+    private void EnsurePendingTabVisibleForPostback()
+    {
+        if (homeWelcomePanel != null)
+        {
+            homeWelcomePanel.Visible = false;
+        }
+
+        SetMainDataWrapperVisible(true);
+        searchfilters.Visible = false;
+        analyticsPanel.Visible = false;
+
+        overall_request_details.Visible = false;
+        GridView_cmf_pending.Visible = true;
+        fieldSelectorPanel.Visible = false;
+        issueListHeaderPanel.Visible = false;
+        cmf_pending_header_panel.Visible = false;
+        SetIssuePagerVisible(false);
+
+        pane3.Visible = false;
+        pane4.Visible = true;
+        pane8.Visible = false;
+        pane9.Visible = false;
+
+        btnExportToExcel.Visible = false;
+        btnExportToExcel_cmf_pending.Visible = true;
+        reportsPlaceholderPanel.Visible = false;
+        configRulesPanel.Visible = false;
+
+        InitializeSharedFilterPanel();
+    }
+
     private void LoadCmfRulesEditor()
     {
         if (txtCmfRules != null)
@@ -896,12 +966,10 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         }
     }
 
-    private string BuildHomeDashboardSourceSql()
+    private string BuildHomeDashboardSourceSql(string platformTable)
     {
-        List<string> sourceQueries = new List<string>();
-        foreach (string platformTable in HomeDashboardPlatformTables)
-        {
-            sourceQueries.Add(@"SELECT
+        platformTable = ResolvePlatformTable(platformTable);
+        return @"(SELECT
     status,
     priority,
     customer_impact,
@@ -909,10 +977,7 @@ public partial class CMF_Web_portal : System.Web.UI.Page
     date_cmf_decided,
     date_cmf_ask,
     component_group
-FROM " + ResolvePlatformTable(platformTable));
-        }
-
-        return "(" + string.Join(" UNION ALL ", sourceQueries.ToArray()) + ") AS all_cmf_issues";
+FROM " + platformTable + ") AS platform_cmf_issues";
     }
 
     private static string BuildHomeAiDailySummaryHtml(HomeDashboardSnapshot snapshot)
@@ -940,9 +1005,10 @@ FROM " + ResolvePlatformTable(platformTable));
 
     private HomeDashboardSnapshot BuildHomeDashboardSnapshot()
     {
-        string dashboardSourceSql = BuildHomeDashboardSourceSql();
+        string dashboardPlatform = ResolvePlatformTable(Session["selectedPlatform"] as string ?? ddlTables.SelectedValue);
+        string dashboardSourceSql = BuildHomeDashboardSourceSql(dashboardPlatform);
         HomeDashboardSnapshot snapshot = new HomeDashboardSnapshot();
-        snapshot.PlatformLabel = "Overall CMF Dashboard";
+        snapshot.PlatformLabel = BuildPlatformDisplayName(dashboardPlatform);
         snapshot.GeneratedAt = DateTime.Now.ToString("dd MMM yyyy HH:mm", CultureInfo.InvariantCulture);
         snapshot.Trend = new List<HomeDashboardTrendPoint>();
         snapshot.StatusDistribution = new List<HomeDashboardCategoryPoint>();
@@ -1181,7 +1247,8 @@ ORDER BY issue_count DESC", con))
         GridView_notes.Visible = false;
         GridView_comp.Visible = false;
         tptdefdiv.Visible = false;
-        BindGridView();
+        BindAllFilters();
+        BindGridView(null, null, bindRelatedGrids: false);
         if (lnkPlatformDashboardPending != null)
         {
             lnkPlatformDashboardPending.Visible = false;
@@ -1317,7 +1384,7 @@ ORDER BY issue_count DESC", con))
         pane9.Visible = false;
         fieldSelectorPanel.Visible = false;
         issueListHeaderPanel.Visible = false;
-        cmf_pending_header_panel.Visible = true;
+        cmf_pending_header_panel.Visible = false;
         SetIssuePagerVisible(false);
         configRulesPanel.Visible = false;
         reportsPlaceholderPanel.Visible = false;
@@ -1917,9 +1984,11 @@ ORDER BY issue_count DESC", con))
 
     private void ApplyAllFilters()
     {
+        EnsureIssueTabVisibleForPostback();
         overall_request_details.PageIndex = 0;
         string filterValue = Session["filterValue"] as string;
         Dictionary<string, string> filters = GetAllFilterValues();
+        BindAllFilters();
         BindGridView(filterValue, filters, bindRelatedGrids: false);
     }
 
@@ -1938,6 +2007,143 @@ ORDER BY issue_count DESC", con))
         {"Detail", Session["detailFilter"] as string ?? "All"},        // Fixed: use "detailFilter"
         {"Component", Session["componentFilter"] as string ?? "All"},  // Fixed: use "componentFilter"
     };
+    }
+
+    private string BuildIssueGridCacheKey(string filterValue, Dictionary<string, string> columnFilters)
+    {
+        StringBuilder keyBuilder = new StringBuilder();
+        keyBuilder.Append(ResolvePlatformTable(selectedPlatform));
+        keyBuilder.Append("|driver=");
+        keyBuilder.Append(string.IsNullOrWhiteSpace(filterValue) ? "" : filterValue.Trim());
+
+        if (columnFilters != null)
+        {
+            foreach (KeyValuePair<string, string> filter in columnFilters.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                keyBuilder.Append("|");
+                keyBuilder.Append(filter.Key ?? string.Empty);
+                keyBuilder.Append("=");
+                keyBuilder.Append(filter.Value ?? string.Empty);
+            }
+        }
+
+        return keyBuilder.ToString();
+    }
+
+    private void CacheIssueGridData(string filterValue, Dictionary<string, string> columnFilters, DataTable dt)
+    {
+        Session[IssueGridCacheKeySessionKey] = BuildIssueGridCacheKey(filterValue, columnFilters);
+        Session[IssueGridCacheDataSessionKey] = dt;
+    }
+
+    private bool TryBindIssueGridFromCache(string filterValue, Dictionary<string, string> columnFilters)
+    {
+        string expectedKey = BuildIssueGridCacheKey(filterValue, columnFilters);
+        string cachedKey = Session[IssueGridCacheKeySessionKey] as string;
+        DataTable cachedData = Session[IssueGridCacheDataSessionKey] as DataTable;
+
+        if (cachedData == null || string.IsNullOrWhiteSpace(cachedKey) || !string.Equals(expectedKey, cachedKey, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        BindIssueGridFromDataTable(cachedData, bindRelatedGrids: false);
+        return true;
+    }
+
+    private void BindIssueGridFromDataTable(DataTable dt, bool bindRelatedGrids)
+    {
+        if (dt == null)
+        {
+            dt = new DataTable();
+        }
+
+        int totalIssues = dt.Rows.Count;
+        int inProgressIssues = 0;
+        int closedIssues = 0;
+        int staleIssues = 0;
+
+        foreach (DataRow row in dt.Rows)
+        {
+            string status = row["IssueStatus"] == DBNull.Value
+                ? string.Empty
+                : row["IssueStatus"].ToString().Trim().ToLowerInvariant();
+
+            if (status == "complete" || status == "rejected")
+            {
+                closedIssues++;
+            }
+            else if (status == "open" || status == "implemented")
+            {
+                inProgressIssues++;
+            }
+            else
+            {
+                staleIssues++;
+            }
+        }
+
+        lblIssueTotal.Text = totalIssues.ToString();
+        lblIssueInProgress.Text = inProgressIssues.ToString();
+        lblIssueClosed.Text = closedIssues.ToString();
+        lblIssueStale.Text = staleIssues.ToString();
+
+        int maxPageIndex = Math.Max(0, (int)Math.Ceiling(dt.Rows.Count / (double)overall_request_details.PageSize) - 1);
+        if (overall_request_details.PageIndex > maxPageIndex)
+        {
+            overall_request_details.PageIndex = maxPageIndex;
+        }
+
+        overall_request_details.DataSource = dt;
+        overall_request_details.DataKeyNames = new string[] { "SightingID" };
+        overall_request_details.DataBind();
+
+        int pageCount = Math.Max(1, overall_request_details.PageCount);
+        int currentPage = overall_request_details.PageIndex + 1;
+
+        const int pagesPerGroup = 10;
+        int currentGroupStartPage = ((currentPage - 1) / pagesPerGroup) * pagesPerGroup + 1;
+        int currentGroupEndPage = Math.Min(currentGroupStartPage + pagesPerGroup - 1, pageCount);
+
+        List<PageNumberItem> pageNumbers = new List<PageNumberItem>();
+        for (int i = currentGroupStartPage; i <= currentGroupEndPage; i++)
+        {
+            pageNumbers.Add(new PageNumberItem
+            {
+                PageNumber = i,
+                IsCurrentPage = (i == currentPage)
+            });
+        }
+        rptPageNumbers.DataSource = pageNumbers;
+        rptPageNumbers.DataBind();
+
+        bool hasPreviousGroup = currentGroupStartPage > 1;
+        bool hasNextGroup = currentGroupEndPage < pageCount;
+
+        btnPageGroupPrev.Enabled = hasPreviousGroup;
+        btnPageGroupNext.Enabled = hasNextGroup;
+
+        btnPageGroupPrev.CssClass = btnPageGroupPrev.Enabled ? "issue-pager-group-btn" : "issue-pager-group-btn disabled";
+        btnPageGroupNext.CssClass = btnPageGroupNext.Enabled ? "issue-pager-group-btn" : "issue-pager-group-btn disabled";
+
+        int rangeStart = totalIssues == 0 ? 0 : (overall_request_details.PageIndex * overall_request_details.PageSize) + 1;
+        int rangeEnd = totalIssues == 0 ? 0 : Math.Min(totalIssues, rangeStart + overall_request_details.PageSize - 1);
+        lblIssuePageStatus.Text = string.Format("Showing {0}-{1} of {2} | Current: {3} of {4}",
+            rangeStart,
+            rangeEnd,
+            totalIssues,
+            currentPage,
+            pageCount);
+
+        if (bindRelatedGrids)
+        {
+            BindGridView_design_open();
+            BindGridView_cmf_summary();
+            BindGridView_cmf_pending();
+            BindGridView_design_summary();
+            BindGridView_component_summary();
+            BindGridView_oem_summary();
+        }
     }
 
     private static Dictionary<string, string> GetFilterValuesExcluding(Dictionary<string, string> filters, string excludeKey)
@@ -2019,6 +2225,7 @@ ORDER BY issue_count DESC", con))
         using (var con = new SqlConnection(ConnectionString))
         {
             con.Open();
+            EnsurePublicIssueDriverFilter(con, currentPlatform);
 
             BindOwnerFilter(con, currentPlatform, activeFilters);
             BindFilterData(con, "repro_on_rvp", "RvpReproItems", currentPlatform, activeFilters, "rvpRepro");
@@ -2030,6 +2237,21 @@ ORDER BY issue_count DESC", con))
             BindFilterData(con, "customer_detail", "DetailItems", currentPlatform, activeFilters, "Detail");
             BindFilterData(con, "component_group", "ComponentItems", currentPlatform, activeFilters, "Component");
         }
+
+        PopulateTopFilterDropdowns();
+    }
+
+    private void PopulateTopFilterDropdowns()
+    {
+        PopulateTopFilterDropdown("ddlOwnerTop", "OwnerItems", "ownerFilter");
+        PopulateTopFilterDropdown("ddlRvpReproTop", "RvpReproItems", "rvpReproFilter");
+        PopulateTopFilterDropdown("ddlIdstTop", "IdstItems", "idstFilter");
+        PopulateTopFilterDropdown("ddlLosTop", "LosItems", "losFilter");
+        PopulateTopFilterDropdown("ddlCompanyTop", "CompanyItems", "companyFilter");
+        PopulateTopFilterDropdown("ddlDetailTop", "DetailItems", "detailFilter");
+        PopulateTopFilterDropdown("ddlComponentTop", "ComponentItems", "componentFilter");
+        PopulateTopFilterDropdown("ddlMilestoneTop", "MilestoneItems", "milestoneFilter");
+        PopulateTopFilterDropdown("ddlCmfRequestTop", "CmfRequestItems", "cmfRequestFilter");
     }
 
     private void BindFilterData(SqlConnection con, string columnName, string viewStateKey, string platform, Dictionary<string, string> activeFilters, string excludeFilterKey)
@@ -2069,14 +2291,19 @@ ORDER BY issue_count DESC", con))
                         "    OR ( " +
                         "       @FilterValue LIKE '%,' + drivers + ',%' " +
                         "       OR @FilterValue LIKE drivers + ',%' " +
-                        "       OR @FilterValue LIKE '%,' + drivers) ) ";
+                        "       OR @FilterValue LIKE '%,' + drivers) ) " +
+                        "AND sysdebug Like ('%customer_must_fix%') AND status NOT IN ('rejected') AND cmf_request in ('cmf_ok') ";
             }
             else
             {
                 query += " AND ((@FilterValue = 'Pre-PV' AND drivers LIKE '%WW%' " +
                         " AND FLOOR(CAST(SUBSTRING(drivers, CHARINDEX('WW', must_fix_for) + 2, 2) AS FLOAT)) BETWEEN 1 AND 31) " +
-                        "    OR drivers = @FilterValue ) ";
+                        "    OR drivers = @FilterValue ) AND status NOT IN ('rejected') AND sysdebug Like ('%customer_must_fix%') AND cmf_request in ('cmf_ok') ";
             }
+        }
+        else
+        {
+            query += " AND status NOT IN ('rejected') AND sysdebug Like ('%customer_must_fix%') AND cmf_request in ('cmf_ok') ";
         }
 
         Dictionary<string, string> dependentFilters = GetFilterValuesExcluding(activeFilters, excludeFilterKey);
@@ -2133,14 +2360,19 @@ ORDER BY issue_count DESC", con))
                         "    OR ( " +
                         "       @FilterValue LIKE '%,' + drivers + ',%' " +
                         "       OR @FilterValue LIKE drivers + ',%' " +
-                        "       OR @FilterValue LIKE '%,' + drivers) ) ";
+                        "       OR @FilterValue LIKE '%,' + drivers) ) " +
+                        "AND sysdebug Like ('%customer_must_fix%') AND status NOT IN ('rejected') AND cmf_request in ('cmf_ok') ";
             }
             else
             {
                 query += " AND ((@FilterValue = 'Pre-PV' AND drivers LIKE '%WW%' " +
                         " AND FLOOR(CAST(SUBSTRING(drivers, CHARINDEX('WW', must_fix_for) + 2, 2) AS FLOAT)) BETWEEN 1 AND 31) " +
-                        "    OR drivers = @FilterValue ) ";
+                        "    OR drivers = @FilterValue ) AND status NOT IN ('rejected') AND sysdebug Like ('%customer_must_fix%') AND cmf_request in ('cmf_ok') ";
             }
+        }
+        else
+        {
+            query += " AND status NOT IN ('rejected') AND sysdebug Like ('%customer_must_fix%') AND cmf_request in ('cmf_ok') ";
         }
 
         Dictionary<string, string> dependentFilters = GetFilterValuesExcluding(activeFilters, "owner");
@@ -2354,8 +2586,44 @@ ORDER BY issue_count DESC", con))
 
     private void InitializeFilterValue()
     {
-        // Default to no milestone pre-filter so full platform data is visible.
-        Session["filterValue"] = null;
+        using (SqlConnection con = new SqlConnection(ConnectionString))
+        {
+            con.Open();
+            string currentPlatform = GetIssuePendingPlatform();
+            EnsurePublicIssueDriverFilter(con, currentPlatform, forceRefresh: true);
+        }
+    }
+
+    private void EnsurePublicIssueDriverFilter(SqlConnection con, string platform, bool forceRefresh = false)
+    {
+        string currentFilterValue = Session["filterValue"] as string;
+        if (!forceRefresh && !string.IsNullOrWhiteSpace(currentFilterValue) && !currentFilterValue.Equals("AllDrivers", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        platform = ResolvePlatformTable(platform);
+        string driverQuery = "SELECT DISTINCT([drivers]) FROM " + platform +
+                             " WHERE drivers IS NOT NULL AND LTRIM(RTRIM(drivers)) <> '' " +
+                             " AND status in ('open','implemented') " +
+                             " AND cmf_request not in ('cmf_reject') " +
+                             " AND sysdebug Like ('%customer_must_fix%') ";
+
+        using (SqlCommand cmd = new SqlCommand(driverQuery, con))
+        using (SqlDataReader reader = cmd.ExecuteReader())
+        {
+            List<string> driversList = new List<string>();
+            while (reader.Read())
+            {
+                string driverValue = reader["drivers"] == DBNull.Value ? string.Empty : reader["drivers"].ToString().Trim();
+                if (!string.IsNullOrEmpty(driverValue))
+                {
+                    driversList.Add(driverValue);
+                }
+            }
+
+            Session["filterValue"] = driversList.Count > 0 ? string.Join(",", driversList) : null;
+        }
     }
 
     private static PrincipalContext TryCreateContext(string domain)
@@ -2540,9 +2808,6 @@ ORDER BY issue_count DESC", con))
 
             // Initialize filterValue for first load - this is important for BindAllFilters
             InitializeFilterValue();
-
-            BindAllFilters();
-            RebindFocusedTabData(false);
 
             // Initialize the shared filter panel for Issue List and CMF Pending List
             InitializeSharedFilterPanel();
@@ -3088,6 +3353,8 @@ ORDER BY issue_count DESC", con))
         using (SqlConnection con = new SqlConnection(ConnectionString))
         {
             con.Open();
+            EnsurePublicIssueDriverFilter(con, platformTable);
+            filterValue = Session["filterValue"] as string;
 
             //            string base_master_query = @"
             //SELECT 
@@ -3247,7 +3514,8 @@ LEFT JOIN " + designTable + @" AS d
                         "    OR ( " +
                         "       @FilterValue LIKE '%,' + drivers + ',%' " +
                         "       OR @FilterValue LIKE drivers + ',%' " +
-                        "       OR @FilterValue LIKE '%,' + drivers) ) ";
+                        "       OR @FilterValue LIKE '%,' + drivers) ) " +
+                        "AND sysdebug Like ('%customer_must_fix%') AND status IN ('open', 'implemented') AND cmf_request in ('cmf_ok') ";
                     }
                     else
                     {
@@ -3257,7 +3525,8 @@ LEFT JOIN " + designTable + @" AS d
                         "    OR ( " +
                         "       @FilterValue LIKE '%,' + drivers + ',%' " +
                         "       OR @FilterValue LIKE drivers + ',%' " +
-                        "       OR @FilterValue LIKE '%,' + drivers) ) ";
+                        "       OR @FilterValue LIKE '%,' + drivers) ) " +
+                        "AND sysdebug Like ('%customer_must_fix%') AND cmf_request in ('cmf_ok') ";
                     }
                 }
                 else
@@ -3267,13 +3536,13 @@ LEFT JOIN " + designTable + @" AS d
                     {
                         whereClause = " WHERE \r\n ((@FilterValue = 'Pre-PV' AND drivers LIKE '%WW%' \r\n" +
                         " AND FLOOR(CAST(SUBSTRING(drivers, CHARINDEX('WW', must_fix_for) + 2, 2) AS FLOAT)) BETWEEN 1 AND 31) \r\n" +
-                        "    OR drivers = @FilterValue ) ";
+                        "    OR drivers = @FilterValue ) AND status in ('open', 'implemented') AND sysdebug Like ('%customer_must_fix%') AND cmf_request in ('cmf_ok') ";
                     }
                     else
                     {
                         whereClause = " WHERE \r\n ((@FilterValue = 'Pre-PV' AND drivers LIKE '%WW%' \r\n" +
                         " AND FLOOR(CAST(SUBSTRING(drivers, CHARINDEX('WW', must_fix_for) + 2, 2) AS FLOAT)) BETWEEN 1 AND 31) \r\n" +
-                        "    OR drivers = @FilterValue ) ";
+                        "    OR drivers = @FilterValue ) AND sysdebug Like ('%customer_must_fix%') AND cmf_request in ('cmf_ok') ";
                     }
                 }
             }
@@ -3287,20 +3556,20 @@ LEFT JOIN " + designTable + @" AS d
                     "    OR ( " +
                     "       @FilterValue LIKE '%,' + drivers + ',%' " +
                     "       OR @FilterValue LIKE drivers + ',%' " +
-                    "       OR @FilterValue LIKE '%,' + drivers) ) ";
+                    "       OR @FilterValue LIKE '%,' + drivers) ) " +
+                    "AND sysdebug Like ('%customer_must_fix%') AND status NOT IN ('rejected') AND cmf_request in ('cmf_ok') ";
                 }
                 else if (string.IsNullOrEmpty(filterValue))
                 {
-                    whereClause = " WHERE 1=1 ";
+                    whereClause = " WHERE status NOT IN ('rejected') AND sysdebug Like ('%customer_must_fix%') AND cmf_request in ('cmf_ok') ";
                 }
                 else
                 {
                     whereClause = " WHERE \r\n ((@FilterValue = 'Pre-PV' AND drivers LIKE '%WW%' \r\n" +
                     "     AND FLOOR(CAST(SUBSTRING(drivers, CHARINDEX('WW', must_fix_for) + 2, 2) AS FLOAT)) BETWEEN 1 AND 31) \r\n" +
-                    "    OR drivers = @FilterValue ) ";
+                    "    OR drivers = @FilterValue ) AND sysdebug Like ('%customer_must_fix%') AND status not in ( 'rejected') AND cmf_request in ('cmf_ok') ";
                 }
             }
-
             // Add column filters
             whereClause += BuildFilterClauses(columnFilters, "main");
 
@@ -3418,95 +3687,8 @@ LEFT JOIN " + designTable + @" AS d
                         }
                     }
 
-                    int totalIssues = dt.Rows.Count;
-                    int inProgressIssues = 0;
-                    int closedIssues = 0;
-                    int staleIssues = 0;
-
-                    foreach (DataRow row in dt.Rows)
-                    {
-                        string status = row["IssueStatus"] == DBNull.Value
-                            ? string.Empty
-                            : row["IssueStatus"].ToString().Trim().ToLowerInvariant();
-
-                        if (status == "complete" || status == "rejected")
-                        {
-                            closedIssues++;
-                        }
-                        else if (status == "open" || status == "implemented")
-                        {
-                            inProgressIssues++;
-                        }
-                        else
-                        {
-                            staleIssues++;
-                        }
-                    }
-
-                    lblIssueTotal.Text = totalIssues.ToString();
-                    lblIssueInProgress.Text = inProgressIssues.ToString();
-                    lblIssueClosed.Text = closedIssues.ToString();
-                    lblIssueStale.Text = staleIssues.ToString();
-
-                    // Bind
-                    int maxPageIndex = Math.Max(0, (int)Math.Ceiling(dt.Rows.Count / (double)overall_request_details.PageSize) - 1);
-                    if (overall_request_details.PageIndex > maxPageIndex)
-                    {
-                        overall_request_details.PageIndex = maxPageIndex;
-                    }
-
-                    overall_request_details.DataSource = dt;
-                    overall_request_details.DataKeyNames = new string[] { "SightingID" };
-                    overall_request_details.DataBind();
-
-                    int pageCount = Math.Max(1, overall_request_details.PageCount);
-                    int currentPage = overall_request_details.PageIndex + 1;
-
-                    // Generate page numbers for Repeater - show 10 pages at a time
-                    const int pagesPerGroup = 10;
-                    int currentGroupStartPage = ((currentPage - 1) / pagesPerGroup) * pagesPerGroup + 1;
-                    int currentGroupEndPage = Math.Min(currentGroupStartPage + pagesPerGroup - 1, pageCount);
-
-                    List<PageNumberItem> pageNumbers = new List<PageNumberItem>();
-                    for (int i = currentGroupStartPage; i <= currentGroupEndPage; i++)
-                    {
-                        pageNumbers.Add(new PageNumberItem
-                        {
-                            PageNumber = i,
-                            IsCurrentPage = (i == currentPage)
-                        });
-                    }
-                    rptPageNumbers.DataSource = pageNumbers;
-                    rptPageNumbers.DataBind();
-
-                    // Set page group info
-                    bool hasPreviousGroup = currentGroupStartPage > 1;
-                    bool hasNextGroup = currentGroupEndPage < pageCount;
-                    
-                    btnPageGroupPrev.Enabled = hasPreviousGroup;
-                    btnPageGroupNext.Enabled = hasNextGroup;
-
-                    btnPageGroupPrev.CssClass = btnPageGroupPrev.Enabled ? "issue-pager-group-btn" : "issue-pager-group-btn disabled";
-                    btnPageGroupNext.CssClass = btnPageGroupNext.Enabled ? "issue-pager-group-btn" : "issue-pager-group-btn disabled";
-
-                    int rangeStart = totalIssues == 0 ? 0 : (overall_request_details.PageIndex * overall_request_details.PageSize) + 1;
-                    int rangeEnd = totalIssues == 0 ? 0 : Math.Min(totalIssues, rangeStart + overall_request_details.PageSize - 1);
-                    lblIssuePageStatus.Text = string.Format("Showing {0}-{1} of {2} | Current: {3} of {4}",
-                        rangeStart,
-                        rangeEnd,
-                        totalIssues,
-                        currentPage,
-                        pageCount);
-
-                    if (bindRelatedGrids)
-                    {
-                        BindGridView_design_open();
-                        BindGridView_cmf_summary();
-                        BindGridView_cmf_pending();
-                        BindGridView_design_summary();
-                        BindGridView_component_summary();
-                        BindGridView_oem_summary();
-                    }
+                    BindIssueGridFromDataTable(dt, bindRelatedGrids);
+                    CacheIssueGridData(filterValue, columnFilters, dt);
                 }
             }
         }
@@ -3515,23 +3697,31 @@ LEFT JOIN " + designTable + @" AS d
     protected void overall_request_details_PageIndexChanging(object sender, GridViewPageEventArgs e)
     {
         ApplyIssuePendingPlatformContext();
+        EnsureIssueTabVisibleForPostback();
         ApplyIssuePageSizeFromSession();
         overall_request_details.PageIndex = e.NewPageIndex;
         string filterValue = Session["filterValue"] as string;
         Dictionary<string, string> filters = GetAllFilterValues();
-        BindGridView(filterValue, filters, bindRelatedGrids: false);
+        if (!TryBindIssueGridFromCache(filterValue, filters))
+        {
+            BindGridView(filterValue, filters, bindRelatedGrids: false);
+        }
     }
 
     protected void ddlIssuePageSize_SelectedIndexChanged(object sender, EventArgs e)
     {
         ApplyIssuePendingPlatformContext();
+        EnsureIssueTabVisibleForPostback();
         Session["issuePageSize"] = ddlIssuePageSize.SelectedValue;
         overall_request_details.PageIndex = 0;
         ApplyIssuePageSizeFromSession();
 
         string filterValue = Session["filterValue"] as string;
         Dictionary<string, string> filters = GetAllFilterValues();
-        BindGridView(filterValue, filters, bindRelatedGrids: false);
+        if (!TryBindIssueGridFromCache(filterValue, filters))
+        {
+            BindGridView(filterValue, filters, bindRelatedGrids: false);
+        }
     }
 
     protected void rptPageNumbers_ItemCommand(object source, RepeaterCommandEventArgs e)
@@ -3539,19 +3729,24 @@ LEFT JOIN " + designTable + @" AS d
         if (e.CommandName == "SelectPage")
         {
             ApplyIssuePendingPlatformContext();
+            EnsureIssueTabVisibleForPostback();
             ApplyIssuePageSizeFromSession();
             int pageNumber = int.Parse(e.CommandArgument.ToString());
             overall_request_details.PageIndex = pageNumber - 1;
 
             string filterValue = Session["filterValue"] as string;
             Dictionary<string, string> filters = GetAllFilterValues();
-            BindGridView(filterValue, filters, bindRelatedGrids: false);
+            if (!TryBindIssueGridFromCache(filterValue, filters))
+            {
+                BindGridView(filterValue, filters, bindRelatedGrids: false);
+            }
         }
     }
 
     protected void btnPageGroupPrev_Click(object sender, EventArgs e)
     {
         ApplyIssuePendingPlatformContext();
+        EnsureIssueTabVisibleForPostback();
         ApplyIssuePageSizeFromSession();
         const int pagesPerGroup = 10;
         int currentPage = overall_request_details.PageIndex + 1;
@@ -3565,12 +3760,16 @@ LEFT JOIN " + designTable + @" AS d
 
         string filterValue = Session["filterValue"] as string;
         Dictionary<string, string> filters = GetAllFilterValues();
-        BindGridView(filterValue, filters, bindRelatedGrids: false);
+        if (!TryBindIssueGridFromCache(filterValue, filters))
+        {
+            BindGridView(filterValue, filters, bindRelatedGrids: false);
+        }
     }
 
     protected void btnPageGroupNext_Click(object sender, EventArgs e)
     {
         ApplyIssuePendingPlatformContext();
+        EnsureIssueTabVisibleForPostback();
         ApplyIssuePageSizeFromSession();
         const int pagesPerGroup = 10;
         int currentPage = overall_request_details.PageIndex + 1;
@@ -3584,7 +3783,10 @@ LEFT JOIN " + designTable + @" AS d
 
         string filterValue = Session["filterValue"] as string;
         Dictionary<string, string> filters = GetAllFilterValues();
-        BindGridView(filterValue, filters, bindRelatedGrids: false);
+        if (!TryBindIssueGridFromCache(filterValue, filters))
+        {
+            BindGridView(filterValue, filters, bindRelatedGrids: false);
+        }
     }
 
     protected string CreateDuplicateLinks(object duplicateDetails)
@@ -3698,6 +3900,14 @@ LEFT JOIN " + designTable + @" AS d
         return sb.ToString();
     }
 
+    protected string RenderPendingIssueDetailsWithRecommendation(object cpIdValue, object titleValue, object cmfRequestValue, object componentValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
+    {
+        return "<span class=\"pending-issue-with-action\">" +
+            RenderPendingIssueDetails(cpIdValue, titleValue, cmfRequestValue) +
+            RenderPendingRecommendationButton(cpIdValue, titleValue, componentValue, cmfRequestValue, impactValue, idstValue, reproOnRvpValue, reproducibilityValue, customerDetailValue, customerOwnerValue) +
+            "</span>";
+    }
+
     protected string RenderPendingCustomer(object customerDetailValue, object ownerValue)
     {
         string customerDetail = customerDetailValue == null || customerDetailValue == DBNull.Value ? string.Empty : customerDetailValue.ToString().Trim();
@@ -3743,8 +3953,8 @@ LEFT JOIN " + designTable + @" AS d
         StringBuilder sb = new StringBuilder();
         sb.Append("<span class=\"pending-status-cell\">");
         sb.Append("<span class=\"pending-chip-row\">");
-        sb.AppendFormat("<span class=\"pending-chip\">Ask: {0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(cmfRequest) ? "N/A" : cmfRequest.Replace('_', ' ')));
         sb.AppendFormat("<span class=\"pending-chip\">Date: {0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(dateCmfAsk) ? "N/A" : dateCmfAsk));
+        sb.AppendFormat("<span class=\"pending-chip\">{0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(cmfRequest) ? "N/A" : cmfRequest.Replace('_', ' ')));
         sb.Append("</span>");
         sb.AppendFormat("<span class=\"pending-mini-label\">Impact</span><span>{0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(impact) ? "Impact not specified" : impact));
         sb.Append("</span>");
@@ -3754,7 +3964,7 @@ LEFT JOIN " + designTable + @" AS d
     protected string RenderPendingRecommendationButton(object cpIdValue, object titleValue, object componentValue, object cmfRequestValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
     {
         return string.Format(
-            "<div class=\"status-cell-wrap\"><button type=\"button\" class=\"ai-summary-btn\" onclick='openCmfPendingRecommendationModal(\"{0}\", \"{1}\", \"{2}\", \"{3}\", \"{4}\", \"{5}\", \"{6}\", \"{7}\", \"{8}\", \"{9}\")'>AI Recommendation</button></div>",
+            "<button type=\"button\" class=\"pending-recommendation-btn\" onclick='openCmfPendingRecommendationModal(\"{0}\", \"{1}\", \"{2}\", \"{3}\", \"{4}\", \"{5}\", \"{6}\", \"{7}\", \"{8}\", \"{9}\")' title=\"AI Recommendation\" aria-label=\"AI Recommendation\"><i class=\"fas fa-brain\" aria-hidden=\"true\"></i><span>Recommend</span></button>",
             JsEncode(cpIdValue),
             JsEncode(titleValue),
             JsEncode(componentValue),
@@ -3973,22 +4183,34 @@ LEFT JOIN " + designTable + @" AS d
             status = rawStatus;
         }
         string sysdebug = sysdebugValue == null || sysdebugValue == DBNull.Value ? string.Empty : sysdebugValue.ToString().Replace("\r", " ").Replace("\n", " ").Trim();
+        string sightingId = sightingIdValue == null || sightingIdValue == DBNull.Value ? string.Empty : sightingIdValue.ToString();
+        int confidence = AiSummaryService.EstimateSummaryConfidence(new AiSummaryRequest
+        {
+            IssueId = sightingId,
+            Title = titleValue == null || titleValue == DBNull.Value ? string.Empty : titleValue.ToString(),
+            Status = status,
+            Sysdebug = sysdebug
+        });
         string oneLineUpdate = BuildOneLineStatusUpdate(status, sysdebug);
-        if (string.IsNullOrWhiteSpace(oneLineUpdate)) oneLineUpdate = BuildFallbackStatusSentence(status, Convert.ToString(titleValue));
+        if (string.IsNullOrWhiteSpace(oneLineUpdate)) oneLineUpdate = BuildFallbackStatusSentence(status);
 
         string onclick = "openAiSummaryModal(\"" + JsEncode(sightingIdValue) + "\", \"" + JsEncode(titleValue) + "\", \"" + JsEncode(FormatDateOnly(submittedDateValue)) + "\", \"" + JsEncode(statusValue) + "\", \"" + JsEncode(sysdebugValue) + "\")";
 
         return "<div class=\"status-cell-wrap status-cell-wrap-compact\">" +
-            "<div class=\"status-row\">" +
+            "<div class=\"status-row status-row-primary\">" +
+                "<span class=\"status-label-group\">" +
                 "<span class=\"status-pill\">" + HttpUtility.HtmlEncode(status) + "</span>" +
+                "<span class=\"status-confidence-pill\" data-ai-confidence-issue=\"" + HttpUtility.HtmlAttributeEncode(sightingId) + "\">Confidence: " + confidence.ToString(CultureInfo.InvariantCulture) + "%</span>" +
+                "</span>" +
                 "<button type=\"button\" class=\"ai-summary-btn ai-summary-btn-inline\" onclick='" + onclick + "' title=\"AI Summary\" aria-label=\"AI Summary\">✦</button>" +
             "</div>" +
-                "<div class=\"status-one-line\">" + HttpUtility.HtmlEncode(oneLineUpdate) + "</div>" +
+            "<div class=\"status-one-line\">" + HttpUtility.HtmlEncode(oneLineUpdate) + "</div>" +
             "</div>";
     }
 
-    private string GetLatestOneLineUpdateForIssue(string issueId, string title, string status, string sysdebug)
+    private string GetLatestOneLineUpdateForIssue(string issueId, string title, string status, string sysdebug, out int confidence)
     {
+        confidence = 40;
         if (string.IsNullOrWhiteSpace(issueId)) return string.Empty;
 
         try
@@ -3996,6 +4218,14 @@ LEFT JOIN " + designTable + @" AS d
             string platform = Session[IssuePendingPlatformSessionKey] as string;
             if (string.IsNullOrWhiteSpace(platform)) platform = Session["selectedPlatform"] as string;
             string issueContext = BuildIssueSummaryContext(platform, issueId.Trim());
+            confidence = AiSummaryService.EstimateSummaryConfidence(new AiSummaryRequest
+            {
+                IssueId = issueId,
+                Title = title,
+                Status = status,
+                Sysdebug = sysdebug,
+                ContextDetails = issueContext
+            });
 
             string generated = AiSummaryService.GenerateOneLineStatus(new AiSummaryRequest
             {
@@ -4038,7 +4268,15 @@ LEFT JOIN " + designTable + @" AS d
         const int maxLength = 105;
         if (cleaned.Length > maxLength)
         {
-            cleaned = cleaned.Substring(0, maxLength - 3).TrimEnd() + "...";
+            int sentenceEnd = cleaned.IndexOfAny(new[] { '.', '!', '?' });
+            if (sentenceEnd > 30 && sentenceEnd < maxLength)
+            {
+                cleaned = cleaned.Substring(0, sentenceEnd + 1).Trim();
+            }
+            else
+            {
+                cleaned = cleaned.Substring(0, maxLength).TrimEnd('.', ',', ';', ':', ' ');
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(status))
@@ -4049,16 +4287,10 @@ LEFT JOIN " + designTable + @" AS d
         return cleaned;
     }
 
-    private static string BuildFallbackStatusSentence(string status, string title)
+    private static string BuildFallbackStatusSentence(string status)
     {
         string effectiveStatus = string.IsNullOrWhiteSpace(status) ? "active" : status.Trim();
-        string shortTitle = string.IsNullOrWhiteSpace(title) ? "this issue" : title.Trim();
-        if (shortTitle.Length > 55)
-        {
-            shortTitle = shortTitle.Substring(0, 52).TrimEnd() + "...";
-        }
-
-        return BuildOneLineStatusUpdate(string.Empty, "Issue is " + effectiveStatus + " while HSD follow-up continues on " + shortTitle + ".");
+        return BuildOneLineStatusUpdate(string.Empty, "Current status is " + effectiveStatus + "; latest HSD follow-up is pending.");
     }
 
     protected string RenderSightingAndPromotedLinks(object sightingIdValue, object promotedIdValue)
@@ -6676,6 +6908,20 @@ firstPatternCaseStatements +
 
         if (needed.Count > 0)
         {
+            ScriptManager sm = ScriptManager.GetCurrent(this);
+            bool isAsyncPostback = sm != null && sm.IsInAsyncPostBack;
+
+            if (isAsyncPostback)
+            {
+                foreach (string alias in needed)
+                {
+                    cache[alias] = alias;
+                }
+
+                Session["OwnerDisplayCache"] = cache;
+                return cache;
+            }
+
             PrincipalContext ctxGar = null, ctxAmr = null, ctxCcr = null, ctxGer = null;
             try { ctxGar = new PrincipalContext(ContextType.Domain, "gar.corp.intel.com"); } catch { }
             try { ctxAmr = new PrincipalContext(ContextType.Domain, "amr.corp.intel.com"); } catch { }
@@ -10672,36 +10918,33 @@ ORDER BY cp_id";
     {
         try
         {
-            // Ensure the default item is deselected
-            if (ddlSharedPlatform.Items.Count > 0)
-                ddlSharedPlatform.Items[0].Selected = false;
-
-            // Clear existing items except the first one (default)
-            while (ddlSharedPlatform.Items.Count > 1)
+            if (ddlSharedPlatform.Items.Count <= 1)
             {
-                ddlSharedPlatform.Items.RemoveAt(1);
-            }
+                // Ensure the default item is deselected
+                if (ddlSharedPlatform.Items.Count > 0)
+                    ddlSharedPlatform.Items[0].Selected = false;
 
-            // List of available platforms
-            string[] platforms = { "PTL", "LNL", "ARL-S", "ARL-H", "ARL-U", "ARL-Hx", "ARL-Refresh", "GNR", "WCL", "NVL-S", "NVL-H" };
-            string[] platformTables = { 
-                "CMF_PTL_ALL_COMPONENTS_TABLE",
-                "CMF_LNL_ALL_COMPONENTS_TABLE",
-                "CMF_ARL_S_ALL_COMPONENTS_TABLE",
-                "CMF_ARL_H_ALL_COMPONENTS_TABLE",
-                "CMF_ARL_U_ALL_COMPONENTS_TABLE",
-                "CMF_ARL_HX_ALL_COMPONENTS_TABLE",
-                "CMF_ARL_Refresh_ALL_COMPONENTS_TABLE",
-                "CMF_GNR_ALL_COMPONENTS_TABLE",
-                "CMF_WCL_ALL_COMPONENTS_TABLE",
-                "CMF_NVL_S_ALL_COMPONENTS_TABLE",
-                "CMF_NVL_H_ALL_COMPONENTS_TABLE"
-            };
+                // List of available platforms
+                string[] platforms = { "PTL", "LNL", "ARL-S", "ARL-H", "ARL-U", "ARL-Hx", "ARL-Refresh", "GNR", "WCL", "NVL-S", "NVL-H" };
+                string[] platformTables = {
+                    "CMF_PTL_ALL_COMPONENTS_TABLE",
+                    "CMF_LNL_ALL_COMPONENTS_TABLE",
+                    "CMF_ARL_S_ALL_COMPONENTS_TABLE",
+                    "CMF_ARL_H_ALL_COMPONENTS_TABLE",
+                    "CMF_ARL_U_ALL_COMPONENTS_TABLE",
+                    "CMF_ARL_HX_ALL_COMPONENTS_TABLE",
+                    "CMF_ARL_Refresh_ALL_COMPONENTS_TABLE",
+                    "CMF_GNR_ALL_COMPONENTS_TABLE",
+                    "CMF_WCL_ALL_COMPONENTS_TABLE",
+                    "CMF_NVL_S_ALL_COMPONENTS_TABLE",
+                    "CMF_NVL_H_ALL_COMPONENTS_TABLE"
+                };
 
-            // Add platforms to dropdown
-            for (int i = 0; i < platforms.Length; i++)
-            {
-                ddlSharedPlatform.Items.Add(new ListItem(platforms[i], platformTables[i]));
+                // Add platforms to dropdown only once
+                for (int i = 0; i < platforms.Length; i++)
+                {
+                    ddlSharedPlatform.Items.Add(new ListItem(platforms[i], platformTables[i]));
+                }
             }
 
             // Restore previously selected platform from session or current platform
@@ -10743,6 +10986,16 @@ ORDER BY cp_id";
                 ResetIssueFiltersToAll();
                 InitializeFilterValue();
                 UpdatePlatformDashboardLink();
+
+                string activeTab = GetActiveFocusedTab();
+                if (string.Equals(activeTab, "pending", StringComparison.OrdinalIgnoreCase))
+                {
+                    EnsurePendingTabVisibleForPostback();
+                }
+                else
+                {
+                    EnsureIssueTabVisibleForPostback();
+                }
 
                 RebindFocusedTabData(false);
 
