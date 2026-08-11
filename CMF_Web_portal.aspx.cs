@@ -742,7 +742,6 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         Session["idstFilter"] = "All";
         Session["losFilter"] = "All";
         Session["milestoneFilter"] = "All";
-        Session["cmfRequestFilter"] = "All";
         Session["companyFilter"] = "All";
         Session["detailFilter"] = "All";
         Session["componentFilter"] = "All";
@@ -1927,33 +1926,6 @@ ORDER BY issue_count DESC", con))
         }
     }
 
-    protected void ddlCmfRequestHeader_SelectedIndexChanged(object sender, EventArgs e)
-    {
-        DropDownList ddl = sender as DropDownList;
-        if (ddl != null)
-        {
-            Session["cmfRequestFilter"] = ddl.SelectedValue;
-            ApplyAllFilters();
-        }
-    }
-
-    protected void btnApplyFilters_Click(object sender, EventArgs e)
-    {
-        // Store all filter values from dropdown selections
-        Session["ownerFilter"] = ddlOwnerTop.SelectedValue;
-        Session["rvpReproFilter"] = ddlRvpReproTop.SelectedValue;
-        Session["idstFilter"] = ddlIdstTop.SelectedValue;
-        Session["losFilter"] = ddlLosTop.SelectedValue;
-        Session["milestoneFilter"] = ddlMilestoneTop.SelectedValue;
-        Session["cmfRequestFilter"] = ddlCmfRequestTop.SelectedValue;
-        Session["companyFilter"] = ddlCompanyTop.SelectedValue;
-        Session["detailFilter"] = ddlDetailTop.SelectedValue;
-        Session["componentFilter"] = ddlComponentTop.SelectedValue;
-
-        // Apply the filters
-        ApplyAllFilters();
-    }
-
     protected void btnClearFilters_Click(object sender, EventArgs e)
     {
         // Clear all filter sessions
@@ -1962,7 +1934,6 @@ ORDER BY issue_count DESC", con))
         Session["idstFilter"] = null;
         Session["losFilter"] = null;
         Session["milestoneFilter"] = null;
-        Session["cmfRequestFilter"] = null;
         Session["companyFilter"] = null;
         Session["detailFilter"] = null;
         Session["componentFilter"] = null;
@@ -1973,7 +1944,6 @@ ORDER BY issue_count DESC", con))
         ddlIdstTop.SelectedValue = "All";
         ddlLosTop.SelectedValue = "All";
         ddlMilestoneTop.SelectedValue = "All";
-        ddlCmfRequestTop.SelectedValue = "All";
         ddlCompanyTop.SelectedValue = "All";
         ddlDetailTop.SelectedValue = "All";
         ddlComponentTop.SelectedValue = "All";
@@ -2002,7 +1972,6 @@ ORDER BY issue_count DESC", con))
         {"idst", Session["idstFilter"] as string ?? "All"},
         {"los", Session["losFilter"] as string ?? "All"},
         {"milestone", Session["milestoneFilter"] as string ?? "All"},
-        {"cmfRequest", Session["cmfRequestFilter"] as string ?? "All"},
         {"Company", Session["companyFilter"] as string ?? "All"},      // Fixed: use "companyFilter"
         {"Detail", Session["detailFilter"] as string ?? "All"},        // Fixed: use "detailFilter"
         {"Component", Session["componentFilter"] as string ?? "All"},  // Fixed: use "componentFilter"
@@ -2207,9 +2176,6 @@ ORDER BY issue_count DESC", con))
                 case "Component":
                     cmd.Parameters.AddWithValue("@ComponentFilter", filter.Value);
                     break;
-                case "cmfRequest":
-                    cmd.Parameters.AddWithValue("@CmfRequestFilter", filter.Value);
-                    break;
             }
         }
     }
@@ -2232,7 +2198,6 @@ ORDER BY issue_count DESC", con))
             BindFilterData(con, "idst", "IdstItems", currentPlatform, activeFilters, "idst");
             BindFilterData(con, "los", "LosItems", currentPlatform, activeFilters, "los");
             BindFilterData(con, "drivers", "MilestoneItems", currentPlatform, activeFilters, "milestone");
-            BindFilterData(con, "cmf_request", "CmfRequestItems", currentPlatform, activeFilters, "cmfRequest");
             BindFilterData(con, "customer_company", "CompanyItems", currentPlatform, activeFilters, "Company");
             BindFilterData(con, "customer_detail", "DetailItems", currentPlatform, activeFilters, "Detail");
             BindFilterData(con, "component_group", "ComponentItems", currentPlatform, activeFilters, "Component");
@@ -2251,7 +2216,6 @@ ORDER BY issue_count DESC", con))
         PopulateTopFilterDropdown("ddlDetailTop", "DetailItems", "detailFilter");
         PopulateTopFilterDropdown("ddlComponentTop", "ComponentItems", "componentFilter");
         PopulateTopFilterDropdown("ddlMilestoneTop", "MilestoneItems", "milestoneFilter");
-        PopulateTopFilterDropdown("ddlCmfRequestTop", "CmfRequestItems", "cmfRequestFilter");
     }
 
     private void BindFilterData(SqlConnection con, string columnName, string viewStateKey, string platform, Dictionary<string, string> activeFilters, string excludeFilterKey)
@@ -2493,7 +2457,6 @@ ORDER BY issue_count DESC", con))
         PopulateTopFilterDropdown("ddlDetailTop", "DetailItems", "detailFilter");
         PopulateTopFilterDropdown("ddlComponentTop", "ComponentItems", "componentFilter");
         PopulateTopFilterDropdown("ddlMilestoneTop", "MilestoneItems", "milestoneFilter");
-        PopulateTopFilterDropdown("ddlCmfRequestTop", "CmfRequestItems", "cmfRequestFilter");
     }
 
     private void PopulateTopFilterDropdown(string dropdownId, string viewStateKey, string sessionKey)
@@ -2573,9 +2536,6 @@ ORDER BY issue_count DESC", con))
 
                     case "milestone":
                         clauses.Add(" AND LTRIM(RTRIM(" + prefix + "drivers)) = @MilestoneFilter ");
-                        break;
-                    case "cmfRequest":
-                        clauses.Add(" AND LTRIM(RTRIM(" + prefix + "cmf_request)) = @CmfRequestFilter ");
                         break;
                 }
             }
@@ -3614,9 +3574,6 @@ LEFT JOIN " + designTable + @" AS d
                                 case "Component":
                                     sda.SelectCommand.Parameters.AddWithValue("@ComponentFilter", filter.Value);
                                     break;
-                                case "cmfRequest":
-                                    sda.SelectCommand.Parameters.AddWithValue("@CmfRequestFilter", filter.Value);
-                                    break;
                             }
                         }
                     }
@@ -3941,7 +3898,6 @@ LEFT JOIN " + designTable + @" AS d
     protected string RenderPendingAskImpact(object dateCmfAskValue, object cmfRequestValue, object impactValue)
     {
         string dateCmfAsk = dateCmfAskValue == null || dateCmfAskValue == DBNull.Value ? string.Empty : dateCmfAskValue.ToString().Trim();
-        string cmfRequest = cmfRequestValue == null || cmfRequestValue == DBNull.Value ? string.Empty : cmfRequestValue.ToString().Trim();
         string impact = impactValue == null || impactValue == DBNull.Value ? string.Empty : impactValue.ToString().Trim();
 
         DateTime parsedDate;
@@ -3954,7 +3910,6 @@ LEFT JOIN " + designTable + @" AS d
         sb.Append("<span class=\"pending-status-cell\">");
         sb.Append("<span class=\"pending-chip-row\">");
         sb.AppendFormat("<span class=\"pending-chip\">Date: {0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(dateCmfAsk) ? "N/A" : dateCmfAsk));
-        sb.AppendFormat("<span class=\"pending-chip\">{0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(cmfRequest) ? "N/A" : cmfRequest.Replace('_', ' ')));
         sb.Append("</span>");
         sb.AppendFormat("<span class=\"pending-mini-label\">Impact</span><span>{0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(impact) ? "Impact not specified" : impact));
         sb.Append("</span>");
@@ -4051,6 +4006,10 @@ LEFT JOIN " + designTable + @" AS d
 
         StringBuilder sb = new StringBuilder();
         sb.Append("<span class=\"customer-detail-cell\">");
+        if (!string.IsNullOrWhiteSpace(displayDetail))
+        {
+            sb.AppendFormat("<span class=\"customer-detail-text\">{0}</span>", HttpUtility.HtmlEncode(displayDetail));
+        }
         if (!string.IsNullOrWhiteSpace(companyName))
         {
             sb.AppendFormat(
@@ -4058,10 +4017,6 @@ LEFT JOIN " + designTable + @" AS d
                 HttpUtility.HtmlAttributeEncode(badgeClass),
                 HttpUtility.HtmlAttributeEncode(company),
                 HttpUtility.HtmlEncode(companyName));
-        }
-        if (!string.IsNullOrWhiteSpace(displayDetail))
-        {
-            sb.AppendFormat("<span class=\"customer-detail-text\">{0}</span>", HttpUtility.HtmlEncode(displayDetail));
         }
         sb.Append("</span>");
         return sb.ToString();
@@ -9408,6 +9363,11 @@ ORDER BY cp_id";
 
     protected void overall_request_details_RowDataBound(object sender, GridViewRowEventArgs e)
     {
+        if (e.Row.RowType == DataControlRowType.Header)
+        {
+            AddIssueColumnHideButtons(e.Row);
+            return;
+        }
 
         if (e.Row.RowType == DataControlRowType.DataRow && e.Row.RowIndex == overall_request_details.EditIndex)
         {
@@ -9492,6 +9452,99 @@ ORDER BY cp_id";
 
 
         }
+    }
+
+    private static void AddIssueColumnHideButtons(GridViewRow headerRow)
+    {
+        if (headerRow == null)
+        {
+            return;
+        }
+
+        foreach (TableCell cell in headerRow.Cells)
+        {
+            string fieldClass = GetIssueFieldClass(cell.CssClass);
+            if (string.IsNullOrWhiteSpace(fieldClass) || ContainsColumnHideButton(cell))
+            {
+                continue;
+            }
+
+            LiteralControl button = new LiteralControl("<button type=\"button\" class=\"col-hide-btn\" title=\"Hide column\" data-field=\"" + HttpUtility.HtmlAttributeEncode(fieldClass) + "\" onclick=\"hideColumnByClass('" + HttpUtility.JavaScriptStringEncode(fieldClass) + "'); return false;\">&#x2715;</button>");
+            System.Web.UI.Control target = FindControlByCssClass(cell, "filter-header-text") ?? cell;
+            target.Controls.Add(button);
+        }
+    }
+
+    private static string GetIssueFieldClass(string cssClass)
+    {
+        if (string.IsNullOrWhiteSpace(cssClass))
+        {
+            return string.Empty;
+        }
+
+        string[] classes = cssClass.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (string className in classes)
+        {
+            if (className.StartsWith("field-", StringComparison.OrdinalIgnoreCase))
+            {
+                return className;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static bool ContainsColumnHideButton(System.Web.UI.Control root)
+    {
+        if (root == null)
+        {
+            return false;
+        }
+
+        WebControl webControl = root as WebControl;
+        if (webControl != null && !string.IsNullOrWhiteSpace(webControl.CssClass) && webControl.CssClass.IndexOf("col-hide-btn", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return true;
+        }
+
+        foreach (System.Web.UI.Control child in root.Controls)
+        {
+            if (ContainsColumnHideButton(child))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static System.Web.UI.Control FindControlByCssClass(System.Web.UI.Control root, string cssClass)
+    {
+        if (root == null || string.IsNullOrWhiteSpace(cssClass))
+        {
+            return null;
+        }
+
+        WebControl webControl = root as WebControl;
+        if (webControl != null && !string.IsNullOrWhiteSpace(webControl.CssClass))
+        {
+            string[] classes = webControl.CssClass.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (classes.Any(className => string.Equals(className, cssClass, StringComparison.OrdinalIgnoreCase)))
+            {
+                return root;
+            }
+        }
+
+        foreach (System.Web.UI.Control child in root.Controls)
+        {
+            System.Web.UI.Control match = FindControlByCssClass(child, cssClass);
+            if (match != null)
+            {
+                return match;
+            }
+        }
+
+        return null;
     }
 
     protected void GridView_design_open_RowEditing(object sender, GridViewEditEventArgs e)

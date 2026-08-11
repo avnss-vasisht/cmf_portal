@@ -55,7 +55,7 @@ public static class AiSummaryService
         string contextDetails = SafeText(request.ContextDetails);
 
         int confidence = CalculateSummaryConfidence(status, sysdebug, contextDetails);
-        string hash = ComputeHash("summary-label-template-v4|" + issueId + "|" + title + "|" + submittedDate + "|" + status + "|" + sysdebug + "|" + contextDetails);
+        string hash = ComputeHash("summary-interpretive-template-v5|" + issueId + "|" + title + "|" + submittedDate + "|" + status + "|" + sysdebug + "|" + contextDetails);
         string cacheKey = "ai-summary:" + hash;
 
         AiSummaryResponse cached = TryGetCached(cacheKey);
@@ -542,20 +542,21 @@ public static class AiSummaryService
         if (!HasPresentValue(displayStatus)) displayStatus = BuildDisplayValue(status);
 
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine("Review all ticket information and write for a busy engineering/program user who will scan this in seconds.");
+        builder.AppendLine("Review all ticket information from the CMF database, the sighting HSD article, and the promoted HSD article. Write for a busy engineering/program user who needs to understand the issue without opening those links.");
         builder.AppendLine();
         builder.AppendLine("CRITICAL REQUIREMENTS:");
         builder.AppendLine("- Use EXACTLY the output template below and keep labels unchanged.");
         builder.AppendLine("- Summary must contain exactly 3 numbered points: 1), 2), 3).");
-        builder.AppendLine("- Each numbered point must be one short line, ideally 10-16 words.");
-        builder.AppendLine("- The three points must read like an engineering opinion/readout, not copied field details.");
-        builder.AppendLine("- Point 1: what the issue is about and why it matters.");
-        builder.AppendLine("- Point 2: likely/current cause or strongest debug evidence.");
-        builder.AppendLine("- Point 3: what action/fix/validation is happening now.");
+        builder.AppendLine("- Each numbered point must be one short interpretive line, ideally 12-20 words.");
+        builder.AppendLine("- The three points must read like an engineering assessment, not copied field details.");
+        builder.AppendLine("- Point 1: explain the user-visible/platform problem and why it matters.");
+        builder.AppendLine("- Point 2: explain what the sysdebug/HSD evidence suggests technically, including likely subsystem or failure mode when supported.");
+        builder.AppendLine("- Point 3: explain the current disposition: fix path, validation state, closure reason, owner action, or risk.");
         builder.AppendLine("- Each point must include issue-specific evidence from this ticket, such as component, OS, impact, debug note, owner action, fix version, closure reason, or promoted issue state.");
-        builder.AppendLine("- Never reuse boilerplate sentences that could apply to any issue; if evidence is sparse, say which exact field is missing and what field is available.");
+        builder.AppendLine("- Summarize sysdebug by meaning, not by repeating raw sysdebug text. Translate debug clues into what the user should infer.");
+        builder.AppendLine("- Never reuse boilerplate sentences that could apply to any issue; every point must be anchored to the specific sighting/promoted evidence.");
         builder.AppendLine("- Follow up must be exactly one bullet and one short line.");
-        builder.AppendLine("- Keep the full answer under 110 words, excluding fixed labels.");
+        builder.AppendLine("- Keep the full answer under 130 words, excluding fixed labels.");
         builder.AppendLine("- Prefer latest HSD comments, owner/debug updates, closure/fix evidence, impact, reproducibility, and CMF status.");
         builder.AppendLine("- Do not repeat the title; compress it into the actual issue meaning.");
         builder.AppendLine("- Do not mention vendor investigation, escalation, reopening, or log collection unless explicitly present in the issue data.");
@@ -835,7 +836,9 @@ public static class AiSummaryService
         string rvpDebug = FirstContextValue(contextMap, "RVP Platform Debug Details", "RVP Debug", "Repro On RVP");
         List<string> activityLines = ExtractActivityLines(contextDetails);
 
-        string debugSnippet = BuildDebugSnippet(sysdebug);
+        string contextSysdebug = FirstContextValue(contextMap, "Sysdebug", "Sysdebug Forum", "Sysdebug Category");
+        string debugSnippet = BuildDebugSnippet(FirstNonEmpty(sysdebug, contextSysdebug));
+        string interpretedDebug = BuildSysdebugInterpretation(debugSnippet, component, operatingSystem, reproducibility, impact, customerImpact);
         string issueSituation = BuildIssueSituationNarrative(title, component, operatingSystem, impact, customerImpact, reproducibility);
         bool highRisk = ContainsAnyToken(priority, "p0", "p1", "showstopper") || ContainsAnyToken(customerImpact, "critical", "2-high", "high");
 
@@ -879,18 +882,18 @@ public static class AiSummaryService
 
         if (!string.IsNullOrWhiteSpace(debugSnippet) && debugSnippet.IndexOf("No sysdebug details", StringComparison.OrdinalIgnoreCase) < 0)
         {
-            AddUniqueBullet(storyBullets, BuildShortPhrase("The strongest debug evidence points to " + debugSnippet, 125));
+            AddUniqueBullet(storyBullets, BuildShortPhrase(interpretedDebug, 125));
         }
         else if (activityLines.Count > 0)
         {
-            AddUniqueBullet(storyBullets, BuildShortPhrase("The latest ticket activity indicates " + activityLines[0], 125));
+            AddUniqueBullet(storyBullets, BuildShortPhrase("Latest HSD activity is the best signal: " + activityLines[0], 125));
         }
         else if (HasPresentValue(fixedVersion))
         {
             AddUniqueBullet(storyBullets, BuildShortPhrase("The likely resolution path is tied to the recorded fix version " + fixedVersion, 125));
         }
 
-        AddUniqueBullet(storyBullets, BuildShortPhrase("Current action/status: " + outcomeNarrative, 125));
+        AddUniqueBullet(storyBullets, BuildShortPhrase("Current disposition: " + outcomeNarrative, 125));
 
         string evidenceNarrative = BuildEvidenceNarrative(component, operatingSystem, cmfRequest, priority, customerImpact, reproducibility, impact, promotedId, promotedIssueStatus, promotedIssueClosedReason, promotedIssueFixedVersion);
         if (!string.IsNullOrWhiteSpace(evidenceNarrative))
@@ -1363,6 +1366,26 @@ public static class AiSummaryService
         }
 
         return normalized;
+    }
+
+    private static string BuildSysdebugInterpretation(string debugSnippet, string component, string operatingSystem, string reproducibility, string impact, string customerImpact)
+    {
+        if (!HasPresentValue(debugSnippet) || debugSnippet.IndexOf("No sysdebug details", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return "Sysdebug evidence is sparse, so confidence depends on HSD comments, status, and linked promoted issue context";
+        }
+
+        List<string> clues = new List<string>();
+        if (HasPresentValue(component)) clues.Add("component " + component.Trim());
+        if (HasPresentValue(operatingSystem)) clues.Add("OS " + operatingSystem.Trim());
+        if (HasPresentValue(reproducibility)) clues.Add("repro " + reproducibility.Trim());
+        if (HasPresentValue(FirstNonEmpty(customerImpact, impact))) clues.Add("impact " + BuildShortPhrase(FirstNonEmpty(customerImpact, impact), 55));
+
+        string evidenceFrame = clues.Count > 0
+            ? " against " + JoinReadableList(clues)
+            : string.Empty;
+
+        return "Sysdebug points to " + BuildShortPhrase(debugSnippet, 82) + evidenceFrame + ", which is the main technical signal for triage";
     }
 
     private static string ExtractContentFromResponse(object raw)
