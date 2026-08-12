@@ -71,7 +71,18 @@ public static class AiSummaryService
         if (!hasModelSummary)
         {
             int fallbackConfidence = Math.Max(40, confidence - 8);
-            string fallbackSummary = CleanupSummarySpacing(BuildFallbackSummary(issueId, submittedDate, title, status, sysdebug, contextDetails, fallbackConfidence), 140);
+
+            string fallbackSummary = CleanupSummarySpacing(
+                BuildFallbackSummary(
+                    issueId,
+                    submittedDate,
+                    title,
+                    status,
+                    sysdebug,
+                    contextDetails,
+                    fallbackConfidence),
+                220);
+
             return new AiSummaryResponse
             {
                 Success = true,
@@ -86,7 +97,7 @@ public static class AiSummaryService
         }
 
         // Post-process the model output to clean up spacing and ensure word limit
-        string concise = CleanupSummarySpacing(modelSummary, 140);
+        string concise = CleanupSummarySpacing(modelSummary, 220);
 
         AiSummaryResponse result = new AiSummaryResponse
         {
@@ -545,41 +556,42 @@ public static class AiSummaryService
         builder.AppendLine("Review all ticket information from the CMF database, the sighting HSD article, and the promoted HSD article. Write for a busy engineering/program user who needs to understand the issue without opening those links.");
         builder.AppendLine();
         builder.AppendLine("CRITICAL REQUIREMENTS:");
-        builder.AppendLine("- Use EXACTLY the output template below and keep labels unchanged.");
-        builder.AppendLine("- Summary must contain exactly 3 numbered points: 1), 2), 3).");
-        builder.AppendLine("- Each numbered point must be one short interpretive line, ideally 12-20 words.");
-        builder.AppendLine("- The three points must read like an engineering assessment, not copied field details.");
-        builder.AppendLine("- Point 1: explain the user-visible/platform problem and why it matters.");
-        builder.AppendLine("- Point 2: explain what the sysdebug/HSD evidence suggests technically, including likely subsystem or failure mode when supported.");
-        builder.AppendLine("- Point 3: explain the current disposition: fix path, validation state, closure reason, owner action, or risk.");
-        builder.AppendLine("- Each point must include issue-specific evidence from this ticket, such as component, OS, impact, debug note, owner action, fix version, closure reason, or promoted issue state.");
-        builder.AppendLine("- Summarize sysdebug by meaning, not by repeating raw sysdebug text. Translate debug clues into what the user should infer.");
-        builder.AppendLine("- Never reuse boilerplate sentences that could apply to any issue; every point must be anchored to the specific sighting/promoted evidence.");
-        builder.AppendLine("- Follow up must be exactly one bullet and one short line.");
-        builder.AppendLine("- Keep the full answer under 130 words, excluding fixed labels.");
-        builder.AppendLine("- Prefer latest HSD comments, owner/debug updates, closure/fix evidence, impact, reproducibility, and CMF status.");
-        builder.AppendLine("- Do not repeat the title; compress it into the actual issue meaning.");
-        builder.AppendLine("- Do not mention vendor investigation, escalation, reopening, or log collection unless explicitly present in the issue data.");
-        builder.AppendLine("Do not invent details not present in the data below.");
+        builder.AppendLine("- Analyze the complete ticket as an engineering investigation, not as a collection of database fields.");
+        builder.AppendLine("- Use the CMF database information together with all available HSD information, including comments, investigation updates, debug findings, logs, status changes, fix information, and closure information.");
+        builder.AppendLine("- Reconstruct the progression of the issue from the available evidence.");
+        builder.AppendLine("- Distinguish between the original symptom, investigation findings, technical evidence, root cause, fix, and final disposition.");
+        builder.AppendLine("- Do not simply repeat field values such as priority, customer impact, CMF status, or sysdebug.");
+        builder.AppendLine("- Explain what those values and technical updates mean in the context of this specific issue.");
+        builder.AppendLine("- Give greater importance to detailed HSD investigation updates and technical evidence than to generic metadata.");
+        builder.AppendLine("- When multiple updates exist, use the latest information to determine the current state, while retaining earlier findings that are important to understanding the investigation.");
+        builder.AppendLine("- If an earlier hypothesis was ruled out, mention that only when it helps explain how the investigation reached the final conclusion.");
+        builder.AppendLine("- Do not invent a root cause, fix, validation result, owner action, or technical finding that is not supported by the supplied data.");
+        builder.AppendLine("- If the root cause or fix is not established, explicitly say that it remains unresolved or unconfirmed.");
+        builder.AppendLine("- Do not treat a proposed investigation step as a completed finding.");
+        builder.AppendLine("- Do not treat a planned fix as an implemented or validated fix.");
+        builder.AppendLine("- Do not repeat the issue title verbatim; explain the actual problem in meaningful technical language.");
+        builder.AppendLine("- The summary should allow a Program Manager to understand the issue without opening the HSD ticket.");
+        builder.AppendLine("- Keep the summary concise but sufficiently detailed to preserve the important technical story.");
+        builder.AppendLine("- Use exactly the output structure shown below.");
+        builder.AppendLine("- Do not include information outside the supplied ticket context.");
         builder.AppendLine();
         builder.AppendLine("Output template:");
-        builder.AppendLine("**AI summary (Confidence: " + confidence.ToString() + "%)**");
+        builder.AppendLine("**AI Summary (Confidence: " + confidence.ToString() + "%)**");
         builder.AppendLine();
-        builder.AppendLine("Sighting ID: " + BuildDisplayValue(issueId) + "  CMF Ask date: " + BuildDisplayValue(submittedDate));
+        builder.AppendLine("**Issue:**");
+        builder.AppendLine("- [Explain the actual customer/platform problem, affected configuration, and user-visible impact.]");
         builder.AppendLine();
-        builder.AppendLine("Status: " + displayStatus);
-        builder.AppendLine("Impact: " + impact);
-        builder.AppendLine("Reproducibility: " + reproducibility);
-        builder.AppendLine("Logs(sysdebug): " + logsAvailable);
-        builder.AppendLine("RVP platform debug details: " + rvpDebugAvailable);
+        builder.AppendLine("**Investigation:**");
+        builder.AppendLine("- [Explain the important investigation steps and what the engineering evidence established or ruled out.]");
         builder.AppendLine();
-        builder.AppendLine("**Summary:**");
-        builder.AppendLine("1) [what the issue means for the platform/user]");
-        builder.AppendLine("2) [likely cause or strongest debug evidence]");
-        builder.AppendLine("3) [current fix, validation, closure, or owner action]");
+        builder.AppendLine("**Key Finding:**");
+        builder.AppendLine("- [State the most important technical finding that explains the issue, when supported by evidence.]");
         builder.AppendLine();
-        builder.AppendLine("**Follow up**");
-        builder.AppendLine("- [one brief next action, or no further action if resolved]");
+        builder.AppendLine("**Root Cause:**");
+        builder.AppendLine("- [State the established root cause. If not confirmed, explicitly state that it remains unconfirmed.]");
+        builder.AppendLine();
+        builder.AppendLine("**Fix & Closure:**");
+        builder.AppendLine("- [Explain the implemented fix, validation/result, and why/how the issue was closed. If unresolved, explain the current disposition.]");
         builder.AppendLine();
         builder.AppendLine("Ticket data:");
         builder.AppendLine("Issue ID: " + issueId);

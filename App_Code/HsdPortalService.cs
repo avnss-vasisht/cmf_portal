@@ -27,6 +27,16 @@ public class HsdArticleData
     public List<string> Comments { get; set; }
     public bool FetchSuccess { get; set; }
     public string FetchError { get; set; }
+    public string FixDescription { get; set; }
+    public string ClosedReason { get; set; }
+    public string FixedVersion { get; set; }
+    public string CustomerImpact { get; set; }
+    public string Reproducibility { get; set; }
+    public string ImplementedDate { get; set; }
+    public string VerifiedDate { get; set; }
+    public string ClosedDate { get; set; }
+    public string CmfJustification { get; set; }
+    public string InvestigationHistory { get; set; }
 }
 
 public static class HsdPortalService
@@ -72,7 +82,24 @@ public static class HsdPortalService
             }
 
             ParseArticleJson(json, result);
-            result.FetchSuccess = true;
+
+            if (!string.IsNullOrWhiteSpace(result.Title) ||
+                !string.IsNullOrWhiteSpace(result.Description) ||
+                !string.IsNullOrWhiteSpace(result.Status) ||
+                !string.IsNullOrWhiteSpace(result.Sysdebug))
+            {
+                result.FetchSuccess = true;
+            }
+            else
+            {
+                result.FetchSuccess = false;
+
+                if (string.IsNullOrWhiteSpace(result.FetchError))
+                {
+                    result.FetchError =
+                        "HSD response received, but no recognizable article fields were parsed.";
+                }
+            }
 
             // Try to fetch discussion comments; ignore errors since comments are optional.
             TryFetchComments(articleUrl, result);
@@ -119,6 +146,13 @@ public static class HsdPortalService
                 sb.AppendLine("  [" + (i + 1) + "] " + data.Comments[i]);
         }
 
+        if (!string.IsNullOrWhiteSpace(data.InvestigationHistory))
+        {
+            sb.AppendLine();
+            sb.AppendLine("=== HSD INVESTIGATION HISTORY ===");
+            sb.AppendLine(data.InvestigationHistory);
+        }
+
         return sb.ToString().Trim();
     }
 
@@ -147,29 +181,99 @@ public static class HsdPortalService
     private static string HttpGetNtlm(string url)
     {
         int timeoutMs = 10000;
-        string timeoutStr = ConfigurationManager.AppSettings["HSD:TimeoutSeconds"];
-        int secs;
-        if (!string.IsNullOrWhiteSpace(timeoutStr) && int.TryParse(timeoutStr, out secs) && secs > 0)
-            timeoutMs = secs * 1000;
 
-        HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+        string timeoutStr =
+            ConfigurationManager.AppSettings["HSD:TimeoutSeconds"];
+
+        int secs;
+
+        if (!string.IsNullOrWhiteSpace(timeoutStr) &&
+            int.TryParse(timeoutStr, out secs) &&
+            secs > 0)
+        {
+            timeoutMs = secs * 1000;
+        }
+
+        HttpWebRequest request =
+            (HttpWebRequest)WebRequest.Create(url);
+
         request.Method = "GET";
         request.Accept = "application/json";
         request.Timeout = timeoutMs;
 
-        // NTLM auth using the IIS app pool's Windows identity
+        string identityDebugPath = Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory,
+            "App_Data",
+            "hsd-identity-debug.txt"
+        );
+
+        string identityInfo =
+            "HSD request Windows identity: " +
+            System.Security.Principal.WindowsIdentity.GetCurrent().Name +
+            Environment.NewLine +
+            "HSD request IsAuthenticated: " +
+            System.Security.Principal.WindowsIdentity.GetCurrent().IsAuthenticated +
+            Environment.NewLine;
+
+        File.WriteAllText(identityDebugPath, identityInfo);
+
         CredentialCache creds = new CredentialCache();
-        creds.Add(new Uri(url), "NTLM", CredentialCache.DefaultNetworkCredentials);
+
+        creds.Add(
+            new Uri(url),
+            "Negotiate",
+            CredentialCache.DefaultNetworkCredentials
+        );
+
         request.Credentials = creds;
         request.PreAuthenticate = false;
-
-        // HSD is internal — no external proxy needed
         request.Proxy = null;
 
-        using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
-        using (StreamReader reader = new StreamReader(response.GetResponseStream(), Encoding.UTF8))
+        try
         {
-            return reader.ReadToEnd();
+            using (HttpWebResponse response =
+                (HttpWebResponse)request.GetResponse())
+            using (StreamReader reader =
+                new StreamReader(
+                    response.GetResponseStream(),
+                    Encoding.UTF8))
+            {
+                return reader.ReadToEnd();
+            }
+        }
+        catch (WebException ex)
+        {
+            HttpWebResponse errorResponse =
+                ex.Response as HttpWebResponse;
+
+            if (errorResponse != null)
+            {
+                string authHeader = errorResponse.Headers["WWW-Authenticate"];
+                string authScheme = "Unknown";
+
+                if (!string.IsNullOrWhiteSpace(authHeader))
+                {
+                    if (authHeader.StartsWith("Negotiate",
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        authScheme = "Negotiate";
+                    }
+                    else if (authHeader.StartsWith("Basic",
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        authScheme = "Basic";
+                    }
+                }
+
+                string errorDetails =
+                    "HSD HTTP " + (int)errorResponse.StatusCode + " " +
+                    errorResponse.StatusDescription + ". " +
+                    "WWW-Authenticate scheme: " + authScheme;
+
+                throw new Exception(errorDetails, ex);
+            }
+
+            throw;
         }
     }
 
@@ -179,18 +283,52 @@ public static class HsdPortalService
         ser.MaxJsonLength = int.MaxValue;
 
         object raw = ser.DeserializeObject(json);
+
         IDictionary root = raw as IDictionary;
-        if (root == null) return;
 
-        // HSDES wraps the article in a "data" array
+        if (root == null)
+        {
+            result.FetchError = "HSD response root is not a JSON object.";
+            return;
+        }
+
+        // TEMPORARY DIAGNOSTIC
+        string debugPath = null;
+
+        try
+        {
+            debugPath = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "App_Data",
+                "hsd-raw-response-" + result.ArticleId + ".json"
+            );
+
+            File.WriteAllText(debugPath, json);
+        }
+        catch
+        {
+            // Do not allow debugging output to affect HSD processing.
+        }
+
         IList dataArray = root["data"] as IList;
-        IDictionary fields;
-        if (dataArray != null && dataArray.Count > 0)
-            fields = dataArray[0] as IDictionary;
-        else
-            fields = root; // some variants return the article directly
 
-        if (fields == null) return;
+        IDictionary fields = null;
+
+        if (dataArray != null && dataArray.Count > 0)
+        {
+            fields = dataArray[0] as IDictionary;
+        }
+        else
+        {
+            fields = root;
+        }
+
+        if (fields == null)
+        {
+            result.FetchError = "Unable to locate HSD article fields.";
+            return;
+        }
+
         MapArticleFields(fields, result);
     }
 
@@ -209,6 +347,84 @@ public static class HsdPortalService
         result.StepsToReproduce = Pick(fields, "steps_to_reproduce", "repro_steps", "sighting.steps_to_reproduce", "repro");
         result.ExpectedBehavior = Pick(fields, "expected_behavior", "expected", "sighting.expected_behavior");
         result.ActualBehavior = Pick(fields, "actual_behavior", "actual", "sighting.actual_behavior");
+        result.FixDescription = Pick(
+            fields,
+            "bugfixdescription",
+            "fixdescription",
+            "fix_description");
+
+        result.ClosedReason = Pick(
+            fields,
+            "bugclosedreason",
+            "closedreason",
+            "closed_reason");
+
+        result.FixedVersion = Pick(
+            fields,
+            "clientplatfbugfixedinversion",
+            "fixedinversion",
+            "fixed_version");
+
+        result.CustomerImpact = Pick(
+            fields,
+            "clientplatfbugimpact",
+            "bugcustomerimpact",
+            "customerimpact");
+
+        result.Reproducibility = Pick(
+            fields,
+            "bugreproducibility",
+            "reproducibility");
+
+        result.ImplementedDate = Pick(
+            fields,
+            "bugimplementeddate",
+            "dateimplemented");
+
+        result.VerifiedDate = Pick(
+            fields,
+            "bugverifieddate",
+            "dateverified");
+
+        result.ClosedDate = Pick(
+            fields,
+            "closeddate",
+            "dateclosed");
+
+        result.CmfJustification = Pick(
+            fields,
+            "clientplatfbugwhycmfchange",
+            "whycmfchange");
+
+        string commentsHistory = Pick(
+            fields,
+            "comments",
+            "discussion_comments",
+            "discussioncomments");
+
+        if (!string.IsNullOrWhiteSpace(commentsHistory))
+        {
+            result.InvestigationHistory = commentsHistory;
+        }
+
+        string customerBlogHistory = Pick(
+            fields,
+            "clientplatfbugextcustbloghist",
+            "custbloghist",
+            "customerbloghistory");
+
+        if (!string.IsNullOrWhiteSpace(customerBlogHistory))
+        {
+            if (!string.IsNullOrWhiteSpace(result.InvestigationHistory))
+            {
+                result.InvestigationHistory += "\n\n=== CUSTOMER / EXTERNAL HISTORY ===\n"
+                    + customerBlogHistory;
+            }
+            else
+            {
+                result.InvestigationHistory = customerBlogHistory;
+            }
+        }
     }
 
     private static void ParseCommentsJson(string json, HsdArticleData result)

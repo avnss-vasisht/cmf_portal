@@ -4393,6 +4393,16 @@ LEFT JOIN " + designTable + @" AS d
                 ContextDetails = issueContext
             };
 
+            // TEMPORARY DEBUGGING ONLY
+            string debugPath = HttpContext.Current != null
+                ? HttpContext.Current.Server.MapPath("~/App_Data/ai-summary-context-" + issueId + ".txt")
+                : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "App_Data", "ai-summary-context-" + issueId + ".txt");
+
+            File.WriteAllText(
+                debugPath,
+                request.ContextDetails ?? string.Empty
+            );
+
             return AiSummaryService.GenerateIssueSummary(request);
         }
         catch (Exception ex)
@@ -4506,8 +4516,48 @@ WHERE main.cp_id = @issueId", con))
                     }
 
                     // ── Section 2: HSD portal – sighting article ───────────────
-                    HsdArticleData hsdSighting = HsdPortalService.FetchArticle(issueId.Trim());
-                    string hsdSightingContext = HsdPortalService.FormatForAiContext(hsdSighting, "Sighting " + issueId.Trim());
+                    HsdArticleData hsdSighting =
+                        HsdPortalService.FetchArticle(issueId.Trim());
+
+                    string hsdSightingContext =
+                        HsdPortalService.FormatForAiContext(
+                            hsdSighting,
+                            "Sighting " + issueId.Trim());
+
+                    // TEMPORARY DEBUGGING
+                    string hsdDebugPath = HttpContext.Current != null
+                        ? HttpContext.Current.Server.MapPath("~/App_Data/hsd-debug-" + issueId.Trim() + ".txt")
+                        : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "App_Data", "hsd-debug-" + issueId.Trim() + ".txt");
+
+                    StringBuilder hsdDebug = new StringBuilder();
+
+                    hsdDebug.AppendLine("========== HSD ARTICLE OBJECT ==========");
+                    hsdDebug.AppendLine("Article ID: " + (hsdSighting != null && hsdSighting.ArticleId != null ? hsdSighting.ArticleId : "NULL"));
+                    hsdDebug.AppendLine("Title: " + (hsdSighting != null && hsdSighting.Title != null ? hsdSighting.Title : "NULL"));
+                    hsdDebug.AppendLine("Description: " + (hsdSighting != null && hsdSighting.Description != null ? hsdSighting.Description : "NULL"));
+                    hsdDebug.AppendLine("Status: " + (hsdSighting != null && hsdSighting.Status != null ? hsdSighting.Status : "NULL"));
+                    hsdDebug.AppendLine("Sysdebug: " + (hsdSighting != null && hsdSighting.Sysdebug != null ? hsdSighting.Sysdebug : "NULL"));
+                    hsdDebug.AppendLine("Fetch Success: " +
+                        (hsdSighting != null ? hsdSighting.FetchSuccess : false));
+
+                    hsdDebug.AppendLine("Fetch Error: " +
+                        (hsdSighting != null && hsdSighting.FetchError != null ? hsdSighting.FetchError : "NULL"));
+
+                    hsdDebug.AppendLine("Comments count: " +
+                        (hsdSighting != null && hsdSighting.Comments != null ? hsdSighting.Comments.Count : 0));
+
+                    hsdDebug.AppendLine("Investigation History Length: " +
+                        (hsdSighting != null && hsdSighting.InvestigationHistory != null ? hsdSighting.InvestigationHistory.Length : 0));
+
+                    hsdDebug.AppendLine();
+                    hsdDebug.AppendLine("========== FORMATTED HSD CONTEXT ==========");
+                    hsdDebug.AppendLine(hsdSightingContext ?? "NULL");
+
+                    File.WriteAllText(
+                        hsdDebugPath,
+                        hsdDebug.ToString()
+                    );
+
                     if (!string.IsNullOrWhiteSpace(hsdSightingContext))
                         builder.AppendLine(hsdSightingContext);
 
