@@ -938,6 +938,7 @@
         .sidebar-toggle-div {
             position: absolute;
             right: 1.2rem;
+            display: none !important;
         }
 
         .sidebar {
