@@ -7627,8 +7627,6 @@ td:nth-child(odd), th:nth-child(odd) {
             var reproducibility = extractAiSummaryLabel(text, 'Reproducibility');
             var logs = extractAiSummaryLabel(text, 'Logs\\(sysdebug(?:/debug details)?\\)');
             var rvpDebug = extractAiSummaryLabel(text, 'RVP platform debug details');
-            var bodyParts = extractAiSummaryBodyParts(text);
-
             return {
                 confidence: confidence,
                 status: status,
@@ -7636,8 +7634,8 @@ td:nth-child(odd), th:nth-child(odd) {
                 reproducibility: reproducibility,
                 logs: logs,
                 rvpDebug: rvpDebug,
-                body: bodyParts.summary,
-                followUp: bodyParts.followUp
+                body: text,
+                followUp: ''
             };
         }
 
@@ -7778,9 +7776,9 @@ td:nth-child(odd), th:nth-child(odd) {
                 }
                 updateIssueListConfidenceBadge(payload.issueId, preparedSummary.confidence);
                 updateAiSummaryFacts(document.getElementById('aiSummaryFacts'), preparedSummary, false);
-                bodyNode.innerHTML = '<div class="ai-summary-section-title">Summary</div>' + renderMarkdown(preparedSummary.body) + '<div class="ai-summary-section-title">Follow up</div>' + renderMarkdown(preparedSummary.followUp || '- No further action identified from available details.');
+                bodyNode.innerHTML = renderMarkdown(preparedSummary.body);
                 bodyNode.className = 'ai-summary-body markdown-content';
-                window._aiSummaryLastText = preparedSummary.body + '\n\nFollow up\n' + (preparedSummary.followUp || '');
+                window._aiSummaryLastText = preparedSummary.body;
                 if (actionsNode) actionsNode.style.display = '';
             })
             .catch(function () {

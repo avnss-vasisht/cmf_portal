@@ -266,7 +266,20 @@ public static class HsdPortalService
         }
 
         string status = response == null || response["status"] == null ? "unknown status" : response["status"].ToString();
-        error = "EQL returned no article data (" + status + ").";
+        string detail = FirstNonEmptyResponseValue(response, "message", "error", "error_message", "details");
+        error = "EQL returned no article data (" + status + ")" +
+            (string.IsNullOrWhiteSpace(detail) ? "." : ": " + Truncate(detail, 500));
+        return null;
+    }
+
+    private static string FirstNonEmptyResponseValue(IDictionary response, params string[] keys)
+    {
+        if (response == null || keys == null) return null;
+        foreach (string key in keys)
+        {
+            object value = response[key];
+            if (value != null && !string.IsNullOrWhiteSpace(value.ToString())) return value.ToString();
+        }
         return null;
     }
 
@@ -364,11 +377,7 @@ public static class HsdPortalService
             useDefaultCredentials = true;
         }
 
-        request.UseDefaultCredentials = useDefaultCredentials;
-        request.Credentials = useDefaultCredentials
-            ? CredentialCache.DefaultCredentials
-            : CredentialCache.DefaultNetworkCredentials;
-        request.PreAuthenticate = true;
+        ConfigureHsdAuthentication(request, useDefaultCredentials);
 
         // HSD is usually accessible from the corporate network. If a proxy is required,
         // preserve the same Windows identity so the proxy and the upstream HSD endpoint
@@ -403,9 +412,7 @@ public static class HsdPortalService
         request.ContentType = "application/json";
         request.Timeout = GetTimeoutMilliseconds();
         request.ReadWriteTimeout = GetTimeoutMilliseconds();
-        request.UseDefaultCredentials = true;
-        request.Credentials = CredentialCache.DefaultCredentials;
-        request.PreAuthenticate = true;
+        ConfigureHsdAuthentication(request, true);
         request.Proxy = BuildHsdProxy();
 
         using (StreamWriter writer = new StreamWriter(request.GetRequestStream()))
@@ -426,6 +433,32 @@ public static class HsdPortalService
         return int.TryParse(ConfigurationManager.AppSettings["HSD:TimeoutSeconds"], out timeoutSeconds) && timeoutSeconds > 0
             ? timeoutSeconds * 1000
             : 10000;
+    }
+
+    private static void ConfigureHsdAuthentication(HttpWebRequest request, bool useDefaultCredentials)
+    {
+        string authenticationMode = ConfigurationManager.AppSettings["HSD:AuthenticationMode"] ?? "Negotiate";
+        if (string.Equals(authenticationMode, "Basic", StringComparison.OrdinalIgnoreCase))
+        {
+            string username = Environment.GetEnvironmentVariable("HSD_BASIC_USERNAME");
+            string password = Environment.GetEnvironmentVariable("HSD_BASIC_PASSWORD");
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+            {
+                throw new InvalidOperationException("HSD Basic authentication is enabled, but HSD_BASIC_USERNAME or HSD_BASIC_PASSWORD is not set for the IIS Express process.");
+            }
+
+            string token = Convert.ToBase64String(Encoding.UTF8.GetBytes(username + ":" + password));
+            request.Headers[HttpRequestHeader.Authorization] = "Basic " + token;
+            request.UseDefaultCredentials = false;
+            request.PreAuthenticate = true;
+            return;
+        }
+
+        request.UseDefaultCredentials = useDefaultCredentials;
+        request.Credentials = useDefaultCredentials
+            ? CredentialCache.DefaultCredentials
+            : CredentialCache.DefaultNetworkCredentials;
+        request.PreAuthenticate = true;
     }
 
     private static IWebProxy BuildHsdProxy()
