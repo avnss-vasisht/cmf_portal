@@ -43,12 +43,18 @@ public class HsdArticleData
 public static class HsdPortalService
 {
     private const string DefaultBaseUrl = "https://hsdes.intel.com/appbuilder/rest/article";
+    private const string DefaultEqlServiceUrl = "https://hsdes-api.intel.com/ws/ESService";
     private const int DescriptionMaxChars = 2500;
     private const int CommentMaxChars = 600;
     private const int MaxComments = 5;
 
     // Fetches article fields + recent comments from the HSD portal using Windows NTLM auth.
     public static HsdArticleData FetchArticle(string articleId)
+    {
+        return FetchArticle(articleId, null);
+    }
+
+    public static HsdArticleData FetchArticle(string articleId, string componentGroup)
     {
         var result = new HsdArticleData
         {
@@ -128,7 +134,139 @@ public static class HsdPortalService
             result.FetchError = ex.Message;
         }
 
+        if (!result.FetchSuccess && ShouldUseEqlFallback())
+        {
+            string articleApiError = result.FetchError;
+            HsdArticleData eqlResult = FetchArticleByEql(articleId, componentGroup);
+            if (eqlResult.FetchSuccess)
+            {
+                return eqlResult;
+            }
+
+            result.FetchError = "Article API: " + articleApiError + "; EQL fallback: " + eqlResult.FetchError;
+        }
+
         return result;
+    }
+
+    private static bool ShouldUseEqlFallback()
+    {
+        string setting = ConfigurationManager.AppSettings["HSD:UseEqlFallback"];
+        return string.IsNullOrWhiteSpace(setting) || !string.Equals(setting, "false", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static HsdArticleData FetchArticleByEql(string articleId, string componentGroup)
+    {
+        HsdArticleData result = new HsdArticleData
+        {
+            ArticleId = articleId,
+            Comments = new List<string>(),
+            FetchSuccess = false
+        };
+
+        try
+        {
+            string entity = ResolveEqlEntity(componentGroup);
+            string escapedId = articleId.Trim().Replace("'", "''");
+            string eql = "select " + entity + ".id as 'id', " + entity + ".title as 'title', " +
+                entity + ".status as 'status', " + entity + ".owner as 'owner', " +
+                entity + ".priority as 'priority', " + entity + ".sysdebug as 'sysdebug', " +
+                entity + ".sysdebug_forum as 'sysdebug_forum', " + entity + ".reproducibility as 'reproducibility', " +
+                entity + ".closed_reason as 'closed_reason', " + entity + ".fixed_in_version as 'fixed_version' " +
+                "where " + entity + ".id = '" + escapedId + "'";
+
+            string responseJson = HttpPostSspi(GetEqlServiceUrl(), BuildEqlRequest(eql));
+            IDictionary fields = GetFirstEqlResult(responseJson, out string error);
+            if (fields == null)
+            {
+                result.FetchError = error;
+                return result;
+            }
+
+            MapArticleFields(fields, result);
+            result.FetchSuccess = !string.IsNullOrWhiteSpace(result.Title)
+                || !string.IsNullOrWhiteSpace(result.Status)
+                || !string.IsNullOrWhiteSpace(result.Owner);
+            result.FetchError = result.FetchSuccess ? null : "EQL returned no recognizable article fields.";
+        }
+        catch (WebException webEx)
+        {
+            HttpWebResponse response = webEx.Response as HttpWebResponse;
+            result.FetchError = response == null
+                ? webEx.Message
+                : "HSD EQL HTTP " + (int)response.StatusCode;
+        }
+        catch (Exception ex)
+        {
+            result.FetchError = ex.Message;
+        }
+
+        return result;
+    }
+
+    private static string ResolveEqlEntity(string componentGroup)
+    {
+        switch ((componentGroup ?? string.Empty).Trim().ToUpperInvariant())
+        {
+            case "HW":
+            case "MEMORY": return "sighting_central.sighting";
+            case "AUDIO": return "sfip.sighting";
+            case "GFX":
+            case "IGFX":
+            case "IPF": return "ip_sw_graphics.bug";
+            case "SENSOR": return "ip_fw_sw_sensing.bug";
+            case "BIOS": return "central_firmware.bug";
+            case "OS": return "platf_win_os.bug";
+            case "TBT":
+            case "TCSS (EXCL TBT)": return "client_conn_ip.bug";
+            case "LAN": return "client_conn_ip.sighting";
+            default: return "client_platf.bug";
+        }
+    }
+
+    private static string GetEqlServiceUrl()
+    {
+        return ConfigurationManager.AppSettings["HSD:EqlServiceUrl"] ?? DefaultEqlServiceUrl;
+    }
+
+    private static string BuildEqlRequest(string eql)
+    {
+        JavaScriptSerializer serializer = new JavaScriptSerializer();
+        return serializer.Serialize(new
+        {
+            requests = new[]
+            {
+                new
+                {
+                    tran_id = Guid.NewGuid().ToString(),
+                    command = "get_records_by_eql",
+                    command_args = new { eql = eql, count = "1" },
+                    var_args = new string[0]
+                }
+            }
+        });
+    }
+
+    private static IDictionary GetFirstEqlResult(string responseJson, out string error)
+    {
+        error = "Empty EQL response.";
+        JavaScriptSerializer serializer = new JavaScriptSerializer();
+        serializer.MaxJsonLength = int.MaxValue;
+        IDictionary root = serializer.DeserializeObject(responseJson) as IDictionary;
+        IList responses = root == null ? null : root["responses"] as IList;
+        IDictionary response = responses != null && responses.Count > 0 ? responses[0] as IDictionary : null;
+        IList results = response == null ? null : response["result_table"] as IList;
+        IDictionary fields = results != null && results.Count > 0 ? results[0] as IDictionary : null;
+
+        if (fields != null)
+        {
+            error = null;
+            return fields;
+        }
+
+        string status = response == null || response["status"] == null ? "unknown status" : response["status"].ToString();
+        error = "EQL returned no article data (" + status + ").";
+        return null;
     }
 
     // Formats HsdArticleData into a context block for the AI prompt.
@@ -254,6 +392,39 @@ public static class HsdPortalService
         {
             return reader.ReadToEnd();
         }
+    }
+
+    private static string HttpPostSspi(string url, string requestBody)
+    {
+        HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+        request.Method = "POST";
+        request.Accept = "application/json";
+        request.ContentType = "application/json";
+        request.Timeout = GetTimeoutMilliseconds();
+        request.ReadWriteTimeout = GetTimeoutMilliseconds();
+        request.UseDefaultCredentials = true;
+        request.Credentials = CredentialCache.DefaultCredentials;
+        request.PreAuthenticate = true;
+        request.Proxy = BuildHsdProxy();
+
+        using (StreamWriter writer = new StreamWriter(request.GetRequestStream()))
+        {
+            writer.Write(requestBody);
+        }
+
+        using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+        using (StreamReader reader = new StreamReader(response.GetResponseStream(), Encoding.UTF8))
+        {
+            return reader.ReadToEnd();
+        }
+    }
+
+    private static int GetTimeoutMilliseconds()
+    {
+        int timeoutSeconds;
+        return int.TryParse(ConfigurationManager.AppSettings["HSD:TimeoutSeconds"], out timeoutSeconds) && timeoutSeconds > 0
+            ? timeoutSeconds * 1000
+            : 10000;
     }
 
     private static IWebProxy BuildHsdProxy()

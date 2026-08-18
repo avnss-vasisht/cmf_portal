@@ -21,6 +21,7 @@ public class CmfRecommendationRequest
     public string Reproducibility { get; set; }
     public string CustomerDetail { get; set; }
     public string CustomerOwner { get; set; }
+    public string ContextDetails { get; set; }
     public string Rules { get; set; }
 }
 
@@ -106,13 +107,14 @@ threshold_for_cmf_tag: 0.70";
         string reproducibility = SafeText(request.Reproducibility);
         string customerDetail = SafeText(request.CustomerDetail);
         string customerOwner = SafeText(request.CustomerOwner);
+        string contextDetails = SafeText(request.ContextDetails);
         string rules = SafeText(request.Rules);
         if (string.IsNullOrWhiteSpace(rules))
         {
             rules = GetActiveRulesText();
         }
 
-        string hash = ComputeHash("cmf-recommendation-reasoning-v5|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + rules);
+        string hash = ComputeHash("cmf-recommendation-reasoning-v6|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + contextDetails + "|" + rules);
         string cacheKey = "cmf-recommendation:" + hash;
 
         CmfRecommendationResponse cached = TryGetCached(cacheKey);
@@ -124,7 +126,7 @@ threshold_for_cmf_tag: 0.70";
         string modelRecommendation;
         string modelError;
         string deterministicRecommendation = BuildFallbackRecommendation(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules);
-        bool hasModelRecommendation = TryGenerateWithGitHubModel(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, deterministicRecommendation, out modelRecommendation, out modelError);
+        bool hasModelRecommendation = TryGenerateWithGitHubModel(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, contextDetails, rules, deterministicRecommendation, out modelRecommendation, out modelError);
 
         if (!hasModelRecommendation)
         {
@@ -252,7 +254,7 @@ threshold_for_cmf_tag: 0.70";
     }
 
     private static bool TryGenerateWithGitHubModel(
-        string cpId, string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string rules, string deterministicRecommendation,
+        string cpId, string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string contextDetails, string rules, string deterministicRecommendation,
         out string recommendation, out string error)
     {
         recommendation = string.Empty;
@@ -288,7 +290,7 @@ threshold_for_cmf_tag: 0.70";
                 model = "gpt-4o-mini";
         }
 
-        string prompt = BuildCmfRecommendationPrompt(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, deterministicRecommendation);
+        string prompt = BuildCmfRecommendationPrompt(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, contextDetails, rules, deterministicRecommendation);
 
         try
         {
@@ -1111,7 +1113,7 @@ threshold_for_cmf_tag: 0.70";
         return "0";
     }
 
-    private static string BuildCmfRecommendationPrompt(string cpId, string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string rules, string deterministicRecommendation)
+    private static string BuildCmfRecommendationPrompt(string cpId, string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string contextDetails, string rules, string deterministicRecommendation)
     {
         StringBuilder prompt = new StringBuilder();
         prompt.AppendLine("Analyze the following CMF (Component Management Framework) pending issue against the admin-defined CMF rules.");
@@ -1130,6 +1132,12 @@ threshold_for_cmf_tag: 0.70";
         prompt.AppendLine("Reproducibility: " + (string.IsNullOrWhiteSpace(reproducibility) ? "N/A" : reproducibility));
         prompt.AppendLine("Customer Detail: " + (string.IsNullOrWhiteSpace(customerDetail) ? "N/A" : customerDetail));
         prompt.AppendLine("Customer Owner: " + (string.IsNullOrWhiteSpace(customerOwner) ? "N/A" : customerOwner));
+        if (!string.IsNullOrWhiteSpace(contextDetails))
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("Additional database and HSD context:");
+            prompt.AppendLine(contextDetails);
+        }
         prompt.AppendLine();
         prompt.AppendLine("Provide your response in this exact format:");
         prompt.AppendLine("Use threshold_for_cmf_tag from the rules as the minimum overall quality score for tagging. Treat high-weight rules as blocking gates: if a high-weight rule fails, recommend Do not tag as CMF even when the rollup score is near the threshold. The overall quality score should be weighted by rule weight, not a plain average.");
@@ -1139,7 +1147,7 @@ threshold_for_cmf_tag: 0.70";
         prompt.AppendLine("OVERALL QUALITY SCORE: [0-100 integer rollup based on the rule scores]");
         prompt.AppendLine();
         prompt.AppendLine("AI REASONING:");
-        prompt.AppendLine("[2-3 polished, issue-specific sentences that explain why the recommendation is justified. Use natural grammar. Connect the decision to the strongest supporting or blocking rules, and do not copy raw field values as the reasoning.] ");
+        prompt.AppendLine("[2-3 polished, issue-specific sentences that explain why the recommendation is justified. Identify missing information, qualification gaps, and duplicate candidates only when supported by the supplied context. Use natural grammar and do not invent facts.] ");
         prompt.AppendLine();
         prompt.AppendLine("RULE SCORES:");
         prompt.AppendLine("For each rule defined above, provide:");

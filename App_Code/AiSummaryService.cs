@@ -578,20 +578,17 @@ public static class AiSummaryService
         builder.AppendLine("Output template:");
         builder.AppendLine("**AI Summary (Confidence: " + confidence.ToString() + "%)**");
         builder.AppendLine();
-        builder.AppendLine("**Issue:**");
-        builder.AppendLine("- [Explain the actual customer/platform problem, affected configuration, and user-visible impact.]");
+        builder.AppendLine("**Issue Summary:**");
+        builder.AppendLine("- [State the current debug, root-cause, fix, validation, and ownership state in 1-2 evidence-grounded sentences.]");
         builder.AppendLine();
-        builder.AppendLine("**Investigation:**");
-        builder.AppendLine("- [Explain the important investigation steps and what the engineering evidence established or ruled out.]");
+        builder.AppendLine("**Risk Assessment:**");
+        builder.AppendLine("- [State Low, Medium, or High risk and explain the customer impact, validation, or technical evidence that supports it.]");
         builder.AppendLine();
-        builder.AppendLine("**Key Finding:**");
-        builder.AppendLine("- [State the most important technical finding that explains the issue, when supported by evidence.]");
+        builder.AppendLine("**Next Action:**");
+        builder.AppendLine("- [Give the single most important action needed to close, escalate, or continue validation.]");
         builder.AppendLine();
-        builder.AppendLine("**Root Cause:**");
-        builder.AppendLine("- [State the established root cause. If not confirmed, explicitly state that it remains unconfirmed.]");
-        builder.AppendLine();
-        builder.AppendLine("**Fix & Closure:**");
-        builder.AppendLine("- [Explain the implemented fix, validation/result, and why/how the issue was closed. If unresolved, explain the current disposition.]");
+        builder.AppendLine("**Escalation Warning:**");
+        builder.AppendLine("- [State a specific warning only when the supplied data proves it. If update dates are absent, state that inactivity cannot be verified.]");
         builder.AppendLine();
         builder.AppendLine("Ticket data:");
         builder.AppendLine("Issue ID: " + issueId);
@@ -864,6 +861,9 @@ public static class AiSummaryService
         }
 
         string outcomeNarrative = BuildOutcomeNarrative(safeStatus, closedReason, fixedVersion, riskNarrative);
+        string escalationWarning = activityLines.Count == 0
+            ? "Inactivity cannot be verified because the available context has no dated HSD update history."
+            : "No escalation warning is supported by the available HSD activity; review the dated history before closure.";
 
         string nextAction;
         if (ContainsAnyToken(safeStatus, "rejected", "closed", "complete")
@@ -929,16 +929,14 @@ public static class AiSummaryService
         builder.AppendLine("Logs(sysdebug): " + (HasPresentValue(sysdebug) || HasPresentValue(FirstContextValue(contextMap, "Sysdebug", "Sysdebug Forum")) ? "Yes" : "No"));
         builder.AppendLine("RVP platform debug details: " + BuildYesNoValue(rvpDebug));
         builder.AppendLine();
-        builder.AppendLine("**Summary:**");
-        for (int index = 0; index < 3; index++)
-        {
-            string bullet = index < storyBullets.Count ? storyBullets[index] : "Latest available HSD fields do not add more issue activity.";
-            builder.AppendLine((index + 1).ToString() + ") " + bullet.TrimEnd('.'));
-        }
-
-        builder.AppendLine();
-        builder.AppendLine("**Follow up**");
-        builder.Append("- " + BuildCompactFollowUpAction(nextAction, drivers, fixedVersion, closedReason));
+        builder.AppendLine("**Issue Summary:**");
+        builder.AppendLine("- " + (storyBullets.Count > 0 ? storyBullets[0] : outcomeNarrative));
+        builder.AppendLine("**Risk Assessment:**");
+        builder.AppendLine("- " + riskNarrative + ".");
+        builder.AppendLine("**Next Action:**");
+        builder.AppendLine("- " + BuildCompactFollowUpAction(nextAction, drivers, fixedVersion, closedReason));
+        builder.AppendLine("**Escalation Warning:**");
+        builder.Append("- " + escalationWarning);
         return builder.ToString();
     }
 

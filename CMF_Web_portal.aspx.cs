@@ -4466,6 +4466,7 @@ SELECT TOP 1
     main.processor,
     main.reproducibility,
     main.repro_on_rvp,
+    main.component_group,
     main.promoted_id,
     main.merge_id,
     main.fixed_in_version,
@@ -4486,6 +4487,7 @@ WHERE main.cp_id = @issueId", con))
 
                     DataRow row = table.Rows[0];
                     StringBuilder builder = new StringBuilder();
+                    string componentGroup = FirstNonEmptyColumnValue(row, "component_group");
 
                     // ── Section 1: CMF portal database fields ──────────────────
                     builder.AppendLine("--- CMF Portal Database ---");
@@ -4539,7 +4541,7 @@ WHERE main.cp_id = @issueId", con))
 
                     // ── Section 2: HSD portal – sighting article ───────────────
                     HsdArticleData hsdSighting =
-                        HsdPortalService.FetchArticle(issueId.Trim());
+                        HsdPortalService.FetchArticle(issueId.Trim(), componentGroup);
 
                     string hsdSightingContext =
                         HsdPortalService.FormatForAiContext(
@@ -4587,7 +4589,7 @@ WHERE main.cp_id = @issueId", con))
                     if (!string.IsNullOrWhiteSpace(promotedId)
                         && !string.Equals(promotedId.Trim(), issueId.Trim(), StringComparison.OrdinalIgnoreCase))
                     {
-                        HsdArticleData hsdPromoted = HsdPortalService.FetchArticle(promotedId.Trim());
+                        HsdArticleData hsdPromoted = HsdPortalService.FetchArticle(promotedId.Trim(), componentGroup);
                         string hsdPromotedContext = HsdPortalService.FormatForAiContext(hsdPromoted, "Promoted Issue " + promotedId.Trim());
                         if (!string.IsNullOrWhiteSpace(hsdPromotedContext))
                             builder.AppendLine(hsdPromotedContext);
@@ -4750,6 +4752,7 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
                 Reproducibility = reproducibility,
                 CustomerDetail = customerDetail,
                 CustomerOwner = customerOwner,
+                ContextDetails = BuildIssueSummaryContext(resolvedPlatform, cpId),
                 Rules = CmfRecommendationService.GetActiveRulesText()
             };
 
