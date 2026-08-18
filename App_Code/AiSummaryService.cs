@@ -921,14 +921,6 @@ public static class AiSummaryService
         StringBuilder builder = new StringBuilder();
         builder.AppendLine("**AI summary (Confidence: " + confidence.ToString() + "%)**");
         builder.AppendLine();
-        builder.AppendLine("Sighting ID: " + BuildDisplayValue(issueId) + "  CMF Ask date: " + BuildDisplayValue(submittedDate));
-        builder.AppendLine();
-        builder.AppendLine("Status: " + BuildDisplayValue(safeStatus));
-        builder.AppendLine("Impact: " + BuildDisplayValue(FirstNonEmpty(customerImpact, impact)));
-        builder.AppendLine("Reproducibility: " + BuildDisplayValue(reproducibility));
-        builder.AppendLine("Logs(sysdebug): " + (HasPresentValue(sysdebug) || HasPresentValue(FirstContextValue(contextMap, "Sysdebug", "Sysdebug Forum")) ? "Yes" : "No"));
-        builder.AppendLine("RVP platform debug details: " + BuildYesNoValue(rvpDebug));
-        builder.AppendLine();
         builder.AppendLine("**Issue Summary:**");
         builder.AppendLine("- " + (storyBullets.Count > 0 ? storyBullets[0] : outcomeNarrative));
         builder.AppendLine("**Risk Assessment:**");
