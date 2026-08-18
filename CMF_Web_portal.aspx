@@ -7801,8 +7801,6 @@ td:nth-child(odd), th:nth-child(odd) {
                 bodyNode.textContent = 'Error while calling the issue description service.';
             });
         }
-                    <h2 id="aiSummaryDrawerTitle" class="ai-summary-drawer-title">AI Summary</h2>
-                    <div id="aiSummaryDateRow" class="ai-summary-meta-row"><strong>CMF Ask Date:</strong> <span id="aiSummarySubmittedDate">-</span></div>
 
         function fetchAiSummary(payload, bodyNode, actionsNode) {
             if (!bodyNode) bodyNode = document.getElementById('aiSummaryBody');
@@ -9101,7 +9099,7 @@ td:nth-child(odd), th:nth-child(odd) {
             </asp:DropDownList>
         </div>
         <div class="sidebar-toggle-div">
-            <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+            <button type="button" class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
         </div>
 
               <div id="updateinfo" runat="server">
@@ -9115,7 +9113,7 @@ td:nth-child(odd), th:nth-child(odd) {
 
 
         <div id="sidebar" class="sidebar">
-    <button class="close-btn" onclick="closeSidebar()">X</button>
+    <button type="button" class="close-btn" onclick="closeSidebar()">X</button>
     <!-- Hardcoded 'All Drivers' link -->
     <div style="margin-left: 20px">
         <asp:LinkButton ID="lnkAllDrivers" runat="server" CommandArgument="AllDrivers" OnCommand="lnkValue_Command">
@@ -9535,8 +9533,8 @@ Submit
                 <div id="aiSummaryDrawerBg" class="ai-summary-drawer-bg" onclick="closeAiSummaryDrawer()"></div>
                 <aside id="aiSummaryDrawer" class="ai-summary-drawer" aria-hidden="true" role="dialog" aria-label="AI Issue Summary">
                     <button type="button" class="ai-summary-drawer-close" onclick="closeAiSummaryDrawer()" aria-label="Close">&times;</button>
-                    <h2 class="ai-summary-drawer-title"><span>AI Summary</span><span class="ai-summary-title-badges"><span id="aiSummaryConfidence" class="ai-summary-confidence-inline">Confidence: --</span><span id="aiSummaryStatusBadge" class="ai-summary-status-value">Status: --</span></span></h2>
-                    <div class="ai-summary-meta-row ai-summary-meta-combined"><strong>Sighting ID:</strong> <span id="aiSummaryIssueId">-</span><strong>CMF Ask Date:</strong> <span id="aiSummarySubmittedDate">-</span></div>
+                    <h2 class="ai-summary-drawer-title"><span id="aiSummaryDrawerTitle">AI Summary</span><span class="ai-summary-title-badges"><span id="aiSummaryConfidence" class="ai-summary-confidence-inline">Confidence: --</span><span id="aiSummaryStatusBadge" class="ai-summary-status-value">Status: --</span></span></h2>
+                    <div class="ai-summary-meta-row ai-summary-meta-combined"><strong>Sighting ID:</strong> <span id="aiSummaryIssueId">-</span><span id="aiSummaryDateRow"><strong>CMF Ask Date:</strong> <span id="aiSummarySubmittedDate">-</span></span></div>
                     <div class="ai-summary-meta-row" id="aiSummaryTitleRow" style="display:none"><strong>Title:</strong> <span id="aiSummaryTitle">-</span></div>
                     <div id="aiSummaryFacts" class="ai-summary-facts"></div>
                     <div class="ai-summary-body" id="aiSummaryBody">Generating AI summary...</div>
