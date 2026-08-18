@@ -7761,6 +7761,11 @@ td:nth-child(odd), th:nth-child(odd) {
                 }
                 var summary = result.Summary || 'No summary content returned.';
                 var preparedSummary = prepareAiSummaryForDrawer(summary);
+                preparedSummary.status = result.Status || preparedSummary.status;
+                preparedSummary.impact = result.Impact || preparedSummary.impact;
+                preparedSummary.reproducibility = result.Reproducibility || preparedSummary.reproducibility;
+                preparedSummary.logs = result.LogsAvailable || preparedSummary.logs;
+                preparedSummary.rvpDebug = result.RvpDebugAvailable || preparedSummary.rvpDebug;
                 if (result.Confidence && !preparedSummary.confidence) {
                     preparedSummary.confidence = result.Confidence + '%';
                 }
@@ -7923,9 +7928,15 @@ td:nth-child(odd), th:nth-child(odd) {
             
             var recNode = document.getElementById('cmfRecRecommendation');
             var evidenceNode = document.getElementById('cmfRecEvidence');
+            var scoreNode = document.getElementById('cmfRecScore');
+            var checksNode = document.getElementById('cmfRecChecks');
+            var nextStepsNode = document.getElementById('cmfRecNextSteps');
             
             if (recNode) recNode.textContent = 'Generating AI recommendation...';
             if (evidenceNode) evidenceNode.textContent = '-';
+            if (scoreNode) scoreNode.textContent = '-';
+            if (checksNode) checksNode.textContent = '-';
+            if (nextStepsNode) nextStepsNode.textContent = '-';
 
             drawerBg.classList.add('show');
             drawer.classList.add('show');
@@ -7973,6 +7984,24 @@ td:nth-child(odd), th:nth-child(odd) {
                 if (evidenceNode) {
                     var reasoningText = result.Evidence || 'No AI reasoning provided.';
                     evidenceNode.innerHTML = renderMarkdown(compactRecommendationText(reasoningText));
+                }
+
+                if (scoreNode) {
+                    scoreNode.textContent = (result.OverallQualityScore || 0) + '/100 (threshold ' + (result.ThresholdScore || 0) + ')';
+                }
+
+                if (checksNode) {
+                    var ruleScores = result.RuleScores || [];
+                    var checks = [];
+                    for (var index = 0; index < ruleScores.length; index++) {
+                        var rule = ruleScores[index] || {};
+                        checks.push('- ' + (rule.RuleId || 'Rule') + ': ' + (rule.Evaluation || 'No evaluation returned.'));
+                    }
+                    checksNode.innerHTML = renderMarkdown(checks.join('\n') || '- No qualification checks returned.');
+                }
+
+                if (nextStepsNode) {
+                    nextStepsNode.innerHTML = renderMarkdown(result.NextSteps || 'No next action returned.');
                 }
 
             })
@@ -9506,8 +9535,20 @@ Submit
                     <span id="cmfRecComponent" style="display:none">-</span>
                     
                     <div class="cmf-rec-section">
-                        <h3>Reasoning</h3>
+                        <h3>Decision Basis</h3>
                         <div id="cmfRecEvidence" class="ai-summary-body">-</div>
+                    </div>
+                    <div class="cmf-rec-section">
+                        <h3>Qualification Score</h3>
+                        <div id="cmfRecScore" class="ai-summary-body">-</div>
+                    </div>
+                    <div class="cmf-rec-section">
+                        <h3>Qualification Gaps And Checks</h3>
+                        <div id="cmfRecChecks" class="ai-summary-body">-</div>
+                    </div>
+                    <div class="cmf-rec-section">
+                        <h3>Recommended Next Steps</h3>
+                        <div id="cmfRecNextSteps" class="ai-summary-body">-</div>
                     </div>
                     
                     <div class="cmf-rec-placeholder-actions">

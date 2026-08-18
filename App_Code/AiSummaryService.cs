@@ -27,6 +27,11 @@ public class AiSummaryResponse
     public string SubmittedDate { get; set; }
     public string Summary { get; set; }
     public int Confidence { get; set; }
+    public string Status { get; set; }
+    public string Impact { get; set; }
+    public string Reproducibility { get; set; }
+    public string LogsAvailable { get; set; }
+    public string RvpDebugAvailable { get; set; }
     public string Message { get; set; }
     public bool UsedFallback { get; set; }
 }
@@ -40,7 +45,7 @@ public static class AiSummaryService
     {
         if (request == null)
         {
-            return new AiSummaryResponse
+            AiSummaryResponse fallbackResult = new AiSummaryResponse
             {
                 Success = false,
                 Message = "Invalid summary request."
@@ -94,6 +99,8 @@ public static class AiSummaryService
                 Message = BuildFallbackMessage(modelError),
                 UsedFallback = true
             };
+            PopulateSummaryFacts(fallbackResult, status, sysdebug, contextDetails);
+            return fallbackResult;
         }
 
         // Post-process the model output to clean up spacing and ensure word limit
@@ -110,9 +117,22 @@ public static class AiSummaryService
             Message = "AI summary generated.",
             UsedFallback = false
         };
+        PopulateSummaryFacts(result, status, sysdebug, contextDetails);
 
         SetCached(cacheKey, result, DateTime.UtcNow.AddMinutes(30));
         return result;
+    }
+
+    private static void PopulateSummaryFacts(AiSummaryResponse response, string status, string sysdebug, string contextDetails)
+    {
+        if (response == null) return;
+
+        Dictionary<string, string> contextMap = ParseContextDetails(contextDetails);
+        response.Status = BuildDisplayValue(FirstNonEmpty(FirstContextValue(contextMap, "Promoted Status", "Status", "Promoted Issue Status"), status));
+        response.Impact = BuildDisplayValue(FirstContextValue(contextMap, "Customer Impact", "Promoted Issue Customer Impact", "Impact", "Promoted Issue Impact"));
+        response.Reproducibility = BuildDisplayValue(FirstContextValue(contextMap, "Reproducibility"));
+        response.LogsAvailable = HasPresentValue(FirstNonEmpty(sysdebug, FirstContextValue(contextMap, "Sysdebug", "Sysdebug Forum", "Sysdebug Category"))) ? "Yes" : "No";
+        response.RvpDebugAvailable = BuildYesNoValue(FirstContextValue(contextMap, "RVP Platform Debug Details", "RVP Debug", "Repro On RVP"));
     }
 
     public static string GenerateOneLineStatus(AiSummaryRequest request)
