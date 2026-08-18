@@ -88,7 +88,7 @@ public static class AiSummaryService
                     fallbackConfidence),
                 220);
 
-            return new AiSummaryResponse
+            AiSummaryResponse fallbackResult = new AiSummaryResponse
             {
                 Success = true,
                 IssueId = issueId,
