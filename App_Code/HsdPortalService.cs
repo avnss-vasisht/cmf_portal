@@ -176,7 +176,8 @@ public static class HsdPortalService
                 "where " + entity + ".id = '" + escapedId + "'";
 
             string responseJson = HttpPostSspi(GetEqlServiceUrl(), BuildEqlRequest(eql));
-            IDictionary fields = GetFirstEqlResult(responseJson, out string error);
+            string error;
+            IDictionary fields = GetFirstEqlResult(responseJson, out error);
             if (fields == null)
             {
                 result.FetchError = error;
