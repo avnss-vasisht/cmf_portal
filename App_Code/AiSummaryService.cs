@@ -135,6 +135,98 @@ public static class AiSummaryService
         response.RvpDebugAvailable = BuildYesNoValue(FirstContextValue(contextMap, "RVP Platform Debug Details", "RVP Debug", "Repro On RVP"));
     }
 
+    public static AiSummaryResponse GenerateIssueDescription(AiSummaryRequest request, bool includeCmfReviewDetails)
+    {
+        if (request == null)
+        {
+            return new AiSummaryResponse { Success = false, Message = "Invalid issue description request." };
+        }
+
+        string issueId = SafeText(request.IssueId);
+        string title = SafeText(request.Title);
+        string contextDetails = SafeText(request.ContextDetails);
+        string description;
+        string modelError;
+        bool generated = TryGenerateWithGitHubModel(
+            issueId,
+            SafeText(request.SubmittedDate),
+            title,
+            SafeText(request.Status),
+            SafeText(request.Sysdebug),
+            contextDetails,
+            out description,
+            out modelError,
+            BuildIssueDescriptionPrompt(issueId, title, contextDetails, includeCmfReviewDetails),
+            "You write evidence-grounded engineering issue descriptions. Never invent root causes, fixes, workarounds, related issues, or HSD updates that are not present in the supplied context.");
+
+        if (!generated)
+        {
+            description = BuildFallbackIssueDescription(issueId, title, contextDetails, includeCmfReviewDetails);
+        }
+
+        AiSummaryResponse response = new AiSummaryResponse
+        {
+            Success = true,
+            IssueId = issueId,
+            Title = title,
+            Summary = CleanupSummarySpacing(description, 260),
+            Confidence = CalculateSummaryConfidence(SafeText(request.Status), SafeText(request.Sysdebug), contextDetails),
+            Message = generated ? "AI issue description generated." : BuildFallbackMessage(modelError),
+            UsedFallback = !generated
+        };
+        PopulateSummaryFacts(response, SafeText(request.Status), SafeText(request.Sysdebug), contextDetails);
+        return response;
+    }
+
+    private static string BuildIssueDescriptionPrompt(string issueId, string title, string contextDetails, bool includeCmfReviewDetails)
+    {
+        StringBuilder prompt = new StringBuilder();
+        prompt.AppendLine("Create a concise, evidence-grounded description for issue " + issueId + ".");
+        prompt.AppendLine("Use only the CMF database and HSD context below. If HSD context is unavailable, say that the description is based on CMF database data.");
+        prompt.AppendLine();
+        prompt.AppendLine("Use exactly these headings:");
+        prompt.AppendLine("**Issue Description:**");
+        prompt.AppendLine("**Technical Evidence:**");
+        prompt.AppendLine("**Current State:**");
+        if (includeCmfReviewDetails)
+        {
+            prompt.AppendLine("**Replication And Reproducibility:**");
+            prompt.AppendLine("**Recovery Or Workaround:**");
+            prompt.AppendLine("**Similar Or Duplicate Issues:**");
+            prompt.AppendLine("**CMF Qualification Gaps:**");
+        }
+        prompt.AppendLine("Keep each section to one or two sentences. Use 'Not available in supplied context' for unknown values.");
+        prompt.AppendLine();
+        prompt.AppendLine("Title: " + title);
+        prompt.AppendLine("Context:");
+        prompt.AppendLine(contextDetails);
+        return prompt.ToString();
+    }
+
+    private static string BuildFallbackIssueDescription(string issueId, string title, string contextDetails, bool includeCmfReviewDetails)
+    {
+        Dictionary<string, string> contextMap = ParseContextDetails(contextDetails);
+        StringBuilder description = new StringBuilder();
+        description.AppendLine("**Issue Description:**");
+        description.AppendLine("- " + (string.IsNullOrWhiteSpace(title) ? "Issue title is not available." : title));
+        description.AppendLine("**Technical Evidence:**");
+        description.AppendLine("- " + BuildDisplayValue(FirstContextValue(contextMap, "Sysdebug", "Sysdebug Forum", "Impact")));
+        description.AppendLine("**Current State:**");
+        description.AppendLine("- " + BuildDisplayValue(FirstContextValue(contextMap, "Promoted Status", "Status", "CMF Status")));
+        if (includeCmfReviewDetails)
+        {
+            description.AppendLine("**Replication And Reproducibility:**");
+            description.AppendLine("- " + BuildDisplayValue(FirstContextValue(contextMap, "Reproducibility", "RVP Platform Debug Details")));
+            description.AppendLine("**Recovery Or Workaround:**");
+            description.AppendLine("- Not available in supplied context.");
+            description.AppendLine("**Similar Or Duplicate Issues:**");
+            description.AppendLine("- " + BuildDisplayValue(FirstContextValue(contextMap, "Promoted ID", "Promoted Issue ID")));
+            description.AppendLine("**CMF Qualification Gaps:**");
+            description.AppendLine("- Review the available impact, reproducibility, and iDST evidence before disposition.");
+        }
+        return description.ToString();
+    }
+
     public static string GenerateOneLineStatus(AiSummaryRequest request)
     {
         if (request == null)

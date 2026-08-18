@@ -7702,6 +7702,8 @@ td:nth-child(odd), th:nth-child(odd) {
             var actionsNode = document.getElementById('aiSummaryActions');
             var confidenceNode = document.getElementById('aiSummaryConfidence');
             var statusBadgeNode = document.getElementById('aiSummaryStatusBadge');
+            var drawerTitle = document.getElementById('aiSummaryDrawerTitle');
+            var dateRow = document.getElementById('aiSummaryDateRow');
             var drawerBg = document.getElementById('aiSummaryDrawerBg');
             var drawer = document.getElementById('aiSummaryDrawer');
 
@@ -7710,14 +7712,18 @@ td:nth-child(odd), th:nth-child(odd) {
             }
 
             issueIdNode.textContent = issueId || 'N/A';
+            if (drawerTitle) drawerTitle.textContent = 'AI Summary';
             if (titleNode) titleNode.textContent = '';
             if (titleRow) titleRow.style.display = 'none';
+            if (dateRow) dateRow.style.display = '';
             dateNode.textContent = submittedDate || 'N/A';
             if (confidenceNode) confidenceNode.textContent = 'Confidence: --';
             if (statusBadgeNode) {
                 statusBadgeNode.textContent = 'Status: --';
                 statusBadgeNode.className = 'ai-summary-status-value';
+                statusBadgeNode.style.display = '';
             }
+            if (factsNode) factsNode.style.display = '';
             updateAiSummaryFacts(factsNode, {}, true);
             bodyNode.textContent = 'Generating AI summary...';
             bodyNode.className = 'ai-summary-body markdown-content';
@@ -7741,6 +7747,62 @@ td:nth-child(odd), th:nth-child(odd) {
 
             fetchAiSummary(payload, bodyNode, actionsNode);
         }
+        function openAiIssueDescriptionModal(issueId, title, includeCmfReviewDetails) {
+            var drawerBg = document.getElementById('aiSummaryDrawerBg');
+            var drawer = document.getElementById('aiSummaryDrawer');
+            var drawerTitle = document.getElementById('aiSummaryDrawerTitle');
+            var issueIdNode = document.getElementById('aiSummaryIssueId');
+            var titleNode = document.getElementById('aiSummaryTitle');
+            var titleRow = document.getElementById('aiSummaryTitleRow');
+            var dateRow = document.getElementById('aiSummaryDateRow');
+            var factsNode = document.getElementById('aiSummaryFacts');
+            var confidenceNode = document.getElementById('aiSummaryConfidence');
+            var statusBadgeNode = document.getElementById('aiSummaryStatusBadge');
+            var bodyNode = document.getElementById('aiSummaryBody');
+            var actionsNode = document.getElementById('aiSummaryActions');
+
+            if (!drawerBg || !drawer || !bodyNode) return;
+            if (drawerTitle) drawerTitle.textContent = includeCmfReviewDetails ? 'AI CMF Issue Description' : 'AI Issue Description';
+            if (issueIdNode) issueIdNode.textContent = issueId || 'N/A';
+            if (titleNode) titleNode.textContent = title || 'N/A';
+            if (titleRow) titleRow.style.display = '';
+            if (dateRow) dateRow.style.display = 'none';
+            if (factsNode) factsNode.style.display = 'none';
+            if (confidenceNode) confidenceNode.textContent = 'Confidence: --';
+            if (statusBadgeNode) statusBadgeNode.style.display = 'none';
+            bodyNode.textContent = 'Generating AI issue description...';
+            if (actionsNode) actionsNode.style.display = 'none';
+            drawerBg.classList.add('show');
+            drawer.classList.add('show');
+
+            fetch('CMF_Web_portal.aspx/GetAiIssueDescription', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify({
+                    issueId: issueId || '',
+                    title: title || '',
+                    includeCmfReviewDetails: !!includeCmfReviewDetails,
+                    platform: getIssuePendingPlatformValue()
+                })
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                var result = data && data.d ? data.d : data;
+                if (!result || result.Success !== true) {
+                    bodyNode.textContent = (result && result.Message) ? result.Message : 'Unable to generate issue description.';
+                    return;
+                }
+                if (confidenceNode) confidenceNode.textContent = 'Confidence: ' + (result.Confidence || '--') + '%';
+                bodyNode.innerHTML = renderMarkdown(result.Summary || 'No issue description returned.');
+                if (actionsNode) actionsNode.style.display = '';
+                window._aiSummaryLastText = result.Summary || '';
+            })
+            .catch(function () {
+                bodyNode.textContent = 'Error while calling the issue description service.';
+            });
+        }
+                    <h2 id="aiSummaryDrawerTitle" class="ai-summary-drawer-title">AI Summary</h2>
+                    <div id="aiSummaryDateRow" class="ai-summary-meta-row"><strong>CMF Ask Date:</strong> <span id="aiSummarySubmittedDate">-</span></div>
 
         function fetchAiSummary(payload, bodyNode, actionsNode) {
             if (!bodyNode) bodyNode = document.getElementById('aiSummaryBody');

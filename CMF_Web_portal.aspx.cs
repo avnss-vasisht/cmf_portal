@@ -3839,6 +3839,7 @@ LEFT JOIN " + designTable + @" AS d
         }
         sb.Append("</span>");
         sb.AppendFormat("<span class=\"issue-title-text\">{0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(title) ? "Untitled issue" : title));
+        sb.AppendFormat("<button type=\"button\" class=\"ai-summary-btn ai-summary-btn-inline\" onclick='openAiIssueDescriptionModal(\"{0}\", \"{1}\", false)' title=\"AI Issue Description\" aria-label=\"AI Issue Description\"><i class=\"fas fa-file-alt\" aria-hidden=\"true\"></i></button>", JsEncode(sightingId), JsEncode(title));
         sb.Append("</span>");
         return sb.ToString();
     }
@@ -3883,6 +3884,7 @@ LEFT JOIN " + designTable + @" AS d
     {
         return "<span class=\"pending-issue-with-action\">" +
             RenderPendingIssueDetails(cpIdValue, titleValue, cmfRequestValue) +
+            RenderPendingDescriptionButton(cpIdValue, titleValue) +
             RenderPendingRecommendationButton(cpIdValue, titleValue, componentValue, cmfRequestValue, impactValue, idstValue, reproOnRvpValue, reproducibilityValue, customerDetailValue, customerOwnerValue) +
             "</span>";
     }
@@ -3952,6 +3954,14 @@ LEFT JOIN " + designTable + @" AS d
             JsEncode(reproducibilityValue),
             JsEncode(customerDetailValue),
             JsEncode(customerOwnerValue));
+    }
+
+    protected string RenderPendingDescriptionButton(object cpIdValue, object titleValue)
+    {
+        return string.Format(
+            "<button type=\"button\" class=\"pending-recommendation-btn\" onclick='openAiIssueDescriptionModal(\"{0}\", \"{1}\", true)' title=\"AI Issue Description\" aria-label=\"AI Issue Description\"><i class=\"fas fa-file-alt\" aria-hidden=\"true\"></i><span>Describe</span></button>",
+            JsEncode(cpIdValue),
+            JsEncode(titleValue));
     }
 
     protected string RenderMilestoneProgress(object milestoneValue, object progressValue, object fallbackMilestoneValue)
@@ -4434,6 +4444,36 @@ LEFT JOIN " + designTable + @" AS d
                 Success = false,
                 Message = "Summary generation failed: " + ex.Message
             };
+        }
+    }
+
+    [WebMethod(EnableSession = true)]
+    public static AiSummaryResponse GetAiIssueDescription(string issueId, string title, bool includeCmfReviewDetails, string platform)
+    {
+        try
+        {
+            string resolvedPlatform = platform;
+            if (string.IsNullOrWhiteSpace(resolvedPlatform) && HttpContext.Current != null && HttpContext.Current.Session != null)
+            {
+                resolvedPlatform = HttpContext.Current.Session[IssuePendingPlatformSessionKey] as string;
+                if (string.IsNullOrWhiteSpace(resolvedPlatform)) resolvedPlatform = HttpContext.Current.Session["selectedPlatform"] as string;
+            }
+            if (string.IsNullOrWhiteSpace(resolvedPlatform) || !AllowedPlatformTables.Contains(resolvedPlatform))
+            {
+                return new AiSummaryResponse { Success = false, Message = "Select a valid platform before generating an issue description." };
+            }
+
+            string contextDetails = BuildIssueSummaryContext(resolvedPlatform, issueId);
+            return AiSummaryService.GenerateIssueDescription(new AiSummaryRequest
+            {
+                IssueId = issueId,
+                Title = title,
+                ContextDetails = contextDetails
+            }, includeCmfReviewDetails);
+        }
+        catch (Exception ex)
+        {
+            return new AiSummaryResponse { Success = false, Message = "Issue description generation failed: " + ex.Message };
         }
     }
 
