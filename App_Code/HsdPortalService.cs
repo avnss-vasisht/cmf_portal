@@ -108,9 +108,20 @@ public static class HsdPortalService
         catch (WebException webEx)
         {
             HttpWebResponse resp = webEx.Response as HttpWebResponse;
-            result.FetchError = resp != null
-                ? "HSD API HTTP " + (int)resp.StatusCode
-                : "HSD API unreachable: " + webEx.Message;
+            if (resp != null)
+            {
+                string authenticationScheme = resp.Headers[HttpResponseHeader.WwwAuthenticate];
+                result.FetchError = "HSD API HTTP " + (int)resp.StatusCode;
+
+                if (!string.IsNullOrWhiteSpace(authenticationScheme))
+                {
+                    result.FetchError += " (WWW-Authenticate: " + authenticationScheme + ")";
+                }
+            }
+            else
+            {
+                result.FetchError = "HSD API unreachable: " + webEx.Message;
+            }
         }
         catch (Exception ex)
         {
