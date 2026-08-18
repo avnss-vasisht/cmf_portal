@@ -8770,32 +8770,8 @@ td:nth-child(odd), th:nth-child(odd) {
         }
 
         function normalizeIssuePendingShellDom() {
-            var issueShell = document.getElementById('issueTabShell');
-            var pendingShell = document.getElementById('pendingTabShell');
-            if (!issueShell) return;
-
-            var issueMain = issueShell.querySelector('.issue-tab-main');
-            var issueSide = issueShell.querySelector('.issue-side-panel')
-                || document.querySelector('#mainDataWrapper .issue-side-panel')
-                || document.querySelector('.issue-side-panel');
-            var pendingMain = pendingShell ? pendingShell.querySelector('.pending-tab-main') : null;
-            var pendingSide = pendingShell
-                ? (pendingShell.querySelector('.pending-side-panel')
-                    || document.querySelector('#mainDataWrapper .pending-side-panel')
-                    || document.querySelector('.pending-side-panel'))
-                : null;
-
-            if (issueMain && issueSide && issueSide.parentElement !== issueShell) {
-                issueShell.insertBefore(issueSide, issueMain.nextSibling);
-            }
-
-            if (pendingShell && pendingMain && pendingSide && pendingSide.parentElement !== pendingShell) {
-                pendingShell.insertBefore(pendingSide, pendingMain.nextSibling);
-            }
-
-            if (pendingShell && issueShell.parentElement && pendingShell.parentElement !== issueShell.parentElement) {
-                issueShell.parentElement.insertBefore(pendingShell, issueShell.nextSibling);
-            }
+            // The server renders each side panel in its owning tab shell. Do not move nodes here:
+            // UpdatePanel replacements can otherwise place an Issue panel in the Pending shell.
         }
 
         function syncIssuePendingSidePanelVisibility() {
@@ -8817,37 +8793,19 @@ td:nth-child(odd), th:nth-child(odd) {
             var issueGridWrap = issueGrid ? issueGrid.closest('.issue-grid-scroll') : null;
             var pendingGridWrap = pendingGrid ? pendingGrid.closest('.cmf-pending-grid-wrap') : null;
 
-            var issueActive = isElementVisible(issuePane) || isElementVisible(issueHeader) || isElementVisible(issueGrid) || isElementVisible(issueMain);
-            var pendingActive = isElementVisible(pendingPane) || isElementVisible(pendingHeader) || isElementVisible(pendingGrid) || isElementVisible(pendingMain);
+            var issueActive = false;
+            var pendingActive = false;
 
             var activeText = activeViewTitle ? (activeViewTitle.textContent || activeViewTitle.innerText || '').toLowerCase() : '';
             var activeTab = (window.CMF_PORTAL.activeFocusedTab || '').toLowerCase();
             if (activeTab === 'pending' || activeText.indexOf('pending') >= 0) {
                 pendingActive = true;
-                issueActive = false;
             } else if (activeTab === 'issue' || activeText.indexOf('issue') >= 0) {
                 issueActive = true;
-                pendingActive = false;
-            }
-
-            if (!issueActive && !pendingActive) {
-                var issueWasVisible = !!(issueShell && issueShell.style.display === 'grid');
-                var pendingWasVisible = !!(pendingShell && pendingShell.style.display === 'grid');
-                if (pendingWasVisible) {
-                    pendingActive = true;
-                } else if (issueWasVisible) {
-                    issueActive = true;
-                } else {
-                    issueActive = true;
-                }
-            }
-
-            if (issueActive && pendingActive) {
-                if (activeTab === 'pending' || activeText.indexOf('pending') >= 0) {
-                    issueActive = false;
-                } else {
-                    pendingActive = false;
-                }
+            } else {
+                // Before the active-tab state is available, use server-rendered visibility once.
+                issueActive = isElementVisible(issuePane) || isElementVisible(issueHeader) || isElementVisible(issueGrid);
+                pendingActive = !issueActive && (isElementVisible(pendingPane) || isElementVisible(pendingHeader) || isElementVisible(pendingGrid));
             }
 
             if (issueShell) {
@@ -9036,9 +8994,13 @@ td:nth-child(odd), th:nth-child(odd) {
             var input = document.getElementById('globalPortalSearch');
             var query = input ? (input.value || '').trim().toLowerCase() : '';
             var clearBtn = document.getElementById('globalSearchClear');
+            var activeTab = (window.CMF_PORTAL.activeFocusedTab || '').toLowerCase();
 
-            filterGridRowsByQuery(document.getElementById('<%= overall_request_details.ClientID %>'), query);
-            filterGridRowsByQuery(document.getElementById('<%= GridView_cmf_pending.ClientID %>'), query);
+            if (activeTab === 'pending') {
+                filterGridRowsByQuery(document.getElementById('<%= GridView_cmf_pending.ClientID %>'), query);
+            } else {
+                filterGridRowsByQuery(document.getElementById('<%= overall_request_details.ClientID %>'), query);
+            }
 
             if (clearBtn) {
                 clearBtn.style.display = query ? 'inline-flex' : 'none';

@@ -514,14 +514,20 @@ function formatTotalRow(gridView) {
 
         function filterGrid() {
             const grid = document.getElementById(window.CMF_PORTAL.ids.overallRequestDetails);
-          const rows = grid.getElementsByTagName('tr');
+                        const filter0Node = document.getElementById('searchColumn0');
+                        const filter1Node = document.getElementById('searchColumn5');
+                        const filter2Node = document.getElementById('searchColumn10');
+                        const filter3Node = document.getElementById('searchColumn4');
+                        const filter4Node = document.getElementById('searchColumn6');
+                        if (!grid || !filter0Node || !filter1Node || !filter2Node || !filter3Node || !filter4Node) return;
+                    const rows = grid.getElementsByTagName('tr');
 
             // Get filter values from the input fields
-            const filter0 = document.getElementById('searchColumn0').value.toLowerCase();
-          const filter1 = document.getElementById('searchColumn5').value.toLowerCase();
-          const filter2 = document.getElementById('searchColumn10').value.toLowerCase();
-          const filter3 = document.getElementById('searchColumn4').value.toLowerCase();
-          const filter4 = document.getElementById('searchColumn6').value.toLowerCase();
+                        const filter0 = filter0Node.value.toLowerCase();
+                    const filter1 = filter1Node.value.toLowerCase();
+                    const filter2 = filter2Node.value.toLowerCase();
+                    const filter3 = filter3Node.value.toLowerCase();
+                    const filter4 = filter4Node.value.toLowerCase();
 
           console.log("Filter values:", { filter1, filter2, filter3, filter4 });
           console.log("Total rows:", rows.length);
@@ -538,6 +544,7 @@ function formatTotalRow(gridView) {
               const idstCell = cells[10];    // Column for "iDST"
               const componentCell = cells[4]; // Column for "Component"
               const rvpCell = cells[6];      // Column for "RVP Repro"
+              if (!progressCell || !driverCell || !idstCell || !componentCell || !rvpCell) continue;
 
               // Get text content for each cell (trim and convert to lowercase)
               const progressText = progressCell.textContent.trim().toLowerCase();
