@@ -70,7 +70,7 @@ public static class HsdPortalService
             return result;
         }
 
-        string baseUrl = (ConfigurationManager.AppSettings["HSD:ApiBaseUrl"] ?? DefaultBaseUrl).TrimEnd('/');
+        string baseUrl = (ConfigurationManager.AppSettings["HSD:ArticleApiBaseUrl"] ?? DefaultBaseUrl).TrimEnd('/');
         string articleUrl = baseUrl + "/" + Uri.EscapeUriString(articleId.Trim());
 
         try
