@@ -789,6 +789,12 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         }
     }
 
+    private void SetInteractiveTabShellVisibility(bool showIssue, bool showPending)
+    {
+        issueTabShell.Style["display"] = showIssue ? "grid" : "none";
+        pendingTabShell.Style["display"] = showPending ? "grid" : "none";
+    }
+
     private static string GetTimeBasedGreeting()
     {
         int hour = DateTime.Now.Hour;
@@ -829,6 +835,7 @@ public partial class CMF_Web_portal : System.Web.UI.Page
 
         overall_request_details.Visible = false;
         GridView_cmf_pending.Visible = false;
+        SetInteractiveTabShellVisibility(false, false);
         analyticsPanel.Visible = false;
         SetMainDataWrapperVisible(false);
         issueListHeaderPanel.Visible = false;
@@ -860,6 +867,7 @@ public partial class CMF_Web_portal : System.Web.UI.Page
 
         overall_request_details.Visible = true;
         GridView_cmf_pending.Visible = false;
+        SetInteractiveTabShellVisibility(true, false);
         fieldSelectorPanel.Visible = true;
         issueListHeaderPanel.Visible = true;
         cmf_pending_header_panel.Visible = false;
@@ -891,6 +899,7 @@ public partial class CMF_Web_portal : System.Web.UI.Page
 
         overall_request_details.Visible = false;
         GridView_cmf_pending.Visible = true;
+        SetInteractiveTabShellVisibility(false, true);
         fieldSelectorPanel.Visible = false;
         issueListHeaderPanel.Visible = false;
         cmf_pending_header_panel.Visible = false;
@@ -1241,6 +1250,7 @@ ORDER BY issue_count DESC", con))
         GridView_cmf_summary1.Visible = false;
         GridView_milestone_map.Visible = false;
         GridView_cmf_pending.Visible = false;
+        SetInteractiveTabShellVisibility(true, false);
         GridView_design_summary.Visible = false;
         GridView_component_summary.Visible = false;
         GridView_oem_summary.Visible = false;
@@ -1387,6 +1397,7 @@ ORDER BY issue_count DESC", con))
         GridView_cmf_summary1.Visible = false;
         GridView_milestone_map.Visible = false;
         GridView_cmf_pending.Visible = true;
+        SetInteractiveTabShellVisibility(false, true);
         GridView_design_summary.Visible = false;
         GridView_component_summary.Visible = false;
         GridView_oem_summary.Visible = false;

@@ -8781,59 +8781,6 @@ td:nth-child(odd), th:nth-child(odd) {
 
         function syncIssuePendingSidePanelVisibility() {
             normalizeIssuePendingShellDom();
-            var issueShell = document.getElementById('issueTabShell');
-            var pendingShell = document.getElementById('pendingTabShell');
-            var issueSide = issueShell ? issueShell.querySelector('.issue-side-panel') : null;
-            var pendingSide = pendingShell ? pendingShell.querySelector('.pending-side-panel') : null;
-
-            var issuePane = document.getElementById(window.CMF_PORTAL.ids.paneIssueList);
-            var pendingPane = document.getElementById(window.CMF_PORTAL.ids.paneCmfPending);
-            var activeViewTitle = document.getElementById(window.CMF_PORTAL.ids.activeViewTitle);
-            var issueHeader = document.getElementById(window.CMF_PORTAL.ids.issueListHeaderPanel);
-            var pendingHeader = document.getElementById(window.CMF_PORTAL.ids.cmfPendingHeaderPanel);
-            var issueGrid = document.getElementById(window.CMF_PORTAL.ids.overallRequestDetails);
-            var pendingGrid = document.getElementById(window.CMF_PORTAL.ids.gridViewCmfPending);
-            var issueMain = issueShell ? issueShell.querySelector('.issue-tab-main') : null;
-            var pendingMain = pendingShell ? pendingShell.querySelector('.pending-tab-main') : null;
-            var issueGridWrap = issueGrid ? issueGrid.closest('.issue-grid-scroll') : null;
-            var pendingGridWrap = pendingGrid ? pendingGrid.closest('.cmf-pending-grid-wrap') : null;
-
-            var issueActive = false;
-            var pendingActive = false;
-
-            var activeText = activeViewTitle ? (activeViewTitle.textContent || activeViewTitle.innerText || '').toLowerCase() : '';
-            var activeTab = (window.CMF_PORTAL.activeFocusedTab || '').toLowerCase();
-            if (activeTab === 'pending' || activeText.indexOf('pending') >= 0) {
-                pendingActive = true;
-            } else if (activeTab === 'issue' || activeText.indexOf('issue') >= 0) {
-                issueActive = true;
-            } else {
-                // Before the active-tab state is available, use server-rendered visibility once.
-                issueActive = isElementVisible(issuePane) || isElementVisible(issueHeader) || isElementVisible(issueGrid);
-                pendingActive = !issueActive && (isElementVisible(pendingPane) || isElementVisible(pendingHeader) || isElementVisible(pendingGrid));
-            }
-
-            if (issueShell) {
-                issueShell.style.display = issueActive ? 'grid' : 'none';
-                issueShell.classList.toggle('portal-view-hidden', !issueActive);
-                issueShell.classList.toggle('side-hidden', !issueActive);
-            }
-            if (pendingShell) {
-                pendingShell.style.display = pendingActive ? 'grid' : 'none';
-                pendingShell.classList.toggle('portal-view-hidden', !pendingActive);
-                pendingShell.classList.toggle('side-hidden', !pendingActive);
-            }
-
-            if (issueSide) {
-                issueSide.style.display = issueActive ? 'grid' : 'none';
-                issueSide.classList.toggle('portal-view-hidden', !issueActive);
-            }
-
-            if (pendingSide) {
-                pendingSide.style.display = pendingActive ? 'grid' : 'none';
-                pendingSide.classList.toggle('portal-view-hidden', !pendingActive);
-            }
-
             filterPortalVisibleTables();
         }
 
@@ -9682,7 +9629,7 @@ Submit
                         </div>
                     </div>
 
-                    <div class="issue-tab-shell" id="issueTabShell" style="display:none;">
+                    <div class="issue-tab-shell" id="issueTabShell" runat="server" ClientIDMode="Static" style="display:none;">
                     <div class="issue-tab-main">
 
                     <asp:Panel ID="issueListHeaderPanel" runat="server" Visible="true">
@@ -10163,7 +10110,7 @@ Submit
                     </div>
 
                     <!-- CMF PENDING LIST HEADER PANEL - INSIDE mainDataWrapper -->
-                    <div class="pending-tab-shell" id="pendingTabShell" style="display:none;">
+                    <div class="pending-tab-shell" id="pendingTabShell" runat="server" ClientIDMode="Static" style="display:none;">
                         <div class="pending-tab-main">
                             <div class="cmf-pending-page-hd">
                                 <div>
