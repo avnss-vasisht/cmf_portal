@@ -1,0 +1,2 @@
+HSD request Windows identity: GAR\vavnss
+HSD request IsAuthenticated: True

@@ -1,0 +1,22 @@
+--- CMF Portal Database ---
+Sighting ID: 14027950774
+Title: [Dell][Wistron][GhostRider] Camera noise when AC plug-in/plug-out with dGPU config
+Operating System: windows.11_v24H2
+Component: platform.Common.sw.os.Win11_2025_H2
+CMF Request: cmf_ok
+Must Fix For: PR6_HF
+Closed Reason: customer_bios_issue
+Customer Impact: 2-high
+Priority: p1-showstopper
+CMF Status: [iDST WW28.2] USB logs to be shared again and MTC to review the previous logs.
+IDST 27.2
+DOEs in progress.Upstream tracing confirms MSI interrupts are reaching the core without delay, ruling out issues in the front-end path. Remaining gaps include validating VTU MSI acknowledgment behavior and checking for possible software-side interrupt handling delays.
+Next steps are to capture downstream traces to confirm VTU ACK timing and involve the MTC team to analyze SW interrupt servicing latency.
+Promoted Status: complete.product_changed
+Drivers: PR6_HF
+Sysdebug: customer_must_fix
+Impact: Bad user experience on camera recording when dGPU randomly D3 entry/exit. Dell also test on AMD platform as same scenarios, they don't observe the issue. Expected need date is end of June.
+Processor: pantherlake_h484
+Reproducibility: frequently_50%-90%
+RVP Platform Debug Details: unknown
+Promoted ID: N/A
