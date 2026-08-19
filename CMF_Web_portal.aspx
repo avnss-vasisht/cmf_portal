@@ -8844,7 +8844,45 @@ td:nth-child(odd), th:nth-child(odd) {
 
         function syncIssuePendingSidePanelVisibility() {
             normalizeIssuePendingShellDom();
+            var issueShell = document.getElementById('issueTabShell');
+            var pendingShell = document.getElementById('pendingTabShell');
+            var activeViewTitle = document.getElementById(window.CMF_PORTAL.ids.activeViewTitle);
+            var activeText = activeViewTitle ? (activeViewTitle.textContent || activeViewTitle.innerText || '').toLowerCase() : '';
+            var activeTab = (window.CMF_PORTAL.activeFocusedTab || '').toLowerCase();
+            var pendingActive = activeTab === 'pending' || activeText.indexOf('pending') >= 0;
+            var issueActive = !pendingActive && (activeTab === 'issue' || activeText.indexOf('issue') >= 0);
+
+            applyInteractiveShellState(issueShell, issueActive);
+            applyInteractiveShellState(pendingShell, pendingActive);
             filterPortalVisibleTables();
+        }
+
+        function applyInteractiveShellState(shell, isActive) {
+            if (!shell) return;
+            shell.classList.toggle('cmf-tab-shell-active', isActive);
+            shell.classList.toggle('cmf-tab-shell-hidden', !isActive);
+            shell.style.setProperty('display', isActive ? 'flex' : 'none', 'important');
+            if (!isActive) return;
+
+            shell.style.setProperty('align-items', 'flex-start', 'important');
+            shell.style.setProperty('gap', '16px', 'important');
+            shell.style.setProperty('width', '100%', 'important');
+
+            var main = shell.querySelector('.issue-tab-main, .pending-tab-main');
+            var side = shell.querySelector('.issue-side-panel, .pending-side-panel');
+            if (main) {
+                main.style.setProperty('flex', '1 1 auto', 'important');
+                main.style.setProperty('min-width', '0', 'important');
+                main.style.setProperty('width', 'calc(100% - 306px)', 'important');
+            }
+            if (side) {
+                side.style.setProperty('flex', '0 0 290px', 'important');
+                side.style.setProperty('width', '290px', 'important');
+                side.style.setProperty('max-width', '290px', 'important');
+                side.style.setProperty('display', 'grid', 'important');
+                side.style.setProperty('position', 'sticky', 'important');
+                side.style.setProperty('top', '90px', 'important');
+            }
         }
 
         function isReportsViewActive() {

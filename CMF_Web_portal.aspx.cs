@@ -599,8 +599,24 @@ public partial class CMF_Web_portal : System.Web.UI.Page
     protected override void OnPreRender(EventArgs e)
     {
         ApplyFocusedPortalMode();
+        ApplyInteractiveTabShellVisibility();
         RegisterActiveTabClientState();
         base.OnPreRender(e);
+    }
+
+    private void ApplyInteractiveTabShellVisibility()
+    {
+        string activeTab = GetActiveFocusedTab();
+        if (string.Equals(activeTab, "pending", StringComparison.OrdinalIgnoreCase) && !GridView_cmf_pending.Visible)
+        {
+            EnsurePendingTabVisibleForPostback();
+            BindGridView_cmf_pending();
+            UpdateCmfPendingKpis();
+        }
+
+        SetInteractiveTabShellVisibility(
+            string.Equals(activeTab, "issue", StringComparison.OrdinalIgnoreCase),
+            string.Equals(activeTab, "pending", StringComparison.OrdinalIgnoreCase));
     }
 
     private void RegisterActiveTabClientState()
@@ -795,6 +811,8 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         pendingTabShell.Visible = true;
         issueTabShell.Attributes["class"] = "issue-tab-shell " + (showIssue ? "cmf-tab-shell-active" : "cmf-tab-shell-hidden");
         pendingTabShell.Attributes["class"] = "pending-tab-shell " + (showPending ? "cmf-tab-shell-active" : "cmf-tab-shell-hidden");
+        issueTabShell.Attributes["style"] = showIssue ? "display:flex !important;align-items:flex-start !important;gap:16px !important;width:100% !important;" : "display:none !important;";
+        pendingTabShell.Attributes["style"] = showPending ? "display:flex !important;align-items:flex-start !important;gap:16px !important;width:100% !important;" : "display:none !important;";
     }
 
     private static string GetTimeBasedGreeting()
