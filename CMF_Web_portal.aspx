@@ -7433,6 +7433,50 @@ td:nth-child(odd), th:nth-child(odd) {
         align-self: start !important;
     }
 
+    #issueTabShell.cmf-tab-shell-hidden,
+    #pendingTabShell.cmf-tab-shell-hidden {
+        display: none !important;
+    }
+
+    #issueTabShell.cmf-tab-shell-active,
+    #pendingTabShell.cmf-tab-shell-active {
+        display: flex !important;
+        align-items: flex-start !important;
+        gap: 16px !important;
+        width: 100% !important;
+    }
+
+    #issueTabShell.cmf-tab-shell-active > .issue-tab-main,
+    #pendingTabShell.cmf-tab-shell-active > .pending-tab-main {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        width: calc(100% - 306px) !important;
+    }
+
+    #issueTabShell.cmf-tab-shell-active > .issue-side-panel,
+    #pendingTabShell.cmf-tab-shell-active > .pending-side-panel {
+        flex: 0 0 290px !important;
+        width: 290px !important;
+        max-width: 290px !important;
+        display: grid !important;
+    }
+
+    @media (max-width: 760px) {
+        #issueTabShell.cmf-tab-shell-active,
+        #pendingTabShell.cmf-tab-shell-active {
+            flex-direction: column !important;
+        }
+
+        #issueTabShell.cmf-tab-shell-active > .issue-tab-main,
+        #pendingTabShell.cmf-tab-shell-active > .pending-tab-main,
+        #issueTabShell.cmf-tab-shell-active > .issue-side-panel,
+        #pendingTabShell.cmf-tab-shell-active > .pending-side-panel {
+            width: 100% !important;
+            max-width: none !important;
+            flex-basis: auto !important;
+        }
+    }
+
     @media (max-width: 980px) {
         header {
             height: auto !important;

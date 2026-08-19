@@ -791,18 +791,10 @@ public partial class CMF_Web_portal : System.Web.UI.Page
 
     private void SetInteractiveTabShellVisibility(bool showIssue, bool showPending)
     {
-        issueTabShell.Visible = showIssue;
-        pendingTabShell.Visible = showPending;
-
-        if (showIssue)
-        {
-            issueTabShell.Style["display"] = "grid";
-        }
-
-        if (showPending)
-        {
-            pendingTabShell.Style["display"] = "grid";
-        }
+        issueTabShell.Visible = true;
+        pendingTabShell.Visible = true;
+        issueTabShell.Attributes["class"] = "issue-tab-shell " + (showIssue ? "cmf-tab-shell-active" : "cmf-tab-shell-hidden");
+        pendingTabShell.Attributes["class"] = "pending-tab-shell " + (showPending ? "cmf-tab-shell-active" : "cmf-tab-shell-hidden");
     }
 
     private static string GetTimeBasedGreeting()
