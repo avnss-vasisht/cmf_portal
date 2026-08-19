@@ -6770,6 +6770,13 @@ td:nth-child(odd), th:nth-child(odd) {
         }
     }
 
+    @media (min-width: 761px) {
+        .issue-tab-shell,
+        .pending-tab-shell {
+            grid-template-columns: minmax(0, 1fr) 290px !important;
+        }
+    }
+
     @media (max-width: 760px) {
 
         .content-wrapper {
@@ -8825,16 +8832,6 @@ td:nth-child(odd), th:nth-child(odd) {
             if (pendingSide) {
                 pendingSide.style.display = pendingActive ? 'grid' : 'none';
                 pendingSide.classList.toggle('portal-view-hidden', !pendingActive);
-            }
-
-            if (issueGridWrap) {
-                issueGridWrap.style.display = issueActive ? '' : 'none';
-                issueGridWrap.classList.toggle('portal-view-hidden', !issueActive);
-            }
-
-            if (pendingGridWrap) {
-                pendingGridWrap.style.display = pendingActive ? '' : 'none';
-                pendingGridWrap.classList.toggle('portal-view-hidden', !pendingActive);
             }
 
             filterPortalVisibleTables();
