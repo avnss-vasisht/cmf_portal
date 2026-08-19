@@ -1259,6 +1259,7 @@ ORDER BY issue_count DESC", con))
 
     protected void btnShowGridView1_Click(object sender, EventArgs e)
     {
+        SetActiveFocusedTab("issue");
         ApplyIssuePendingPlatformContext();
 
         if (homeWelcomePanel != null)
@@ -1312,7 +1313,6 @@ ORDER BY issue_count DESC", con))
             lnkPlatformDashboardPending.Visible = false;
         }
         UpdatePlatformDashboardLink();
-        SetActiveFocusedTab("issue");
         InitializeSharedFilterPanel();
         //RegisterFieldSelectorScript();
         ScriptManager.RegisterStartupScript(this, GetType(), "initColHideButtons",
@@ -1400,6 +1400,7 @@ ORDER BY issue_count DESC", con))
 
     protected void btnShowGridView4_Click(object sender, EventArgs e)
     {
+        SetActiveFocusedTab("pending");
         ApplyIssuePendingPlatformContext();
 
         if (homeWelcomePanel != null)
@@ -1454,7 +1455,6 @@ ORDER BY issue_count DESC", con))
             lnkPlatformDashboard.Visible = false;
         }
         UpdateCmfPendingAccessibilityLinks();
-        SetActiveFocusedTab("pending");
         InitializeSharedFilterPanel();
     }
     protected void btnShowGridView5_Click(object sender, EventArgs e)
@@ -11109,7 +11109,7 @@ ORDER BY cp_id";
 
         // Show shared filter panel only when Issue List or CMF Pending List is active
         string activeTab = GetActiveFocusedTab();
-        sharedFilterPanel.Visible = (activeTab == "issue" || activeTab == "pending");
+        sharedFilterPanel.Visible = (activeTab == "issue" || activeTab == "pending" || pane3.Visible || pane4.Visible);
         
         if (sharedFilterPanel.Visible)
         {
