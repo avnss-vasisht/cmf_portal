@@ -26,12 +26,6 @@ public class AiSummaryResponse
     public string Title { get; set; }
     public string SubmittedDate { get; set; }
     public string Summary { get; set; }
-    public int Confidence { get; set; }
-    public string Status { get; set; }
-    public string Impact { get; set; }
-    public string Reproducibility { get; set; }
-    public string LogsAvailable { get; set; }
-    public string RvpDebugAvailable { get; set; }
     public string Message { get; set; }
     public bool UsedFallback { get; set; }
 }
@@ -45,7 +39,7 @@ public static class AiSummaryService
     {
         if (request == null)
         {
-            AiSummaryResponse fallbackResult = new AiSummaryResponse
+            return new AiSummaryResponse
             {
                 Success = false,
                 Message = "Invalid summary request."
@@ -59,8 +53,7 @@ public static class AiSummaryService
         string sysdebug = SafeText(request.Sysdebug);
         string contextDetails = SafeText(request.ContextDetails);
 
-        int confidence = CalculateSummaryConfidence(status, sysdebug, contextDetails);
-        string hash = ComputeHash("summary-interpretive-template-v5|" + issueId + "|" + title + "|" + submittedDate + "|" + status + "|" + sysdebug + "|" + contextDetails);
+        string hash = ComputeHash("summary-causal-bullets-v9|" + issueId + "|" + title + "|" + submittedDate + "|" + status + "|" + sysdebug + "|" + contextDetails);
         string cacheKey = "ai-summary:" + hash;
 
         AiSummaryResponse cached = TryGetCached(cacheKey);
@@ -71,36 +64,21 @@ public static class AiSummaryService
 
         string modelSummary;
         string modelError;
-        bool hasModelSummary = TryGenerateWithGitHubModel(issueId, submittedDate, title, status, sysdebug, contextDetails, out modelSummary, out modelError);
+        bool hasModelSummary = TryGenerateWithGitHubModel(issueId, title, status, sysdebug, contextDetails, out modelSummary, out modelError);
 
         if (!hasModelSummary)
         {
-            int fallbackConfidence = Math.Max(40, confidence - 8);
-
-            string fallbackSummary = CleanupSummarySpacing(
-                BuildFallbackSummary(
-                    issueId,
-                    submittedDate,
-                    title,
-                    status,
-                    sysdebug,
-                    contextDetails,
-                    fallbackConfidence),
-                220);
-
-            AiSummaryResponse fallbackResult = new AiSummaryResponse
+            string fallbackSummary = CleanupSummarySpacing(BuildFallbackSummary(title, status, sysdebug, contextDetails), 220);
+            return new AiSummaryResponse
             {
                 Success = true,
                 IssueId = issueId,
                 Title = title,
                 SubmittedDate = submittedDate,
                 Summary = fallbackSummary,
-                Confidence = fallbackConfidence,
                 Message = BuildFallbackMessage(modelError),
                 UsedFallback = true
             };
-            PopulateSummaryFacts(fallbackResult, status, sysdebug, contextDetails);
-            return fallbackResult;
         }
 
         // Post-process the model output to clean up spacing and ensure word limit
@@ -113,118 +91,12 @@ public static class AiSummaryService
             Title = title,
             SubmittedDate = submittedDate,
             Summary = concise,
-            Confidence = confidence,
             Message = "AI summary generated.",
             UsedFallback = false
         };
-        PopulateSummaryFacts(result, status, sysdebug, contextDetails);
 
         SetCached(cacheKey, result, DateTime.UtcNow.AddMinutes(30));
         return result;
-    }
-
-    private static void PopulateSummaryFacts(AiSummaryResponse response, string status, string sysdebug, string contextDetails)
-    {
-        if (response == null) return;
-
-        Dictionary<string, string> contextMap = ParseContextDetails(contextDetails);
-        response.Status = BuildDisplayValue(FirstNonEmpty(FirstContextValue(contextMap, "Promoted Status", "Status", "Promoted Issue Status"), status));
-        response.Impact = BuildDisplayValue(FirstContextValue(contextMap, "Customer Impact", "Promoted Issue Customer Impact", "Impact", "Promoted Issue Impact"));
-        response.Reproducibility = BuildDisplayValue(FirstContextValue(contextMap, "Reproducibility"));
-        response.LogsAvailable = HasPresentValue(FirstNonEmpty(sysdebug, FirstContextValue(contextMap, "Sysdebug", "Sysdebug Forum", "Sysdebug Category"))) ? "Yes" : "No";
-        response.RvpDebugAvailable = BuildYesNoValue(FirstContextValue(contextMap, "RVP Platform Debug Details", "RVP Debug", "Repro On RVP"));
-    }
-
-    public static AiSummaryResponse GenerateIssueDescription(AiSummaryRequest request, bool includeCmfReviewDetails)
-    {
-        if (request == null)
-        {
-            return new AiSummaryResponse { Success = false, Message = "Invalid issue description request." };
-        }
-
-        string issueId = SafeText(request.IssueId);
-        string title = SafeText(request.Title);
-        string contextDetails = SafeText(request.ContextDetails);
-        string description;
-        string modelError;
-        bool generated = TryGenerateWithGitHubModel(
-            issueId,
-            SafeText(request.SubmittedDate),
-            title,
-            SafeText(request.Status),
-            SafeText(request.Sysdebug),
-            contextDetails,
-            out description,
-            out modelError,
-            BuildIssueDescriptionPrompt(issueId, title, contextDetails, includeCmfReviewDetails),
-            "You write evidence-grounded engineering issue descriptions. Never invent root causes, fixes, workarounds, related issues, or HSD updates that are not present in the supplied context.");
-
-        if (!generated)
-        {
-            description = BuildFallbackIssueDescription(issueId, title, contextDetails, includeCmfReviewDetails);
-        }
-
-        AiSummaryResponse response = new AiSummaryResponse
-        {
-            Success = true,
-            IssueId = issueId,
-            Title = title,
-            Summary = CleanupSummarySpacing(description, 260),
-            Confidence = CalculateSummaryConfidence(SafeText(request.Status), SafeText(request.Sysdebug), contextDetails),
-            Message = generated ? "AI issue description generated." : BuildFallbackMessage(modelError),
-            UsedFallback = !generated
-        };
-        PopulateSummaryFacts(response, SafeText(request.Status), SafeText(request.Sysdebug), contextDetails);
-        return response;
-    }
-
-    private static string BuildIssueDescriptionPrompt(string issueId, string title, string contextDetails, bool includeCmfReviewDetails)
-    {
-        StringBuilder prompt = new StringBuilder();
-        prompt.AppendLine("Create a concise, evidence-grounded description for issue " + issueId + ".");
-        prompt.AppendLine("Use only the CMF database and HSD context below. If HSD context is unavailable, say that the description is based on CMF database data.");
-        prompt.AppendLine();
-        prompt.AppendLine("Use exactly these headings:");
-        prompt.AppendLine("**Issue Description:**");
-        prompt.AppendLine("**Technical Evidence:**");
-        prompt.AppendLine("**Current State:**");
-        if (includeCmfReviewDetails)
-        {
-            prompt.AppendLine("**Replication And Reproducibility:**");
-            prompt.AppendLine("**Recovery Or Workaround:**");
-            prompt.AppendLine("**Similar Or Duplicate Issues:**");
-            prompt.AppendLine("**CMF Qualification Gaps:**");
-        }
-        prompt.AppendLine("Keep each section to one or two sentences. Use 'Not available in supplied context' for unknown values.");
-        prompt.AppendLine();
-        prompt.AppendLine("Title: " + title);
-        prompt.AppendLine("Context:");
-        prompt.AppendLine(contextDetails);
-        return prompt.ToString();
-    }
-
-    private static string BuildFallbackIssueDescription(string issueId, string title, string contextDetails, bool includeCmfReviewDetails)
-    {
-        Dictionary<string, string> contextMap = ParseContextDetails(contextDetails);
-        StringBuilder description = new StringBuilder();
-        description.AppendLine("**Issue Description:**");
-        description.AppendLine("- " + (string.IsNullOrWhiteSpace(title) ? "Issue title is not available." : title));
-        description.AppendLine("**Technical Evidence:**");
-        description.AppendLine("- " + BuildDisplayValue(FirstContextValue(contextMap, "Sysdebug", "Sysdebug Forum", "Impact")));
-        description.AppendLine("**Current State:**");
-        description.AppendLine("- " + BuildDisplayValue(FirstContextValue(contextMap, "Promoted Status", "Status", "CMF Status")));
-        if (includeCmfReviewDetails)
-        {
-            description.AppendLine("**Replication And Reproducibility:**");
-            description.AppendLine("- " + BuildDisplayValue(FirstContextValue(contextMap, "Reproducibility", "RVP Platform Debug Details")));
-            description.AppendLine("**Recovery Or Workaround:**");
-            description.AppendLine("- Not available in supplied context.");
-            description.AppendLine("**Similar Or Duplicate Issues:**");
-            description.AppendLine("- " + BuildDisplayValue(FirstContextValue(contextMap, "Promoted ID", "Promoted Issue ID")));
-            description.AppendLine("**CMF Qualification Gaps:**");
-            description.AppendLine("- Review the available impact, reproducibility, and iDST evidence before disposition.");
-        }
-        return description.ToString();
     }
 
     public static string GenerateOneLineStatus(AiSummaryRequest request)
@@ -240,7 +112,7 @@ public static class AiSummaryService
         string sysdebug = SafeText(request.Sysdebug);
         string contextDetails = SafeText(request.ContextDetails);
 
-        string hash = ComputeHash("one-line-status-v2|" + issueId + "|" + title + "|" + status + "|" + sysdebug + "|" + contextDetails);
+        string hash = ComputeHash("one-line-status-v1|" + issueId + "|" + title + "|" + status + "|" + sysdebug + "|" + contextDetails);
         string cacheKey = "ai-one-line-status:" + hash;
 
         AiSummaryResponse cached = TryGetCached(cacheKey);
@@ -253,7 +125,6 @@ public static class AiSummaryService
         string modelError;
         bool hasModelStatus = TryGenerateWithGitHubModel(
             issueId,
-            string.Empty,
             title,
             status,
             sysdebug,
@@ -269,12 +140,6 @@ public static class AiSummaryService
 
         SetCached(cacheKey, new AiSummaryResponse { Success = true, Summary = result }, DateTime.UtcNow.AddMinutes(30));
         return result;
-    }
-
-    public static int EstimateSummaryConfidence(AiSummaryRequest request)
-    {
-        if (request == null) return 40;
-        return CalculateSummaryConfidence(SafeText(request.Status), SafeText(request.Sysdebug), SafeText(request.ContextDetails));
     }
 
     private static string CleanupSummarySpacing(string text, int maxWords)
@@ -413,7 +278,6 @@ public static class AiSummaryService
 
     private static bool TryGenerateWithGitHubModel(
         string issueId,
-        string submittedDate,
         string title,
         string status,
         string sysdebug,
@@ -456,7 +320,7 @@ public static class AiSummaryService
                 model = "gpt-4o-mini";
         }
 
-        string prompt = string.IsNullOrWhiteSpace(promptOverride) ? BuildPrompt(issueId, submittedDate, title, status, sysdebug, contextDetails) : promptOverride;
+        string prompt = string.IsNullOrWhiteSpace(promptOverride) ? BuildPrompt(title, status, sysdebug, contextDetails) : promptOverride;
 
         try
         {
@@ -468,7 +332,7 @@ public static class AiSummaryService
                 model = model,
                 messages = new object[]
                 {
-                    new { role = "system", content = string.IsNullOrWhiteSpace(systemOverride) ? "You are a senior CMF issue summarizer for Program Managers and engineering users. Be brief, evidence-grounded, and template-faithful. Do not invent anything not present in the data." : systemOverride },
+                    new { role = "system", content = string.IsNullOrWhiteSpace(systemOverride) ? "You are a senior CMF issue summarizer for Program Managers and engineering users. Explain the issue outcome and its justification, not just field values. Connect status to closed reason, impact, reproducibility, CMF request state, owner/debug updates, comments, evidence, fix or closure information, and next action. Do not repeat the issue title or rewrite the original description. Do not invent anything not present in the data." : systemOverride },
                     new { role = "user", content = prompt }
                 }
             };
@@ -653,58 +517,63 @@ public static class AiSummaryService
         }
     }
 
-    private static string BuildPrompt(string issueId, string submittedDate, string title, string status, string sysdebug, string contextDetails)
+    private static string BuildPrompt(string title, string status, string sysdebug, string contextDetails)
     {
-        Dictionary<string, string> contextMap = ParseContextDetails(contextDetails);
-        int confidence = CalculateSummaryConfidence(status, sysdebug, contextDetails);
-        string impact = BuildDisplayValue(FirstContextValue(contextMap, "Customer Impact", "Promoted Issue Customer Impact", "Impact", "Promoted Issue Impact"));
-        string reproducibility = BuildDisplayValue(FirstContextValue(contextMap, "Reproducibility"));
-        string logsAvailable = HasPresentValue(sysdebug) || HasPresentValue(FirstContextValue(contextMap, "Sysdebug", "Sysdebug Forum")) ? "Yes" : "No";
-        string rvpDebugAvailable = BuildYesNoValue(FirstContextValue(contextMap, "RVP Platform Debug Details", "RVP Debug", "Repro On RVP"));
-        string displayStatus = BuildDisplayValue(FirstContextValue(contextMap, "Promoted Status", "Status", "Promoted Issue Status"));
-        if (!HasPresentValue(displayStatus)) displayStatus = BuildDisplayValue(status);
-
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine("Review all ticket information from the CMF database, the sighting HSD article, and the promoted HSD article. Write for a busy engineering/program user who needs to understand the issue without opening those links.");
+        builder.AppendLine("You are an issue management assistant. Review all available ticket information including title, description, promoted details, comments, investigation notes, action items, status updates, and ownership information.");
+        builder.AppendLine("The user needs a useful activity history summary because they do not have time to read the full issue thread. Explain what happened so far, what changed, who/what is involved, and why the current outcome follows from the evidence.");
+        builder.AppendLine();
+        builder.AppendLine("Generate a concise, well-framed issue summary using EXACTLY this format:");
+        builder.AppendLine();
+        builder.AppendLine("**Issue Summary**");
+        builder.AppendLine("- [Issue: explain the customer-visible problem in plain language, not as copied field text]");
+        builder.AppendLine("- [Activity / cause: summarize what investigation or discussion found, including root cause when available]");
+        builder.AppendLine("- [Fix / outcome: explain what changed, what fixed it, or why it was closed/rejected]");
+        builder.AppendLine("- [Impact / evidence: include reproduction, impact, owner, platform, or customer context only when it adds useful understanding]");
+        builder.AppendLine();
+        builder.AppendLine("**Follow-up**");
+        builder.AppendLine("- [One practical next step, or say no further action is needed if the issue is fully resolved]");
         builder.AppendLine();
         builder.AppendLine("CRITICAL REQUIREMENTS:");
-        builder.AppendLine("- Analyze the complete ticket as an engineering investigation, not as a collection of database fields.");
-        builder.AppendLine("- Use the CMF database information together with all available HSD information, including comments, investigation updates, debug findings, logs, status changes, fix information, and closure information.");
-        builder.AppendLine("- Reconstruct the progression of the issue from the available evidence.");
-        builder.AppendLine("- Distinguish between the original symptom, investigation findings, technical evidence, root cause, fix, and final disposition.");
-        builder.AppendLine("- Do not simply repeat field values such as priority, customer impact, CMF status, or sysdebug.");
-        builder.AppendLine("- Explain what those values and technical updates mean in the context of this specific issue.");
-        builder.AppendLine("- Give greater importance to detailed HSD investigation updates and technical evidence than to generic metadata.");
-        builder.AppendLine("- When multiple updates exist, use the latest information to determine the current state, while retaining earlier findings that are important to understanding the investigation.");
-        builder.AppendLine("- If an earlier hypothesis was ruled out, mention that only when it helps explain how the investigation reached the final conclusion.");
-        builder.AppendLine("- Do not invent a root cause, fix, validation result, owner action, or technical finding that is not supported by the supplied data.");
-        builder.AppendLine("- If the root cause or fix is not established, explicitly say that it remains unresolved or unconfirmed.");
-        builder.AppendLine("- Do not treat a proposed investigation step as a completed finding.");
-        builder.AppendLine("- Do not treat a planned fix as an implemented or validated fix.");
-        builder.AppendLine("- Do not repeat the issue title verbatim; explain the actual problem in meaningful technical language.");
-        builder.AppendLine("- The summary should allow a Program Manager to understand the issue without opening the HSD ticket.");
-        builder.AppendLine("- Keep the summary concise but sufficiently detailed to preserve the important technical story.");
-        builder.AppendLine("- Use exactly the output structure shown below.");
-        builder.AppendLine("- Do not include information outside the supplied ticket context.");
+        builder.AppendLine("- Use EXACTLY the headers \"**Issue Summary**\" and \"**Follow-up**\"");
+        builder.AppendLine("- Do NOT use \"Current Story\", \"Follow-up So Far\", \"Current State\", or any other header names");
+        builder.AppendLine("- Maximum 3-4 bullet points under Issue Summary");
+        builder.AppendLine("- Maximum 180 words total");
+        builder.AppendLine("- Do not produce a status-cell update. The user needs a narrative summary of the issue and its activity history.");
+        builder.AppendLine("- Focus on the most recent and authoritative updates from HSD discussion comments, owner/debug updates, promoted issue status, closure/fix evidence, and customer impact");
+        builder.AppendLine("- Ignore duplicate comments and conversational noise");
+        builder.AppendLine("- Do not repeat the same status, owner, finding, or next action in multiple bullets");
+        builder.AppendLine("- Explain why the current status makes sense from the actual activity and evidence; do not list raw fields without justification");
+        builder.AppendLine("- Avoid generic repeated phrases across issues; every bullet must mention details specific to this issue's data");
+        builder.AppendLine("- Write in causal language: problem -> investigation/root cause -> fix/closure/outcome");
+        builder.AppendLine("- If status is rejected or closed, explicitly connect it to closed reason/fixed version/customer ownership when those fields exist");
+        builder.AppendLine("- Use professional language");
+        builder.AppendLine("- Do not merely repeat the issue title; use it only to explain the issue situation clearly");
         builder.AppendLine();
-        builder.AppendLine("Output template:");
-        builder.AppendLine("**AI Summary (Confidence: " + confidence.ToString() + "%)**");
+        builder.AppendLine("The user already knows the issue title. Provide a summary of follow-up activity:");
+        builder.AppendLine("Use CMF portal fields plus HSD Sighting and Promoted Issue context, especially discussion comments, owner updates, status, priority, sysdebug forum, closed reason, and fixed version.");
+        builder.AppendLine("Do not restate the issue title as a headline, do not summarize the original description as the main content, and do not copy raw field labels line-by-line.");
+        builder.AppendLine("Translate coded values into plain language and prioritize the latest follow-up activity over static fields.");
+        builder.AppendLine("For example, if an issue is rejected even though priority or reproducibility is high, explain the reconciling reason such as customer software, third-party ownership, duplicate, fixed version, or non-CMF closure reason when present.");
         builder.AppendLine();
-        builder.AppendLine("**Issue Summary:**");
-        builder.AppendLine("- [State the current debug, root-cause, fix, validation, and ownership state in 1-2 evidence-grounded sentences.]");
+        builder.AppendLine("Final answer must use only these markdown headers:");
+        builder.AppendLine("**Issue Summary**");
+        builder.AppendLine("- 3 to 4 compact bullets covering issue, activity/root cause, fix/outcome, and useful impact/evidence.");
+        builder.AppendLine("**Follow-up**");
+        builder.AppendLine("- one practical next step, or no further action if resolved.");
+        builder.AppendLine("Do not use the headers Current Story, Follow-up So Far, Current State, or Next Useful Action.");
         builder.AppendLine();
-        builder.AppendLine("**Risk Assessment:**");
-        builder.AppendLine("- [State Low, Medium, or High risk and explain the customer impact, validation, or technical evidence that supports it.]");
+        builder.AppendLine("Style target example, rewritten as bullets rather than paragraph:");
+        builder.AppendLine("- Issue: Camera flicker/noise occurred during AC plug/unplug on Dell Panther Lake GhostRider systems with dGPU.");
+        builder.AppendLine("- Cause: Investigation traced it to BIOS not waiting the PCIe-required 100 ms after L23D/link training completion.");
+        builder.AppendLine("- Outcome: Adding the 100 ms BIOS delay resolved the issue, so it was closed as a customer BIOS fix.");
         builder.AppendLine();
-        builder.AppendLine("**Next Action:**");
-        builder.AppendLine("- [Give the single most important action needed to close, escalate, or continue validation.]");
+        builder.AppendLine("Prefer HSD discussion comments and promoted-issue activity over static title/description text.");
+        builder.AppendLine("If there are no comments or linked activity in the data, state that directly and summarize only the latest available status fields.");
+        builder.AppendLine("Make each bullet add new information. Remove duplicated statements before responding.");
+        builder.AppendLine("Do not invent details not present in the data below.");
         builder.AppendLine();
-        builder.AppendLine("**Escalation Warning:**");
-        builder.AppendLine("- [State a specific warning only when the supplied data proves it. If update dates are absent, state that inactivity cannot be verified.]");
-        builder.AppendLine();
-        builder.AppendLine("Ticket data:");
-        builder.AppendLine("Issue ID: " + issueId);
-        builder.AppendLine("Issue title: " + title);
+        builder.AppendLine("Issue title is already visible in the grid; use it only to make the situation understandable, not as a copied sentence.");
         builder.AppendLine("Status: " + status);
         builder.AppendLine("Sysdebug: " + sysdebug);
         if (!string.IsNullOrWhiteSpace(contextDetails))
@@ -722,7 +591,6 @@ public static class AiSummaryService
         builder.AppendLine("Read the HSD ticket details, promoted details, comments, investigation notes, ownership, and status updates.");
         builder.AppendLine("Write exactly one concise sentence for a table cell that tells the most recent current status of this issue.");
         builder.AppendLine("Focus on what is happening now: latest update, owner/action, investigation state, fix/closure state, or blocking information.");
-        builder.AppendLine("Do not repeat or restate the issue title; use only the latest status/update meaning.");
         builder.AppendLine("Do not use markdown, bullets, labels, quotes, or mention commenter names unless critical.");
         builder.AppendLine("Keep it under 22 words so it fits inside a narrow status column.");
         builder.AppendLine();
@@ -754,7 +622,7 @@ public static class AiSummaryService
         string[] words = cleaned.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
         if (words.Length > 22)
         {
-            cleaned = string.Join(" ", words, 0, 22).TrimEnd('.', ',', ';', ':');
+            cleaned = string.Join(" ", words, 0, 22).TrimEnd('.', ',', ';', ':') + "...";
         }
 
         return cleaned;
@@ -928,7 +796,7 @@ public static class AiSummaryService
         return "AI model unavailable. Showing deterministic fallback summary. " + modelError;
     }
 
-    private static string BuildFallbackSummary(string issueId, string submittedDate, string title, string status, string sysdebug, string contextDetails, int confidence)
+    private static string BuildFallbackSummary(string title, string status, string sysdebug, string contextDetails)
     {
         Dictionary<string, string> contextMap = ParseContextDetails(contextDetails);
         bool hasIssueContext = contextMap.Count > 0;
@@ -953,13 +821,9 @@ public static class AiSummaryService
         string promotedIssueFixedVersion = FirstContextValue(contextMap, "Promoted Issue Fixed Version");
         string closedReason = FirstContextValue(contextMap, "Closed Reason", "Promoted Issue Closed Reason");
         string fixedVersion = FirstContextValue(contextMap, "Fixed Version", "Promoted Issue Fixed Version");
-        string drivers = FirstContextValue(contextMap, "Drivers", "Must Fix For");
-        string rvpDebug = FirstContextValue(contextMap, "RVP Platform Debug Details", "RVP Debug", "Repro On RVP");
         List<string> activityLines = ExtractActivityLines(contextDetails);
 
-        string contextSysdebug = FirstContextValue(contextMap, "Sysdebug", "Sysdebug Forum", "Sysdebug Category");
-        string debugSnippet = BuildDebugSnippet(FirstNonEmpty(sysdebug, contextSysdebug));
-        string interpretedDebug = BuildSysdebugInterpretation(debugSnippet, component, operatingSystem, reproducibility, impact, customerImpact);
+        string debugSnippet = BuildDebugSnippet(sysdebug);
         string issueSituation = BuildIssueSituationNarrative(title, component, operatingSystem, impact, customerImpact, reproducibility);
         bool highRisk = ContainsAnyToken(priority, "p0", "p1", "showstopper") || ContainsAnyToken(customerImpact, "critical", "2-high", "high");
 
@@ -973,9 +837,6 @@ public static class AiSummaryService
         }
 
         string outcomeNarrative = BuildOutcomeNarrative(safeStatus, closedReason, fixedVersion, riskNarrative);
-        string escalationWarning = activityLines.Count == 0
-            ? "Inactivity cannot be verified because the available context has no dated HSD update history."
-            : "No escalation warning is supported by the available HSD activity; review the dated history before closure.";
 
         string nextAction;
         if (ContainsAnyToken(safeStatus, "rejected", "closed", "complete")
@@ -1002,27 +863,23 @@ public static class AiSummaryService
         }
 
         List<string> storyBullets = new List<string>();
-        AddUniqueBullet(storyBullets, BuildShortPhrase(issueSituation, 125));
-
-        if (!string.IsNullOrWhiteSpace(debugSnippet) && debugSnippet.IndexOf("No sysdebug details", StringComparison.OrdinalIgnoreCase) < 0)
+        AddUniqueBullet(storyBullets, "Issue: " + issueSituation + ".");
+        for (int index = 0; index < activityLines.Count && storyBullets.Count < 2; index++)
         {
-            AddUniqueBullet(storyBullets, BuildShortPhrase(interpretedDebug, 125));
-        }
-        else if (activityLines.Count > 0)
-        {
-            AddUniqueBullet(storyBullets, BuildShortPhrase("Latest HSD activity is the best signal: " + activityLines[0], 125));
-        }
-        else if (HasPresentValue(fixedVersion))
-        {
-            AddUniqueBullet(storyBullets, BuildShortPhrase("The likely resolution path is tied to the recorded fix version " + fixedVersion, 125));
+            AddUniqueBullet(storyBullets, "Activity: " + activityLines[index]);
         }
 
-        AddUniqueBullet(storyBullets, BuildShortPhrase("Current disposition: " + outcomeNarrative, 125));
+        if (storyBullets.Count <= 1 && !string.IsNullOrWhiteSpace(debugSnippet) && debugSnippet.IndexOf("No sysdebug details", StringComparison.OrdinalIgnoreCase) < 0)
+        {
+            AddUniqueBullet(storyBullets, "Activity: Latest debug signal says " + debugSnippet + ".");
+        }
+
+        AddUniqueBullet(storyBullets, "Outcome: " + outcomeNarrative + ".");
 
         string evidenceNarrative = BuildEvidenceNarrative(component, operatingSystem, cmfRequest, priority, customerImpact, reproducibility, impact, promotedId, promotedIssueStatus, promotedIssueClosedReason, promotedIssueFixedVersion);
         if (!string.IsNullOrWhiteSpace(evidenceNarrative))
         {
-            AddUniqueBullet(storyBullets, BuildShortPhrase(evidenceNarrative, 115));
+            AddUniqueBullet(storyBullets, "Evidence: " + evidenceNarrative + ".");
         }
 
         if (storyBullets.Count == 0)
@@ -1031,116 +888,21 @@ public static class AiSummaryService
         }
 
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine("**AI summary (Confidence: " + confidence.ToString() + "%)**");
+        builder.AppendLine("**Issue Summary**");
+        for (int index = 0; index < storyBullets.Count && index < 4; index++)
+        {
+            builder.AppendLine("- " + storyBullets[index]);
+        }
+
         builder.AppendLine();
-        builder.AppendLine("**Issue Summary:**");
-        builder.AppendLine("- " + (storyBullets.Count > 0 ? storyBullets[0] : outcomeNarrative));
-        builder.AppendLine("**Risk Assessment:**");
-        builder.AppendLine("- " + riskNarrative + ".");
-        builder.AppendLine("**Next Action:**");
-        builder.AppendLine("- " + BuildCompactFollowUpAction(nextAction, drivers, fixedVersion, closedReason));
-        builder.AppendLine("**Escalation Warning:**");
-        builder.Append("- " + escalationWarning);
+        builder.AppendLine("**Follow-up**");
+        builder.Append("- " + nextAction);
         return builder.ToString();
-    }
-
-    private static int CalculateSummaryConfidence(string status, string sysdebug, string contextDetails)
-    {
-        Dictionary<string, string> contextMap = ParseContextDetails(contextDetails);
-        int confidence = 38;
-
-        int presentFields = CountPresentContextValues(contextMap,
-            "Component", "Operating System", "CMF Request", "Must Fix For", "Customer Impact", "Impact",
-            "Priority", "CMF Status", "Promoted Status", "Drivers", "Reproducibility", "RVP Platform Debug Details",
-            "Promoted Issue Status", "Promoted Issue Closed Reason", "Promoted Issue Fixed Version");
-        confidence += Math.Min(18, presentFields * 2);
-
-        string debugText = FirstNonEmpty(sysdebug, FirstContextValue(contextMap, "Sysdebug", "Sysdebug Forum"));
-        if (HasPresentValue(debugText))
-        {
-            confidence += debugText.Length > 220 ? 12 : (debugText.Length > 80 ? 9 : 5);
-        }
-
-        int activityCount = ExtractActivityLines(contextDetails).Count;
-        confidence += Math.Min(14, activityCount * 3);
-
-        if (HasPresentValue(FirstContextValue(contextMap, "Closed Reason", "Fixed Version", "Promoted Issue Fixed Version", "Promoted Issue Closed Reason"))) confidence += 8;
-        if (HasPresentValue(FirstContextValue(contextMap, "Customer Impact", "Impact"))) confidence += 5;
-        if (HasPresentValue(FirstContextValue(contextMap, "Reproducibility"))) confidence += 4;
-        if (HasPresentValue(FirstContextValue(contextMap, "RVP Platform Debug Details"))) confidence += 4;
-        if (HasPresentValue(FirstContextValue(contextMap, "Promoted Issue Status", "Promoted Status"))) confidence += 4;
-        if (ContainsAnyToken(status, "rejected", "closed", "complete", "verified", "implemented")) confidence += 4;
-
-        if (!HasPresentValue(debugText) && activityCount == 0) confidence -= 8;
-        if (contextMap.Count == 0) confidence -= 10;
-
-        if (confidence > 94) return 94;
-        if (confidence < 35) return 35;
-        return confidence;
-    }
-
-    private static int CountPresentContextValues(Dictionary<string, string> contextMap, params string[] keys)
-    {
-        if (contextMap == null || keys == null) return 0;
-
-        int count = 0;
-        foreach (string key in keys)
-        {
-            if (HasPresentValue(FirstContextValue(contextMap, key)))
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    private static string BuildDisplayValue(string value)
-    {
-        if (!HasPresentValue(value)) return "N/A";
-        return BuildShortPhrase(value.Trim().Replace("_", " "), 80);
-    }
-
-    private static string BuildYesNoValue(string value)
-    {
-        if (!HasPresentValue(value)) return "No";
-        if (ContainsAnyToken(value, "no", "false", "not available", "n/a", "none")) return "No";
-        return "Yes";
-    }
-
-    private static bool HasPresentValue(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return false;
-        string cleaned = value.Trim();
-        return !string.Equals(cleaned, "N/A", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(cleaned, "NA", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(cleaned, "null", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(cleaned, "-", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string BuildCompactFollowUpAction(string defaultAction, string drivers, string fixedVersion, string closedReason)
-    {
-        if (HasPresentValue(drivers) && ContainsAnyToken(drivers, "hot fix", "hotfix", "hf", "fix"))
-        {
-            return "Apply " + BuildShortPhrase(drivers.Replace("_", " "), 70) + " and rerun validation.";
-        }
-
-        if (HasPresentValue(fixedVersion))
-        {
-            return "Validate fix in " + BuildShortPhrase(fixedVersion, 60) + " and update status.";
-        }
-
-        if (HasPresentValue(closedReason))
-        {
-            return "No further action unless new evidence changes closure.";
-        }
-
-        return BuildShortPhrase(defaultAction, 95).TrimEnd('.') + ".";
     }
 
     private static string BuildIssueSituationNarrative(string title, string component, string operatingSystem, string impact, string customerImpact, string reproducibility)
     {
-        string subject = "Current evidence";
+        string subject = string.IsNullOrWhiteSpace(title) ? "This issue" : "This issue concerns " + BuildShortPhrase(title, 120);
         List<string> context = new List<string>();
 
         if (!string.IsNullOrWhiteSpace(component) && !string.Equals(component, "N/A", StringComparison.OrdinalIgnoreCase))
@@ -1168,10 +930,10 @@ public static class AiSummaryService
 
         if (context.Count == 0)
         {
-            return "Available ticket data is limited; use the latest comments and debug notes to confirm the issue state";
+            return subject;
         }
 
-        return subject + " shows " + JoinReadableList(context);
+        return subject + ", with " + JoinReadableList(context);
     }
 
     private static string BuildShortPhrase(string text, int maxLength)
@@ -1480,26 +1242,6 @@ public static class AiSummaryService
         }
 
         return normalized;
-    }
-
-    private static string BuildSysdebugInterpretation(string debugSnippet, string component, string operatingSystem, string reproducibility, string impact, string customerImpact)
-    {
-        if (!HasPresentValue(debugSnippet) || debugSnippet.IndexOf("No sysdebug details", StringComparison.OrdinalIgnoreCase) >= 0)
-        {
-            return "Sysdebug evidence is sparse, so confidence depends on HSD comments, status, and linked promoted issue context";
-        }
-
-        List<string> clues = new List<string>();
-        if (HasPresentValue(component)) clues.Add("component " + component.Trim());
-        if (HasPresentValue(operatingSystem)) clues.Add("OS " + operatingSystem.Trim());
-        if (HasPresentValue(reproducibility)) clues.Add("repro " + reproducibility.Trim());
-        if (HasPresentValue(FirstNonEmpty(customerImpact, impact))) clues.Add("impact " + BuildShortPhrase(FirstNonEmpty(customerImpact, impact), 55));
-
-        string evidenceFrame = clues.Count > 0
-            ? " against " + JoinReadableList(clues)
-            : string.Empty;
-
-        return "Sysdebug points to " + BuildShortPhrase(debugSnippet, 82) + evidenceFrame + ", which is the main technical signal for triage";
     }
 
     private static string ExtractContentFromResponse(object raw)

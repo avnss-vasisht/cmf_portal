@@ -9,14 +9,22 @@
     <title>CMF Web Portal</title>
 
     <!-- Stylesheets -->
+    <link rel="stylesheet" href="template/vendors/feather/feather.css">
+    <link rel="stylesheet" href="template/vendors/ti-icons/css/themify-icons.css">
+    <link rel="stylesheet" href="template/vendors/css/vendor.bundle.base.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" type="text/css" />
+    <link rel="stylesheet" href="template/css/style.css">
     <link rel="stylesheet" href="Content/cmf-portal.css">
+    <!-- Updated CSS link -->
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <!-- Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
 
     <!-- Bootstrap JS -->
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
@@ -235,14 +243,14 @@
         }
 
         .portal-left-nav.is-collapsed {
-            width: 72px;
-            flex: 0 0 72px;
-            min-height: calc(100vh - 88px);
-            padding: 8px 6px 12px;
-            opacity: 1;
-            box-shadow: 0 10px 22px rgba(3, 16, 46, 0.24);
-            border: 1px solid rgba(123, 165, 227, 0.26);
-            pointer-events: auto;
+            width: 0;
+            flex: 0 0 0;
+            min-height: 0;
+            padding: 0;
+            opacity: 0;
+            box-shadow: none;
+            border: none;
+            pointer-events: none;
         }
 
         .portal-left-nav-title {
@@ -288,18 +296,6 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-        }
-
-        #mainMenuToggleBtn {
-            min-width: 30px;
-            min-height: 30px;
-            width: 30px;
-            height: 30px;
-            padding: 0;
-            border: 1px solid rgba(173, 206, 240, 0.72);
-            background: rgba(255, 255, 255, 0.16);
-            font-size: 12px;
-            box-shadow: 0 5px 12px rgba(4, 23, 54, 0.28);
         }
 
         .portal-collapse-btn:hover {
@@ -363,64 +359,6 @@
             color: #ffffff;
         }
 
-        .portal-left-nav .portal-nav-link.is-active {
-            background: linear-gradient(90deg, rgba(88, 166, 255, 0.28), rgba(255, 255, 255, 0.10));
-            color: #ffffff;
-            border-color: rgba(162, 207, 255, 0.72);
-            box-shadow: inset 4px 0 0 #73c7ff, 0 8px 18px rgba(8, 47, 118, 0.22);
-        }
-
-        .portal-left-nav .portal-nav-link.is-active:before {
-            transform: scaleY(1);
-        }
-
-        .portal-left-nav.is-collapsed .portal-section-header {
-            justify-content: center;
-            margin: 0 0 10px;
-        }
-
-        .portal-left-nav.is-collapsed .collapsible-body.is-collapsed {
-            display: block !important;
-        }
-
-        .portal-left-nav.is-collapsed .portal-nav-link {
-            justify-content: center;
-            gap: 0;
-            padding: 10px 0;
-            min-height: 40px;
-        }
-
-        .portal-left-nav.is-collapsed .portal-nav-link span {
-            display: none;
-        }
-
-        .portal-left-nav.is-collapsed .portal-nav-link i {
-            margin: 0;
-            font-size: 15px;
-        }
-
-        .portal-nav-active-title {
-            margin: 0 4px 12px;
-            text-align: left;
-            color: #b8dcff;
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            padding: 0 2px 8px;
-            border-bottom: 1px solid rgba(143, 185, 242, 0.25);
-            background: transparent;
-        }
-
-        .portal-left-nav.is-collapsed .portal-nav-active-title {
-            display: block;
-            margin: 2px 2px 8px;
-            padding: 5px 4px;
-            font-size: 10px;
-            letter-spacing: 0.02em;
-            line-height: 1.2;
-        }
-
         .portal-main-workspace {
             flex: 1;
             min-width: 0;
@@ -454,10 +392,6 @@
 
         .portal-layout-shell.main-menu-collapsed .portal-menu-reopen {
             display: inline-flex;
-        }
-
-        .portal-layout-shell.main-menu-collapsed .portal-menu-reopen {
-            display: none !important;
         }
 
         .welcome-home-panel {
@@ -934,7 +868,6 @@
         .sidebar-toggle-div {
             position: absolute;
             right: 1.2rem;
-            display: none !important;
         }
 
         .sidebar {
@@ -1054,11 +987,6 @@
                     gap: 14px;
                 }
 
-                .component-with-group,
-                .owner-pair {
-                    gap: 16px;
-                }
-
                 .component-detail {
                     font-size: 12px;
                     color: #374151;
@@ -1151,26 +1079,8 @@
                     min-width: 0;
                 }
 
-                .status-row-primary {
-                    justify-content: flex-start;
-                    flex-wrap: wrap;
-                }
-
-                .status-row-confidence {
-                    margin-top: 0;
-                }
-
-                .status-label-group {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 8px;
-                    flex-wrap: wrap;
-                    min-width: 0;
-                }
-
                 .status-pill {
-                    display: inline-flex;
-                    align-items: center;
+                    display: inline-block;
                     padding: 6px 10px;
                     border-radius: 999px;
                     font-size: 12px;
@@ -1178,24 +1088,6 @@
                     background: #eef4fb;
                     color: #0f5ea8;
                     border: 1px solid #cfe0f1;
-                    max-width: 100%;
-                    white-space: normal;
-                    overflow-wrap: anywhere;
-                }
-
-                .status-confidence-pill {
-                    display: inline-flex;
-                    align-items: center;
-                    min-height: 22px;
-                    padding: 4px 8px;
-                    border-radius: 999px;
-                    font-size: 10px;
-                    font-weight: 800;
-                    color: #5b21b6;
-                    background: #f4efff;
-                    border: 1px solid #dfd2ff;
-                    white-space: normal;
-                    overflow-wrap: anywhere;
                 }
 
                 .ai-summary-btn-inline {
@@ -1230,6 +1122,21 @@
                     overflow: hidden;
                     overflow-wrap: break-word;
                     word-break: normal;
+                }
+
+                .status-confidence {
+                    margin-top: 2px;
+                }
+
+                .confidence-badge {
+                    display: inline-block;
+                    padding: 4px 8px;
+                    border-radius: 999px;
+                    background: #f1f8ee;
+                    color: #19692f;
+                    font-size: 11px;
+                    font-weight: 700;
+                    border: 1px solid #d9efd2;
                 }
 
                 .issue-grid-toolbar {
@@ -1690,43 +1597,14 @@
 }
 
 .ai-summary-body {
-    background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+    background: #f7fafd;
     border: 1px solid #d8e3ee;
-    border-radius: 14px;
-    padding: 14px;
-    white-space: normal;
+    border-radius: 10px;
+    padding: 12px;
+    white-space: pre-wrap;
     line-height: 1.45;
     font-size: 13px;
     color: #21384d;
-    box-shadow: 0 12px 28px rgba(16, 41, 67, 0.08);
-}
-
-.ai-summary-body ul,
-.ai-summary-body ol {
-    margin: 0;
-    padding-left: 0;
-    list-style: none;
-    display: grid;
-    gap: 10px;
-}
-
-.ai-summary-body li {
-    position: relative;
-    padding: 10px 12px 10px 34px;
-    border: 1px solid #e3edf7;
-    border-radius: 12px;
-    background: #ffffff;
-    box-shadow: 0 6px 16px rgba(16, 41, 67, 0.05);
-}
-
-.ai-summary-body li::before {
-    content: "\2726";
-    position: absolute;
-    left: 12px;
-    top: 10px;
-    color: #7c3aed;
-    font-size: 12px;
-    line-height: 1;
 }
 
 .cmf-rec-quality-card {
@@ -1739,92 +1617,6 @@
     border: 1px solid #dbe7f4;
     border-radius: 10px;
     margin-bottom: 16px;
-}
-
-.cmf-rec-hero {
-    display: grid;
-    gap: 12px;
-    margin-top: 16px;
-}
-
-.cmf-rec-section {
-    margin-top: 16px;
-}
-
-.cmf-rec-section h3 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px !important;
-    font-weight: 850 !important;
-    color: #344761 !important;
-    margin: 0 0 8px !important;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-}
-
-.cmf-rec-decision-card {
-    border-left: 4px solid #7c3aed !important;
-    background: linear-gradient(135deg, #fbf8ff 0%, #eef7ff 100%) !important;
-}
-
-.cmf-rec-title-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.cmf-rec-title-text {
-    flex: 1 1 180px;
-    min-width: 0;
-}
-
-.cmf-rec-decision-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 28px;
-    padding: 5px 12px;
-    border-radius: 999px;
-    border: 1px solid #f2c94c;
-    background: linear-gradient(180deg, #fff7d6 0%, #ffe8a3 100%);
-    color: #684600;
-    font-size: 12px;
-    font-weight: 650;
-    box-shadow: 0 10px 22px rgba(245, 158, 11, 0.18);
-    max-width: 100%;
-    overflow-wrap: anywhere;
-}
-
-.cmf-rec-placeholder-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 12px;
-}
-
-.cmf-rec-placeholder-btn {
-    min-height: 38px;
-    border-radius: 10px;
-    border: 1px solid #d8c9ff;
-    background: #ffffff;
-    color: #5b21b6;
-    font-size: 12px;
-    font-weight: 800;
-    cursor: pointer;
-    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.10);
-}
-
-.cmf-rec-placeholder-btn.primary {
-    background: #7c3aed;
-    border-color: #7c3aed;
-    color: #ffffff;
-}
-
-.cmf-rec-placeholder-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 12px 24px rgba(124, 58, 237, 0.16);
 }
 
 .cmf-rec-quality-label {
@@ -1916,10 +1708,9 @@
 .ai-summary-drawer-bg {
     position: fixed;
     inset: 0;
-    background: rgba(16, 31, 52, 0.48);
+    background: rgba(16, 31, 52, 0.35);
     display: none;
     z-index: 1060;
-    backdrop-filter: blur(5px);
 }
 
 .ai-summary-drawer-bg.show {
@@ -1930,19 +1721,16 @@
     position: fixed;
     top: 0;
     right: 0;
-    width: 560px;
+    width: 520px;
     max-width: 94vw;
     height: 100%;
-    background:
-        radial-gradient(circle at top right, rgba(124, 58, 237, 0.12), transparent 34%),
-        linear-gradient(180deg, #ffffff 0%, #f6f9fd 100%);
-    box-shadow: -18px 0 42px rgba(8, 25, 49, 0.24);
+    background: #ffffff;
+    box-shadow: -8px 0 30px rgba(0, 0, 0, 0.15);
     transform: translateX(100%);
     transition: transform 0.28s ease;
     z-index: 1061;
     overflow-y: auto;
-    padding: 24px;
-    border-left: 1px solid rgba(205, 217, 229, 0.9);
+    padding: 20px;
 }
 
 .ai-summary-drawer.show {
@@ -1964,137 +1752,18 @@
 .ai-summary-drawer-title {
     margin: 0 0 12px 0;
     padding-right: 28px;
-    font-size: 22px;
+    font-size: 20px;
     color: #1b2a3a;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.ai-summary-confidence-inline {
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
-    padding: 3px 9px;
-    border-radius: 999px;
-    background: #eef6ff;
-    border: 1px solid #c8def6;
-    color: #0f5ea8;
-    font-size: 12px;
-    font-weight: 800;
 }
 
 .ai-summary-meta-row {
     margin-bottom: 10px;
     color: #23364b;
     font-size: 13px;
-    padding: 9px 11px;
-    border: 1px solid #e2ebf4;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.72);
-}
-
-.ai-summary-meta-combined {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    flex-wrap: wrap;
 }
 
 .ai-summary-meta-row strong {
     color: #1b2a3a;
-}
-
-.ai-summary-title-badges {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.ai-summary-facts {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin: 12px 0 14px;
-}
-
-.ai-summary-fact {
-    min-height: 58px;
-    padding: 10px 12px;
-    border: 1px solid #e2ebf4;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.76);
-    box-shadow: 0 8px 18px rgba(16, 41, 67, 0.05);
-}
-
-.ai-summary-fact-label {
-    display: block;
-    color: #6a7d92;
-    font-size: 10px;
-    font-weight: 850;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 5px;
-}
-
-.ai-summary-fact-value {
-    color: #19324a;
-    font-size: 13px;
-    font-weight: 750;
-    overflow-wrap: anywhere;
-}
-
-.ai-summary-status-value {
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 850;
-    border: 1px solid #cfdcea;
-    background: #f4f7fb;
-    color: #344761;
-}
-
-.ai-summary-status-value.status-open,
-.ai-summary-status-value.status-active,
-.ai-summary-status-value.status-progress {
-    background: #eef6ff;
-    border-color: #c8def6;
-    color: #0f5ea8;
-}
-
-.ai-summary-status-value.status-closed,
-.ai-summary-status-value.status-complete,
-.ai-summary-status-value.status-implemented {
-    background: #ecfdf3;
-    border-color: #bbf7d0;
-    color: #15803d;
-}
-
-.ai-summary-status-value.status-rejected {
-    background: #fff1f2;
-    border-color: #fecdd3;
-    color: #be123c;
-}
-
-.ai-summary-status-value.status-pending,
-.ai-summary-status-value.status-review {
-    background: #fffbeb;
-    border-color: #fde68a;
-    color: #b45309;
-}
-
-.ai-summary-section-title {
-    margin: 14px 0 8px;
-    color: #344761;
-    font-size: 12px;
-    font-weight: 850;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
 }
 
 .ai-tag-label {
@@ -2122,8 +1791,8 @@
 .ai-action-btn {
     flex: 1;
     min-width: 130px;
-    padding: 10px 16px;
-    border-radius: 10px;
+    padding: 9px 16px;
+    border-radius: 8px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -2131,59 +1800,6 @@
     background: #f4f6fa;
     color: #23364b;
     transition: background 0.15s, border-color 0.15s;
-}
-
-body {
-    background:
-        radial-gradient(circle at 8% 6%, rgba(0, 199, 253, 0.18), transparent 26%),
-        radial-gradient(circle at 92% 10%, rgba(124, 58, 237, 0.13), transparent 30%),
-        linear-gradient(180deg, #eef2f7 0%, #e7eef6 100%) !important;
-}
-
-.content-wrapper {
-    background: rgba(255, 255, 255, 0.78) !important;
-    border: 1px solid rgba(220, 229, 240, 0.95) !important;
-    box-shadow: 0 1px 3px rgba(16,31,52,.08), 0 18px 44px rgba(16,31,52,.12) !important;
-    backdrop-filter: blur(12px) !important;
-}
-
-.pane-heading {
-    background: linear-gradient(120deg, #00377c 0%, #0068b5 72%, #00c7fd 100%) !important;
-    color: #ffffff !important;
-    border: 0 !important;
-    box-shadow: 0 14px 32px rgba(0, 104, 181, 0.22) !important;
-}
-
-#overall_request_details {
-    border-spacing: 0 10px !important;
-}
-
-#overall_request_details th {
-    background: #ffffff !important;
-    color: #5d6f84 !important;
-    border-top: 1px solid #e6edf5 !important;
-    border-bottom: 1px solid #e6edf5 !important;
-}
-
-#overall_request_details td {
-    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%) !important;
-    border-top: 1px solid #e4edf6 !important;
-    border-bottom: 1px solid #e4edf6 !important;
-    box-shadow: 0 10px 24px rgba(16, 41, 67, 0.07) !important;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
-}
-
-#overall_request_details tr:hover td {
-    transform: translateY(-2px);
-    border-color: #cfdff0 !important;
-    box-shadow: 0 16px 34px rgba(16, 41, 67, 0.12) !important;
-}
-
-.ai-summary-btn,
-.ai-recommendation-btn,
-.ai-summary-btn-compact,
-.ai-summary-btn-inline {
-    box-shadow: 0 8px 18px rgba(15, 94, 168, 0.12);
 }
 
 .ai-action-btn:hover {
@@ -2249,801 +1865,6 @@ body {
     overflow: visible !important;
     height: auto !important;
     max-height: none !important;
-}
-
-/* Dashboard tab visual match to reference image (scoped to Home panel only) */
-.ccip-dashboard-host {
-    padding: 14px !important;
-    border-radius: 14px !important;
-    background: #f8fafc !important;
-}
-
-.ccip-dashboard {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-.ccip-dash-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 6px 2px 2px;
-    flex-wrap: wrap;
-}
-
-.ccip-dash-greeting {
-    margin: 0;
-    font-size: 34px;
-    line-height: 1.05;
-    font-weight: 800;
-    color: #101828;
-}
-
-.ccip-dash-sub {
-    margin: 6px 0 0;
-    color: #475467;
-    font-size: 14px;
-}
-
-.ccip-dash-updated {
-    display: inline-flex;
-    align-items: center;
-    min-height: 36px;
-    border: 1px solid #d9e1ec;
-    background: #ffffff;
-    color: #4b5563;
-    border-radius: 12px;
-    padding: 8px 12px;
-    font-size: 12px;
-    font-weight: 700;
-    box-shadow: 0 4px 14px rgba(16, 24, 40, 0.06);
-}
-
-.ccip-link-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 36px;
-    border-radius: 10px;
-    padding: 0 12px;
-    border: 1px solid #c9d9f2;
-    background: #f6f9ff;
-    color: #315bba;
-    text-decoration: none;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.ccip-kpi-row {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(170px, 1fr));
-    gap: 12px;
-}
-
-.ccip-kpi {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    padding: 12px 14px;
-    box-shadow: 0 8px 18px rgba(16, 24, 40, 0.04);
-}
-
-.ccip-kpi-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.ccip-kpi-title {
-    color: #1f2937;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.ccip-kpi-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 15px;
-}
-
-.ccip-kpi.kpi-red .ccip-kpi-icon { background: #fee2e2; color: #dc2626; }
-.ccip-kpi.kpi-orange .ccip-kpi-icon { background: #ffedd5; color: #f97316; }
-.ccip-kpi.kpi-green .ccip-kpi-icon { background: #dcfce7; color: #16a34a; }
-.ccip-kpi.kpi-blue .ccip-kpi-icon { background: #dbeafe; color: #2563eb; }
-.ccip-kpi.kpi-purple .ccip-kpi-icon { background: #ede9fe; color: #7c3aed; }
-
-.ccip-kpi-value {
-    font-size: 44px;
-    font-weight: 900;
-    line-height: 1;
-    margin: 8px 0;
-}
-
-.ccip-kpi.kpi-red .ccip-kpi-value { color: #dc2626; }
-.ccip-kpi.kpi-orange .ccip-kpi-value { color: #f97316; }
-.ccip-kpi.kpi-green .ccip-kpi-value { color: #16a34a; }
-.ccip-kpi.kpi-blue .ccip-kpi-value { color: #2563eb; }
-.ccip-kpi.kpi-purple .ccip-kpi-value { color: #7c3aed; }
-
-.ccip-kpi-note {
-    font-size: 12px;
-    font-weight: 700;
-    color: #667085;
-}
-
-.ccip-kpi-note i {
-    margin-right: 4px;
-}
-
-.ccip-kpi-spark {
-    margin-top: 8px;
-    height: 22px;
-    border-radius: 10px;
-    background-size: 100% 100%;
-    opacity: 0.85;
-}
-
-.ccip-kpi.kpi-red .ccip-kpi-spark {
-    background: linear-gradient(180deg, rgba(254, 202, 202, 0) 0%, rgba(254, 202, 202, 0.35) 90%),
-        radial-gradient(circle at 8% 70%, #f87171 0 6%, transparent 8%),
-        radial-gradient(circle at 26% 45%, #f87171 0 6%, transparent 8%),
-        radial-gradient(circle at 48% 74%, #f87171 0 6%, transparent 8%),
-        radial-gradient(circle at 68% 36%, #f87171 0 6%, transparent 8%),
-        radial-gradient(circle at 92% 58%, #f87171 0 6%, transparent 8%);
-}
-
-.ccip-kpi.kpi-orange .ccip-kpi-spark {
-    background: linear-gradient(180deg, rgba(254, 215, 170, 0) 0%, rgba(254, 215, 170, 0.35) 90%),
-        radial-gradient(circle at 10% 65%, #fb923c 0 6%, transparent 8%),
-        radial-gradient(circle at 30% 48%, #fb923c 0 6%, transparent 8%),
-        radial-gradient(circle at 48% 70%, #fb923c 0 6%, transparent 8%),
-        radial-gradient(circle at 74% 42%, #fb923c 0 6%, transparent 8%),
-        radial-gradient(circle at 94% 62%, #fb923c 0 6%, transparent 8%);
-}
-
-.ccip-kpi.kpi-green .ccip-kpi-spark {
-    background: linear-gradient(180deg, rgba(187, 247, 208, 0) 0%, rgba(187, 247, 208, 0.35) 90%),
-        radial-gradient(circle at 8% 64%, #4ade80 0 6%, transparent 8%),
-        radial-gradient(circle at 28% 46%, #4ade80 0 6%, transparent 8%),
-        radial-gradient(circle at 46% 72%, #4ade80 0 6%, transparent 8%),
-        radial-gradient(circle at 70% 40%, #4ade80 0 6%, transparent 8%),
-        radial-gradient(circle at 92% 58%, #4ade80 0 6%, transparent 8%);
-}
-
-.ccip-kpi.kpi-blue .ccip-kpi-spark {
-    background: linear-gradient(180deg, rgba(191, 219, 254, 0) 0%, rgba(191, 219, 254, 0.35) 90%),
-        radial-gradient(circle at 8% 68%, #60a5fa 0 6%, transparent 8%),
-        radial-gradient(circle at 28% 48%, #60a5fa 0 6%, transparent 8%),
-        radial-gradient(circle at 49% 72%, #60a5fa 0 6%, transparent 8%),
-        radial-gradient(circle at 72% 39%, #60a5fa 0 6%, transparent 8%),
-        radial-gradient(circle at 93% 61%, #60a5fa 0 6%, transparent 8%);
-}
-
-.ccip-kpi.kpi-purple .ccip-kpi-spark {
-    background: linear-gradient(180deg, rgba(221, 214, 254, 0) 0%, rgba(221, 214, 254, 0.35) 90%),
-        radial-gradient(circle at 8% 68%, #a78bfa 0 6%, transparent 8%),
-        radial-gradient(circle at 29% 47%, #a78bfa 0 6%, transparent 8%),
-        radial-gradient(circle at 50% 74%, #a78bfa 0 6%, transparent 8%),
-        radial-gradient(circle at 72% 39%, #a78bfa 0 6%, transparent 8%),
-        radial-gradient(circle at 93% 60%, #a78bfa 0 6%, transparent 8%);
-}
-
-.ccip-main-grid {
-    display: grid;
-    grid-template-columns: minmax(300px, 1fr) minmax(520px, 1.85fr) minmax(300px, 1fr);
-    gap: 12px;
-}
-
-.ccip-col {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.ccip-card {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    box-shadow: 0 8px 20px rgba(16, 24, 40, 0.04);
-    padding: 14px;
-}
-
-.ccip-card-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-
-.ccip-card-title {
-    margin: 0;
-    font-size: 26px;
-    color: #101828;
-    font-weight: 800;
-}
-
-.ccip-card-subtitle {
-    margin: 0;
-    font-size: 12px;
-    color: #667085;
-    font-weight: 700;
-}
-
-.ccip-card-mini-title {
-    margin: 0;
-    color: #111827;
-    font-size: 14px;
-    font-weight: 800;
-}
-
-.ccip-card-link {
-    color: #315bba;
-    text-decoration: none;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.ccip-card-link:hover {
-    text-decoration: underline;
-}
-
-.ccip-daily-list {
-    margin: 0;
-    padding-left: 0;
-    list-style: none;
-    display: grid;
-    gap: 8px;
-}
-
-.ccip-daily-list li {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    font-size: 13px;
-    color: #1f2937;
-}
-
-.ccip-daily-list li:before {
-    content: '\\f05a';
-    font-family: 'Font Awesome 6 Free';
-    font-weight: 900;
-    color: #3b82f6;
-    font-size: 11px;
-    margin-top: 2px;
-}
-
-.ccip-daily-actions {
-    margin-top: 12px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-}
-
-.ccip-button {
-    border-radius: 8px;
-    min-height: 34px;
-    font-size: 12px;
-    font-weight: 700;
-    border: 1px solid #c8d7f3;
-    background: #f5f8ff;
-    color: #315bba;
-}
-
-.ccip-button.primary {
-    background: #3b5bdb;
-    color: #ffffff;
-    border-color: #3b5bdb;
-}
-
-.ccip-rec-list {
-    display: grid;
-    gap: 8px;
-}
-
-.ccip-rec-row {
-    display: grid;
-    grid-template-columns: 98px 1fr 46px;
-    gap: 8px;
-    align-items: center;
-}
-
-.ccip-rec-label {
-    color: #344054;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.ccip-rec-track {
-    width: 100%;
-    height: 8px;
-    border-radius: 999px;
-    background: #eef2f7;
-    overflow: hidden;
-}
-
-.ccip-rec-fill {
-    height: 100%;
-    border-radius: 999px;
-}
-
-.ccip-rec-fill.good { background: #4ade80; }
-.ccip-rec-fill.medium { background: #fb923c; }
-.ccip-rec-fill.low { background: #ef4444; }
-
-.ccip-rec-percent {
-    text-align: right;
-    color: #667085;
-    font-size: 11px;
-    font-weight: 800;
-}
-
-.ccip-trend-chart {
-    height: 218px;
-}
-
-.ccip-priority-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-}
-
-.ccip-priority-table th,
-.ccip-priority-table td {
-    padding: 8px 6px;
-    border-bottom: 1px solid #eef2f7;
-    text-align: left;
-}
-
-.ccip-priority-table th {
-    font-size: 11px;
-    color: #667085;
-    font-weight: 800;
-}
-
-.ccip-severity {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 20px;
-    min-width: 54px;
-    border-radius: 999px;
-    font-size: 10px;
-    font-weight: 800;
-    padding: 0 8px;
-}
-
-.ccip-severity.critical { background: #fee2e2; color: #dc2626; }
-.ccip-severity.high { background: #ffedd5; color: #f97316; }
-.ccip-severity.medium { background: #fef3c7; color: #ca8a04; }
-
-.ccip-confidence {
-    color: #16a34a;
-    font-weight: 800;
-}
-
-.ccip-status-pill {
-    display: inline-flex;
-    align-items: center;
-    min-height: 20px;
-    border-radius: 999px;
-    padding: 0 8px;
-    background: #eef2ff;
-    color: #4f46e5;
-    font-size: 10px;
-    font-weight: 800;
-}
-
-.ccip-region-wrap {
-    display: grid;
-    grid-template-columns: 1.25fr 0.95fr;
-    gap: 10px;
-    align-items: center;
-}
-
-.ccip-region-map {
-    min-height: 138px;
-    border-radius: 10px;
-    background:
-        radial-gradient(circle at 20% 36%, #9bb2e9 0 10px, transparent 11px),
-        radial-gradient(circle at 55% 32%, #5ecf7a 0 10px, transparent 11px),
-        radial-gradient(circle at 72% 47%, #f5a53a 0 10px, transparent 11px),
-        radial-gradient(circle at 34% 76%, #a78bfa 0 10px, transparent 11px),
-        linear-gradient(180deg, #f8fbff 0%, #f3f7fd 100%);
-    border: 1px solid #e5ecf7;
-    position: relative;
-    overflow: hidden;
-}
-
-.ccip-region-map:before {
-    content: '';
-    position: absolute;
-    inset: 8px;
-    border-radius: 8px;
-    background:
-        radial-gradient(ellipse at 22% 38%, rgba(153, 167, 187, 0.35) 0 17%, transparent 18%),
-        radial-gradient(ellipse at 50% 45%, rgba(153, 167, 187, 0.35) 0 16%, transparent 17%),
-        radial-gradient(ellipse at 72% 45%, rgba(153, 167, 187, 0.35) 0 14%, transparent 15%),
-        radial-gradient(ellipse at 33% 72%, rgba(153, 167, 187, 0.35) 0 11%, transparent 12%);
-}
-
-.ccip-region-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 8px;
-}
-
-.ccip-region-list li {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 12px;
-    color: #344054;
-}
-
-.ccip-dot {
-    display: inline-block;
-    width: 9px;
-    height: 9px;
-    border-radius: 999px;
-    margin-right: 8px;
-}
-
-.ccip-dot.blue { background: #4f79ff; }
-.ccip-dot.green { background: #4caf64; }
-.ccip-dot.orange { background: #f5a63b; }
-.ccip-dot.purple { background: #8b5cf6; }
-.ccip-dot.red { background: #ef4444; }
-
-.ccip-product-wrap {
-    display: grid;
-    grid-template-columns: 120px 1fr;
-    gap: 10px;
-    align-items: center;
-}
-
-.ccip-product-chart {
-    width: 120px;
-    height: 120px;
-}
-
-.ccip-product-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 8px;
-}
-
-.ccip-product-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    color: #344054;
-    font-size: 12px;
-}
-
-.ccip-product-name {
-    display: inline-flex;
-    align-items: center;
-    min-width: 0;
-}
-
-.ccip-product-value {
-    color: #475467;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.ccip-quick-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-}
-
-.ccip-quick-btn {
-    min-height: 40px;
-    border-radius: 10px;
-    border: 1px solid #d9e1ec;
-    background: #ffffff;
-    color: #344054;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.ccip-activity-list,
-.ccip-insights-list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: grid;
-    gap: 8px;
-}
-
-.ccip-activity-list li,
-.ccip-insights-list li {
-    font-size: 12px;
-    color: #344054;
-    line-height: 1.4;
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-}
-
-.ccip-time {
-    color: #98a2b3;
-    font-weight: 700;
-    min-width: 40px;
-}
-
-.ccip-insights-list li:before {
-    content: '\\f201';
-    font-family: 'Font Awesome 6 Free';
-    font-weight: 900;
-    color: #6366f1;
-    font-size: 11px;
-    margin-top: 1px;
-}
-
-@media (max-width: 1500px) {
-    .ccip-main-grid {
-        grid-template-columns: minmax(280px, 1fr) minmax(500px, 1.8fr);
-    }
-
-    .ccip-main-grid .ccip-col-right {
-        grid-column: 1 / -1;
-        display: grid;
-        grid-template-columns: repeat(2, minmax(260px, 1fr));
-        gap: 12px;
-    }
-}
-
-@media (max-width: 1180px) {
-    .ccip-kpi-row {
-        grid-template-columns: repeat(2, minmax(170px, 1fr));
-    }
-
-    .ccip-main-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .ccip-main-grid .ccip-col-right {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 740px) {
-    .ccip-dash-greeting {
-        font-size: 26px;
-    }
-
-    .ccip-kpi-row {
-        grid-template-columns: 1fr;
-    }
-
-    .ccip-product-wrap,
-    .ccip-region-wrap {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Issue List + CMF Pending interactive modernization */
-.issue-tab-shell,
-.pending-tab-shell {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 290px;
-    gap: 12px;
-    align-items: start;
-}
-
-.issue-tab-main,
-.pending-tab-main {
-    min-width: 0;
-}
-
-.issue-tab-shell.side-hidden,
-.pending-tab-shell.side-hidden {
-    grid-template-columns: minmax(0, 1fr);
-}
-
-.issue-side-panel,
-.pending-side-panel {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    box-shadow: 0 10px 24px rgba(16, 24, 40, 0.06);
-    padding: 12px;
-    display: grid;
-    gap: 10px;
-    position: sticky;
-    top: 92px;
-}
-
-.interactive-side-card {
-    border: 1px solid #e9edf3;
-    border-radius: 12px;
-    background: linear-gradient(180deg, #ffffff 0%, #fafcff 100%);
-    padding: 10px;
-}
-
-.interactive-side-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-
-.interactive-side-title {
-    margin: 0;
-    color: #0f172a;
-    font-size: 14px;
-    font-weight: 800;
-}
-
-.interactive-side-sub {
-    margin: 0;
-    color: #64748b;
-    font-size: 11px;
-}
-
-.interactive-side-btn {
-    width: 100%;
-    min-height: 34px;
-    border-radius: 10px;
-    border: 1px solid #c8d8f7;
-    background: #f4f8ff;
-    color: #2452b8;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.interactive-side-btn:hover {
-    background: #ecf3ff;
-}
-
-.interactive-chip-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 8px;
-}
-
-.interactive-chip-list li {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 12px;
-    color: #334155;
-}
-
-.interactive-chip {
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
-    padding: 0 10px;
-    border-radius: 999px;
-    border: 1px solid #dbe7f4;
-    background: #f8fbff;
-    color: #1e3a8a;
-    font-size: 11px;
-    font-weight: 800;
-}
-
-.interactive-shortcuts {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-}
-
-.interactive-shortcut-btn {
-    min-height: 36px;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    background: #ffffff;
-    color: #334155;
-    font-size: 11px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.interactive-shortcut-btn:hover {
-    background: #f8fbff;
-}
-
-.issue-page-hd,
-.cmf-pending-page-hd {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    box-shadow: 0 8px 18px rgba(16, 24, 40, 0.05);
-    padding: 12px 14px;
-    margin-bottom: 10px;
-}
-
-.issue-kpi-row,
-.cmf-pending-kpi-row {
-    gap: 10px;
-    margin-bottom: 12px;
-}
-
-.issue-kpi,
-.cmf-pending-kpi {
-    border-radius: 12px;
-    box-shadow: 0 8px 18px rgba(16, 24, 40, 0.05);
-}
-
-.issue-top-filter-panel,
-#sharedFilterPanel.overview-platform-actions {
-    border-radius: 12px;
-    box-shadow: 0 8px 18px rgba(16, 24, 40, 0.04);
-}
-
-.issue-grid-scroll,
-.cmf-pending-grid-wrap {
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    padding: 8px;
-    background: #ffffff;
-    box-shadow: 0 10px 24px rgba(16, 24, 40, 0.05);
-}
-
-.issue-grid-inner #overall_request_details {
-    border-radius: 12px !important;
-    overflow: hidden !important;
-}
-
-.issue-grid-inner #overall_request_details th,
-.cmf-pending-grid-wrap #GridView_cmf_pending th {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-}
-
-.issue-grid-inner #overall_request_details td,
-.cmf-pending-grid-wrap #GridView_cmf_pending td {
-    transition: background-color 0.18s ease, transform 0.18s ease;
-}
-
-.issue-grid-inner #overall_request_details tr:hover td,
-.cmf-pending-grid-wrap #GridView_cmf_pending tr:hover td {
-    background: #f8fbff !important;
-}
-
-.issue-pager-controls {
-    margin-top: 12px;
-}
-
-@media (max-width: 1300px) {
-    .issue-tab-shell,
-    .pending-tab-shell {
-        grid-template-columns: minmax(0, 1fr) 270px;
-    }
-}
-
-@media (max-width: 760px) {
-    .issue-tab-shell,
-    .pending-tab-shell {
-        grid-template-columns: 1fr;
-    }
-
-    .issue-side-panel,
-    .pending-side-panel {
-        position: static;
-    }
 }
 
         /* Footer */
@@ -3710,7 +2531,6 @@ td:nth-child(odd), th:nth-child(odd) {
     #<%= overall_request_details.ClientID %> .field-sno.hidden,
     #<%= overall_request_details.ClientID %> .field-progress.hidden,
     #<%= overall_request_details.ClientID %> .field-sightingid.hidden,
-    #<%= overall_request_details.ClientID %> .field-issue_details.hidden,
     #<%= overall_request_details.ClientID %> .field-promotedid.hidden,
     #<%= overall_request_details.ClientID %> .field-title.hidden,
     #<%= overall_request_details.ClientID %> .field-component.hidden,
@@ -3727,7 +2547,6 @@ td:nth-child(odd), th:nth-child(odd) {
     #<%= overall_request_details.ClientID %> .field-component_group.hidden,
     #<%= overall_request_details.ClientID %> .field-duplicatedetails.hidden,
     #<%= overall_request_details.ClientID %> .field-impact.hidden,
-    #<%= overall_request_details.ClientID %> .field-impact_processor.hidden,
     #<%= overall_request_details.ClientID %> .field-milestone.hidden,
     #<%= overall_request_details.ClientID %> .field-days_open.hidden,
     #<%= overall_request_details.ClientID %> .field-cmf_request.hidden,
@@ -3750,7 +2569,6 @@ td:nth-child(odd), th:nth-child(odd) {
     #<%= overall_request_details.ClientID %> .empty-data-container .field-sno.hidden,
     #<%= overall_request_details.ClientID %> .empty-data-container .field-progress.hidden,
     #<%= overall_request_details.ClientID %> .empty-data-container .field-sightingid.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-issue_details.hidden,
     #<%= overall_request_details.ClientID %> .empty-data-container .field-promotedid.hidden,
     #<%= overall_request_details.ClientID %> .empty-data-container .field-title.hidden,
     #<%= overall_request_details.ClientID %> .empty-data-container .field-component.hidden,
@@ -3767,7 +2585,6 @@ td:nth-child(odd), th:nth-child(odd) {
     #<%= overall_request_details.ClientID %> .empty-data-container .field-component_group.hidden,
     #<%= overall_request_details.ClientID %> .empty-data-container .field-imagefreeze.hidden,
     #<%= overall_request_details.ClientID %> .empty-data-container .field-impact.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-impact_processor.hidden,
     #<%= overall_request_details.ClientID %> .empty-data-container .field-milestone.hidden,
     #<%= overall_request_details.ClientID %> .empty-data-container .field-days_open.hidden,
     #<%= overall_request_details.ClientID %> .empty-data-container .field-cmf_request.hidden,
@@ -4310,7 +3127,6 @@ td:nth-child(odd), th:nth-child(odd) {
     }
 
     .pending-issue-cell,
-    .pending-issue-with-action,
     .pending-customer-cell,
     .pending-component-cell,
     .pending-status-cell,
@@ -4321,31 +3137,6 @@ td:nth-child(odd), th:nth-child(odd) {
         align-items: flex-start;
         max-width: 100%;
         min-width: 0;
-    }
-
-    .pending-issue-with-action {
-        gap: 8px;
-    }
-
-    .pending-recommendation-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        align-self: flex-start;
-        min-height: 28px;
-        padding: 4px 9px;
-        border-radius: 999px;
-        border: 1px solid #cdddf2;
-        background: #f5f9ff;
-        color: #1f5f9e;
-        font-size: 11px;
-        font-weight: 800;
-        cursor: pointer;
-    }
-
-    .pending-recommendation-btn:hover {
-        background: #eaf3ff;
-        border-color: #9ec5ee;
     }
 
     .pending-id-link {
@@ -4839,10 +3630,6 @@ td:nth-child(odd), th:nth-child(odd) {
         align-items: flex-start;
     }
 
-    .impact-processor-cell {
-        gap: 16px;
-    }
-
     .impact-text {
         font-size: 12px;
         color: #26384d;
@@ -4987,7 +3774,7 @@ td:nth-child(odd), th:nth-child(odd) {
 
     .customer-detail-text {
         display: block;
-        padding-bottom: 8px;
+        padding-top: 2px;
         font-size: 12px;
         color: #374151;
         line-height: 1.35;
@@ -5127,9 +3914,8 @@ td:nth-child(odd), th:nth-child(odd) {
     }
 
     .issue-pager-controls {
-        display: grid;
-        grid-template-columns: 1fr auto 1fr;
-        justify-content: stretch;
+        display: flex;
+        justify-content: center;
         align-items: center;
         gap: 6px;
         margin-top: 10px;
@@ -5155,15 +3941,6 @@ td:nth-child(odd), th:nth-child(odd) {
         text-decoration: none;
         background: #ffffff;
         color: #2a2a2a;
-    }
-
-    .issue-page-nav {
-        grid-column: 2;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        flex-wrap: wrap;
     }
 
     .issue-pager-group-btn {
@@ -5196,8 +3973,8 @@ td:nth-child(odd), th:nth-child(odd) {
     }
 
     .issue-page-size-control {
-        grid-column: 3;
-        justify-self: end;
+        position: absolute;
+        right: 10px;
         display: inline-flex;
         align-items: center;
         gap: 8px;
@@ -5282,51 +4059,6 @@ td:nth-child(odd), th:nth-child(odd) {
         background: #f8fbff;
     }
 
-    /* Final visual layer: keep Issue List/Pending away from flat Excel styling. */
-    #overall_request_details {
-        border-collapse: separate !important;
-        border-spacing: 0 10px !important;
-        border: 0 !important;
-        background: transparent !important;
-        overflow: visible !important;
-    }
-
-    #overall_request_details th {
-        background: #ffffff !important;
-        color: #5d6f84 !important;
-        border-top: 1px solid #e6edf5 !important;
-        border-bottom: 1px solid #e6edf5 !important;
-        border-left: 0 !important;
-        border-right: 0 !important;
-    }
-
-    #overall_request_details td {
-        background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%) !important;
-        border-top: 1px solid #e4edf6 !important;
-        border-bottom: 1px solid #e4edf6 !important;
-        border-left: 0 !important;
-        border-right: 0 !important;
-        box-shadow: 0 10px 24px rgba(16, 41, 67, 0.07) !important;
-        transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
-    }
-
-    #overall_request_details tr td:first-child {
-        border-left: 1px solid #e4edf6 !important;
-        border-radius: 10px 0 0 10px !important;
-    }
-
-    #overall_request_details tr td:last-child {
-        border-right: 1px solid #e4edf6 !important;
-        border-radius: 0 10px 10px 0 !important;
-    }
-
-    #overall_request_details tr:hover td {
-        background: linear-gradient(180deg, #ffffff 0%, #f4f9ff 100%) !important;
-        transform: translateY(-2px);
-        border-color: #cfdff0 !important;
-        box-shadow: 0 16px 34px rgba(16, 41, 67, 0.12) !important;
-    }
-
     .cmf-pending-grid-wrap #GridView_cmf_pending {
         min-width: 1260px !important;
         border-collapse: separate !important;
@@ -5380,12 +4112,6 @@ td:nth-child(odd), th:nth-child(odd) {
         font-size: 11px;
         font-weight: 800;
         white-space: normal;
-    }
-
-    .cmf-pending-grid-wrap .pending-recommendation-btn {
-        width: auto;
-        max-width: 100%;
-        white-space: nowrap;
     }
 
     .header-dropdown {
@@ -5721,1844 +4447,6 @@ td:nth-child(odd), th:nth-child(odd) {
         border-radius: 0 0 12px 12px !important;
     }
 
-    /* Final layout corrections for side menu alignment and scroll whitespace */
-    .container-scroller,
-    .container-fluid.page-body-wrapper {
-        padding-left: 0 !important;
-        margin-left: 0 !important;
-    }
-
-    .portal-layout-shell {
-        min-height: 0 !important;
-        margin-left: 0 !important;
-    }
-
-    .portal-left-nav {
-        margin-left: 0 !important;
-        left: 0 !important;
-        border-radius: 0 12px 12px 0 !important;
-    }
-
-    .gridview-container-wrapper {
-        align-items: flex-start;
-    }
-
-    .gridview-container3 {
-        height: auto !important;
-        min-height: 0 !important;
-        margin-bottom: 0 !important;
-    }
-
-    /* Remove Issue List hover lift/shadow effect */
-    #overall_request_details tr:hover td,
-    .issue-grid-inner #overall_request_details tr:hover td {
-        transform: none !important;
-        box-shadow: none !important;
-        background: #ffffff !important;
-        border-color: #eef2f7 !important;
-    }
-
-    /* ============================================================
-    CMF PORTAL — PHASE 1 USER-CENTRIC UI
-    ============================================================ */
-
-    /* ------------------------------------------------------------
-    APPLICATION SURFACE
-    ------------------------------------------------------------ */
-
-    html,
-    body {
-        background: #f5f7fb !important;
-        color: #172033 !important;
-    }
-
-    body {
-        font-family:
-            "Segoe UI",
-            Inter,
-            Arial,
-            sans-serif !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    TOP HEADER
-    ------------------------------------------------------------ */
-
-    header {
-        min-height: 72px !important;
-        height: 72px !important;
-
-        padding: 0 24px !important;
-
-        display: flex !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
-
-        background: #ffffff !important;
-
-        color: #172033 !important;
-
-        border-bottom: 1px solid #e4e8ee !important;
-
-        box-shadow: 0 2px 8px rgba(16, 24, 40, 0.05) !important;
-
-        position: sticky !important;
-        top: 0 !important;
-
-        z-index: 1000 !important;
-    }
-
-    .header-title {
-        color: #172033 !important;
-
-        font-size: 17px !important;
-        font-weight: 750 !important;
-
-        letter-spacing: 0 !important;
-        text-transform: none !important;
-
-        text-align: left !important;
-    }
-
-    .header-user-mode {
-        right: 24px !important;
-
-        color: #475467 !important;
-    }
-
-    .header-mode-dropdown {
-        height: 36px !important;
-
-        min-width: 155px !important;
-
-        background: #ffffff !important;
-
-        color: #344054 !important;
-
-        border: 1px solid #d0d5dd !important;
-
-        border-radius: 8px !important;
-    }
-
-    .sidebar-toggle-div {
-        display: none !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    LEFT NAVIGATION
-    ------------------------------------------------------------ */
-
-    .portal-layout-shell {
-        gap: 0 !important;
-
-        min-height: calc(100vh - 72px) !important;
-    }
-
-    .portal-left-nav {
-        width: 188px !important;
-        flex: 0 0 188px !important;
-
-        top: 72px !important;
-
-        min-height: calc(100vh - 72px) !important;
-        max-height: calc(100vh - 72px) !important;
-
-        padding: 14px 10px !important;
-
-        background: #071a44 !important;
-
-        border-radius: 0 !important;
-
-        box-shadow: none !important;
-
-        border-right: 1px solid rgba(255,255,255,0.08) !important;
-    }
-
-    .portal-left-nav .portal-nav-link {
-        min-height: 42px !important;
-
-        padding: 10px 12px !important;
-
-        margin-bottom: 5px !important;
-
-        border: none !important;
-
-        background: transparent !important;
-
-        border-radius: 8px !important;
-
-        color: #d9e4f2 !important;
-
-        font-size: 13px !important;
-        font-weight: 600 !important;
-    }
-
-    .portal-left-nav .portal-nav-link:hover {
-        background: rgba(59,130,246,0.16) !important;
-
-        transform: none !important;
-
-        box-shadow: none !important;
-    }
-
-    .portal-left-nav .portal-nav-link.is-active {
-        background: #315bea !important;
-
-        border: none !important;
-
-        box-shadow: none !important;
-
-        color: #ffffff !important;
-    }
-
-    .portal-left-nav .portal-nav-link.is-active:before {
-        display: none !important;
-    }
-
-    .portal-left-nav-title {
-        color: #ffffff !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    MAIN CONTENT
-    ------------------------------------------------------------ */
-
-    .portal-main-workspace {
-        min-width: 0 !important;
-
-        width: 100% !important;
-    }
-
-    .content-wrapper {
-        width: 100% !important;
-
-        box-sizing: border-box !important;
-
-        margin: 0 !important;
-
-        padding: 24px 26px 40px !important;
-
-        background: #f5f7fb !important;
-
-        border: none !important;
-
-        box-shadow: none !important;
-
-        border-radius: 0 !important;
-    }
-
-
-    /* Remove old banner-style tab headings */
-
-    .pane-heading {
-        background: transparent !important;
-
-        border: none !important;
-
-        box-shadow: none !important;
-
-        padding: 0 !important;
-
-        margin: 0 0 16px !important;
-
-        color: #172033 !important;
-
-        font-size: 24px !important;
-
-        font-weight: 750 !important;
-
-        letter-spacing: -0.02em !important;
-
-        text-transform: none !important;
-
-        text-align: left !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    ISSUE LIST LAYOUT
-    ------------------------------------------------------------ */
-
-    .issue-tab-shell {
-        display: grid !important;
-
-        grid-template-columns:
-            minmax(0, 1fr)
-            240px !important;
-
-        gap: 16px !important;
-
-        align-items: start !important;
-    }
-
-    .issue-tab-main {
-        min-width: 0 !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    ISSUE PAGE HEADER
-    ------------------------------------------------------------ */
-
-    .issue-page-hd {
-        background: transparent !important;
-
-        border: none !important;
-
-        box-shadow: none !important;
-
-        padding: 0 0 4px !important;
-
-        margin-bottom: 14px !important;
-    }
-
-    .issue-page-title {
-        margin: 0 !important;
-
-        color: #172033 !important;
-
-        font-size: 24px !important;
-
-        font-weight: 750 !important;
-
-        letter-spacing: -0.02em !important;
-    }
-
-    .issue-page-desc {
-        margin: 5px 0 0 !important;
-
-        color: #667085 !important;
-
-        font-size: 13px !important;
-
-        line-height: 1.45 !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    ISSUE KPI CARDS
-    ------------------------------------------------------------ */
-
-    .issue-kpi-row {
-        display: grid !important;
-
-        grid-template-columns:
-            repeat(4, minmax(0, 1fr)) !important;
-
-        gap: 12px !important;
-
-        margin-bottom: 14px !important;
-    }
-
-    .issue-kpi {
-        min-height: 92px !important;
-
-        padding: 14px 16px !important;
-
-        background: #ffffff !important;
-
-        border: 1px solid #e4e7ec !important;
-
-        border-radius: 12px !important;
-
-        box-shadow:
-            0 2px 7px rgba(16,24,40,0.04) !important;
-    }
-
-    .issue-kpi-label {
-        color: #667085 !important;
-
-        font-size: 11px !important;
-
-        font-weight: 700 !important;
-    }
-
-    .issue-kpi-value {
-        margin-top: 5px !important;
-
-        color: #172033 !important;
-
-        font-size: 28px !important;
-
-        font-weight: 800 !important;
-    }
-
-    .issue-kpi-sub {
-        margin-top: 5px !important;
-
-        color: #98a2b3 !important;
-
-        font-size: 10px !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    ISSUE FILTER PANEL
-    ------------------------------------------------------------ */
-
-    .issue-top-filter-panel,
-    #sharedFilterPanel.overview-platform-actions {
-        background: #ffffff !important;
-
-        border: 1px solid #e4e7ec !important;
-
-        border-radius: 12px !important;
-
-        box-shadow:
-            0 2px 7px rgba(16,24,40,0.04) !important;
-
-        padding: 14px !important;
-
-        margin-bottom: 12px !important;
-    }
-
-    .issue-filter-section-header {
-        margin-bottom: 10px !important;
-    }
-
-    .issue-filter-title {
-        color: #172033 !important;
-
-        font-size: 13px !important;
-
-        font-weight: 750 !important;
-    }
-
-    .issue-top-filter-grid {
-        display: grid !important;
-
-        grid-template-columns:
-            repeat(4, minmax(150px, 1fr)) !important;
-
-        gap: 10px !important;
-    }
-
-    .issue-top-filter-item {
-        display: flex !important;
-
-        flex-direction: column !important;
-
-        gap: 5px !important;
-    }
-
-    .issue-top-filter-item > span {
-        color: #667085 !important;
-
-        font-size: 10px !important;
-
-        font-weight: 700 !important;
-    }
-
-    .issue-top-filter-item .header-dropdown {
-        width: 100% !important;
-
-        max-width: none !important;
-
-        height: 34px !important;
-
-        background: #ffffff !important;
-
-        border: 1px solid #d0d5dd !important;
-
-        border-radius: 7px !important;
-
-        color: #344054 !important;
-
-        font-size: 11px !important;
-    }
-
-    .issue-top-filter-buttons {
-        margin-top: 10px !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    ISSUE SEARCH TOOLBAR
-    ------------------------------------------------------------ */
-
-    .issue-user-toolbar {
-        display: flex !important;
-
-        align-items: center !important;
-
-        justify-content: space-between !important;
-
-        gap: 12px !important;
-
-        margin-bottom: 10px !important;
-    }
-
-    .issue-search-box {
-        position: relative !important;
-
-        flex: 1 1 360px !important;
-
-        max-width: 520px !important;
-    }
-
-    .issue-search-box > i {
-        position: absolute !important;
-
-        left: 12px !important;
-
-        top: 50% !important;
-
-        transform: translateY(-50%) !important;
-
-        color: #98a2b3 !important;
-
-        font-size: 12px !important;
-    }
-
-    #issueQuickSearch {
-        width: 100% !important;
-
-        height: 38px !important;
-
-        box-sizing: border-box !important;
-
-        padding: 0 38px 0 34px !important;
-
-        border: 1px solid #d0d5dd !important;
-
-        border-radius: 8px !important;
-
-        background: #ffffff !important;
-
-        color: #172033 !important;
-
-        font-size: 12px !important;
-
-        outline: none !important;
-    }
-
-    #issueQuickSearch:focus {
-        border-color: #4f6bed !important;
-
-        box-shadow:
-            0 0 0 3px rgba(79,107,237,0.10) !important;
-    }
-
-    .issue-search-clear {
-        display: none;
-
-        position: absolute !important;
-
-        right: 8px !important;
-
-        top: 50% !important;
-
-        transform: translateY(-50%) !important;
-
-        width: 24px !important;
-
-        height: 24px !important;
-
-        border: none !important;
-
-        background: transparent !important;
-
-        color: #98a2b3 !important;
-
-        cursor: pointer !important;
-    }
-
-    .issue-user-actions {
-        display: flex !important;
-
-        gap: 8px !important;
-
-        align-items: center !important;
-    }
-
-    .issue-toolbar-btn {
-        min-height: 36px !important;
-
-        padding: 0 12px !important;
-
-        border: 1px solid #d0d5dd !important;
-
-        border-radius: 8px !important;
-
-        background: #ffffff !important;
-
-        color: #344054 !important;
-
-        font-size: 11px !important;
-
-        font-weight: 700 !important;
-
-        cursor: pointer !important;
-    }
-
-    .issue-toolbar-btn:hover {
-        background: #f8fafc !important;
-
-        border-color: #b8c0cc !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    ISSUE TABLE CONTAINER
-    ------------------------------------------------------------ */
-
-    .issue-grid-scroll {
-        width: 100% !important;
-
-        max-width: 100% !important;
-
-        box-sizing: border-box !important;
-
-        padding: 0 !important;
-
-        border: 1px solid #e1e5eb !important;
-
-        border-radius: 12px !important;
-
-        background: #ffffff !important;
-
-        box-shadow:
-            0 2px 8px rgba(16,24,40,0.04) !important;
-
-        overflow-x: auto !important;
-    }
-
-    .issue-grid-inner {
-        min-width: 0 !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    ISSUE TABLE
-    IMPORTANT: use field-* classes instead of nth-child()
-    ------------------------------------------------------------ */
-
-    #overall_request_details {
-        width: 100% !important;
-
-        min-width: 1050px !important;
-
-        margin: 0 !important;
-
-        border-collapse: separate !important;
-
-        border-spacing: 0 !important;
-
-        table-layout: auto !important;
-
-        background: #ffffff !important;
-
-        border: none !important;
-
-        border-radius: 12px !important;
-
-        box-shadow: none !important;
-
-        font-size: 12px !important;
-    }
-
-
-    /* Header */
-
-    #overall_request_details thead,
-    #overall_request_details thead tr {
-        background: #f8fafc !important;
-    }
-
-    #overall_request_details thead th {
-        position: sticky !important;
-
-        top: 0 !important;
-
-        z-index: 10 !important;
-
-        background: #f8fafc !important;
-
-        color: #667085 !important;
-
-        border: none !important;
-
-        border-bottom: 1px solid #e4e7ec !important;
-
-        padding: 11px 12px !important;
-
-        font-size: 10px !important;
-
-        font-weight: 750 !important;
-
-        text-align: left !important;
-
-        white-space: nowrap !important;
-    }
-
-
-    /* Hide filter dropdowns INSIDE table headers.
-    Filters now live in the dedicated filter panel above. */
-
-    #overall_request_details thead .filter-container {
-        display: none !important;
-    }
-
-    #overall_request_details thead .filter-header-container {
-        min-height: auto !important;
-
-        align-items: flex-start !important;
-
-        gap: 0 !important;
-    }
-
-    #overall_request_details thead .filter-header-text {
-        margin: 0 !important;
-
-        align-self: flex-start !important;
-
-        text-align: left !important;
-    }
-
-
-    /* Body */
-
-    #overall_request_details tbody tr {
-        background: #ffffff !important;
-
-        transition: background-color 0.12s ease !important;
-    }
-
-    #overall_request_details tbody tr:nth-child(even) {
-        background: #fbfcfe !important;
-    }
-
-    #overall_request_details tbody tr:hover {
-        background: #f5f9ff !important;
-    }
-
-    #overall_request_details tbody td {
-        background: transparent !important;
-
-        border: none !important;
-
-        border-bottom: 1px solid #edf0f4 !important;
-
-        padding: 13px 12px !important;
-
-        color: #475467 !important;
-
-        font-size: 12px !important;
-
-        line-height: 1.45 !important;
-
-        vertical-align: middle !important;
-
-        overflow-wrap: anywhere !important;
-    }
-
-    #overall_request_details tbody tr:last-child td {
-        border-bottom: none !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    ISSUE DETAILS — MOST IMPORTANT
-    ------------------------------------------------------------ */
-
-    #overall_request_details .field-issue_details {
-        min-width: 280px !important;
-
-        max-width: 360px !important;
-
-        color: #172033 !important;
-
-        font-size: 12px !important;
-
-        font-weight: 500 !important;
-    }
-
-    #overall_request_details .field-issue_details a {
-        color: #0068b5 !important;
-
-        font-weight: 750 !important;
-
-        text-decoration: none !important;
-    }
-
-    #overall_request_details .field-issue_details a:hover {
-        color: #004f86 !important;
-
-        text-decoration: underline !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    CUSTOMER
-    ------------------------------------------------------------ */
-
-    #overall_request_details .field-customer_detail {
-        min-width: 135px !important;
-
-        max-width: 180px !important;
-
-        color: #344054 !important;
-
-        font-weight: 600 !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    COMPONENT
-    ------------------------------------------------------------ */
-
-    #overall_request_details .field-component {
-        min-width: 135px !important;
-
-        max-width: 175px !important;
-
-        color: #475467 !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    OWNER
-    ------------------------------------------------------------ */
-
-    #overall_request_details .field-owner {
-        min-width: 120px !important;
-
-        max-width: 160px !important;
-
-        color: #475467 !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    MILESTONE
-    ------------------------------------------------------------ */
-
-    #overall_request_details .field-milestone {
-        min-width: 105px !important;
-
-        max-width: 150px !important;
-
-        color: #344054 !important;
-
-        font-weight: 600 !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    STATUS
-    ------------------------------------------------------------ */
-
-    #overall_request_details .field-status {
-        min-width: 125px !important;
-
-        max-width: 170px !important;
-
-        color: #344054 !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    IMPACT
-    ------------------------------------------------------------ */
-
-    #overall_request_details .field-impact_processor {
-        min-width: 190px !important;
-
-        max-width: 250px !important;
-
-        color: #475467 !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    DAYS OPEN
-    ------------------------------------------------------------ */
-
-    #overall_request_details .field-days_open {
-        min-width: 75px !important;
-
-        width: 75px !important;
-
-        text-align: center !important;
-
-        font-weight: 750 !important;
-    }
-
-    #overall_request_details .field-days_open .days-open,
-    #overall_request_details .field-days_open span {
-        display: inline-flex !important;
-
-        align-items: center !important;
-
-        justify-content: center !important;
-
-        min-width: 34px !important;
-
-        min-height: 25px !important;
-
-        padding: 3px 8px !important;
-
-        border-radius: 999px !important;
-
-        background: #fff7e6 !important;
-
-        border: 1px solid #f1d59b !important;
-
-        color: #9a6700 !important;
-
-        font-size: 11px !important;
-
-        font-weight: 750 !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    STATUS / GENERAL BADGES
-    ------------------------------------------------------------ */
-
-    #overall_request_details .badge,
-    #overall_request_details .tag,
-    #overall_request_details [class*="badge"],
-    #overall_request_details [class*="tag"] {
-        display: inline-flex !important;
-
-        align-items: center !important;
-
-        justify-content: center !important;
-
-        min-height: 23px !important;
-
-        padding: 3px 9px !important;
-
-        border-radius: 999px !important;
-
-        font-size: 10px !important;
-
-        font-weight: 700 !important;
-
-        white-space: nowrap !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    EDIT COLUMN
-    ------------------------------------------------------------ */
-
-    #overall_request_details tbody td:first-child {
-        width: 46px !important;
-
-        min-width: 46px !important;
-
-        text-align: center !important;
-
-        padding: 10px 5px !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    AI SUMMARY BUTTON
-    ------------------------------------------------------------ */
-
-    #overall_request_details .ai-summary-btn,
-    #overall_request_details .ai-summary-trigger {
-        border-radius: 7px !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    SIDE ASSISTANT
-    ------------------------------------------------------------ */
-
-    .issue-side-panel {
-        width: auto !important;
-
-        box-sizing: border-box !important;
-
-        padding: 10px !important;
-
-        background: transparent !important;
-
-        border: none !important;
-
-        box-shadow: none !important;
-
-        border-radius: 0 !important;
-
-        gap: 10px !important;
-
-        position: sticky !important;
-
-        top: 90px !important;
-    }
-
-    .interactive-side-card {
-        background: #ffffff !important;
-
-        border: 1px solid #e4e7ec !important;
-
-        border-radius: 12px !important;
-
-        box-shadow:
-            0 2px 7px rgba(16,24,40,0.04) !important;
-
-        padding: 12px !important;
-    }
-
-    .interactive-side-title {
-        font-size: 13px !important;
-
-        color: #172033 !important;
-    }
-
-    .interactive-side-sub {
-        font-size: 11px !important;
-
-        line-height: 1.45 !important;
-
-        color: #667085 !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    PAGINATION
-    ------------------------------------------------------------ */
-
-    .issue-pager-controls {
-        display: grid !important;
-
-        grid-template-columns: 1fr auto 1fr !important;
-
-        align-items: center !important;
-
-        justify-content: stretch !important;
-
-        gap: 5px !important;
-
-        margin-top: 12px !important;
-
-        padding: 8px 0 !important;
-    }
-
-
-    /* ------------------------------------------------------------
-    RESPONSIVE
-    ------------------------------------------------------------ */
-
-    @media (max-width: 1200px) {
-
-        .issue-tab-shell {
-            grid-template-columns: 1fr !important;
-        }
-
-        .issue-side-panel {
-            position: static !important;
-
-            display: grid !important;
-
-            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-        }
-
-        .issue-kpi-row {
-            grid-template-columns: repeat(2, 1fr) !important;
-        }
-
-        .issue-top-filter-grid {
-            grid-template-columns: repeat(3, minmax(150px, 1fr)) !important;
-        }
-    }
-
-    @media (min-width: 761px) {
-        .issue-tab-shell,
-        .pending-tab-shell {
-            grid-template-columns: minmax(0, 1fr) 290px !important;
-        }
-    }
-
-    @media (max-width: 760px) {
-
-        .content-wrapper {
-            padding: 16px !important;
-        }
-
-        .issue-user-toolbar {
-            align-items: stretch !important;
-
-            flex-direction: column !important;
-        }
-
-        .issue-search-box {
-            max-width: none !important;
-        }
-
-        .issue-user-actions {
-            justify-content: flex-start !important;
-        }
-
-        .issue-kpi-row {
-            grid-template-columns: 1fr !important;
-        }
-
-        .issue-top-filter-grid {
-            grid-template-columns: 1fr !important;
-        }
-
-        .issue-side-panel {
-            grid-template-columns: 1fr !important;
-        }
-    }
-
-    /* ============================================================
-   CMF PENDING LIST
-   ============================================================ */
-
-    .pending-tab-shell {
-        display: grid !important;
-
-        grid-template-columns:
-            minmax(0, 1fr)
-            240px !important;
-
-        gap: 16px !important;
-
-        align-items: start !important;
-    }
-
-    .pending-tab-main {
-        min-width: 0 !important;
-    }
-
-    .cmf-pending-page-hd {
-        background: transparent !important;
-
-        border: none !important;
-
-        box-shadow: none !important;
-
-        padding: 0 0 6px !important;
-
-        margin-bottom: 14px !important;
-    }
-
-    .cmf-pending-page-title {
-        margin: 0 !important;
-
-        color: #172033 !important;
-
-        font-size: 24px !important;
-
-        font-weight: 750 !important;
-    }
-
-    .cmf-pending-page-desc {
-        margin: 5px 0 0 !important;
-
-        color: #667085 !important;
-
-        font-size: 13px !important;
-    }
-
-    .cmf-pending-grid-wrap {
-        width: 100% !important;
-
-        box-sizing: border-box !important;
-
-        padding: 0 !important;
-
-        background: #ffffff !important;
-
-        border: 1px solid #e1e5eb !important;
-
-        border-radius: 12px !important;
-
-        box-shadow:
-            0 2px 8px rgba(16,24,40,0.04) !important;
-
-        overflow-x: auto !important;
-    }
-
-    #GridView_cmf_pending {
-        width: 100% !important;
-
-        min-width: 900px !important;
-
-        border-collapse: separate !important;
-
-        border-spacing: 0 !important;
-
-        background: #ffffff !important;
-    }
-
-    #GridView_cmf_pending th {
-        background: #f8fafc !important;
-
-        color: #667085 !important;
-
-        border: none !important;
-
-        border-bottom: 1px solid #e4e7ec !important;
-
-        padding: 11px 12px !important;
-
-        font-size: 10px !important;
-
-        font-weight: 750 !important;
-
-        text-align: left !important;
-    }
-
-    #GridView_cmf_pending td {
-        background: #ffffff !important;
-
-        color: #475467 !important;
-
-        border: none !important;
-
-        border-bottom: 1px solid #edf0f4 !important;
-
-        padding: 13px 12px !important;
-
-        font-size: 12px !important;
-
-        line-height: 1.45 !important;
-
-        vertical-align: top !important;
-    }
-
-    #GridView_cmf_pending tr:hover td {
-        background: #f5f9ff !important;
-    }
-
-    .pending-side-panel {
-        position: sticky !important;
-
-        top: 90px !important;
-
-        background: transparent !important;
-
-        border: none !important;
-
-        box-shadow: none !important;
-
-        padding: 10px !important;
-    }
-
-    /* Reference-style top bar, global search, and compact work tables */
-    header {
-        height: 66px !important;
-        min-height: 66px !important;
-        padding: 0 22px !important;
-        background: #fbfcff !important;
-        border-bottom: 1px solid #e6ebf2 !important;
-        box-shadow: 0 1px 10px rgba(15, 23, 42, 0.05) !important;
-        gap: 22px !important;
-    }
-
-    .header-title {
-        min-width: 220px !important;
-        color: #16213a !important;
-        font-size: 16px !important;
-        font-weight: 800 !important;
-    }
-
-    .global-search-shell {
-        position: relative;
-        width: min(480px, 42vw);
-        min-width: 320px;
-        margin: 0 auto;
-        display: flex;
-        align-items: center;
-        color: #73839a;
-    }
-
-    .global-search-shell > i {
-        position: absolute;
-        left: 14px;
-        font-size: 13px;
-        color: #75839a;
-        pointer-events: none;
-    }
-
-    #globalPortalSearch {
-        width: 100%;
-        height: 38px;
-        padding: 0 84px 0 40px;
-        border: 1px solid #dce3ee;
-        border-radius: 10px;
-        background: #ffffff;
-        color: #1d2939;
-        font-size: 12px;
-        font-weight: 600;
-        outline: none;
-        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
-    }
-
-    #globalPortalSearch:focus {
-        border-color: #6b8cff;
-        box-shadow: 0 0 0 3px rgba(49, 91, 234, 0.12), 0 6px 18px rgba(15, 23, 42, 0.07);
-    }
-
-    .global-search-shortcut {
-        position: absolute;
-        right: 12px;
-        display: inline-flex;
-        align-items: center;
-        height: 20px;
-        padding: 0 7px;
-        border: 1px solid #dce3ee;
-        border-radius: 6px;
-        background: #f8fafc;
-        color: #667085;
-        font-size: 10px;
-        font-weight: 800;
-    }
-
-    .global-search-clear {
-        display: none;
-        position: absolute;
-        right: 70px;
-        width: 22px;
-        height: 22px;
-        border: none;
-        border-radius: 999px;
-        background: #eef2f7;
-        color: #667085;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        font-size: 15px;
-        line-height: 1;
-    }
-
-    .header-user-mode {
-        position: static !important;
-        margin-left: 0 !important;
-        color: #475467 !important;
-    }
-
-    .header-mode-dropdown {
-        height: 34px !important;
-        min-width: 148px !important;
-        border-radius: 9px !important;
-        font-size: 12px !important;
-        font-weight: 700 !important;
-    }
-
-    .portal-left-nav {
-        top: 66px !important;
-        min-height: calc(100vh - 66px) !important;
-        max-height: calc(100vh - 66px) !important;
-        background: linear-gradient(180deg, #061840 0%, #071f5c 58%, #03112e 100%) !important;
-    }
-
-    .content-wrapper {
-        background: #f6f8fc !important;
-        padding: 18px 22px 34px !important;
-    }
-
-    .issue-page-hd,
-    .cmf-pending-page-hd {
-        margin-bottom: 10px !important;
-    }
-
-    .issue-page-title,
-    .cmf-pending-page-title {
-        font-size: 21px !important;
-        letter-spacing: 0 !important;
-    }
-
-    .issue-page-desc,
-    .cmf-pending-page-desc {
-        font-size: 12px !important;
-    }
-
-    .issue-kpi-row {
-        grid-template-columns: repeat(4, minmax(140px, 1fr)) !important;
-        gap: 9px !important;
-        margin-bottom: 10px !important;
-    }
-
-    .issue-kpi {
-        min-height: 78px !important;
-        padding: 11px 13px !important;
-        border-radius: 10px !important;
-        border-color: #e8edf5 !important;
-        box-shadow: 0 3px 14px rgba(15, 23, 42, 0.035) !important;
-    }
-
-    .issue-kpi-value {
-        font-size: 24px !important;
-    }
-
-    .issue-top-filter-panel {
-        margin: 0 0 10px !important;
-        padding: 0 !important;
-        border: none !important;
-        background: transparent !important;
-        box-shadow: none !important;
-    }
-
-    .issue-filter-section-header {
-        display: none !important;
-    }
-
-    #issueTopFilterBody {
-        padding: 10px !important;
-        margin-bottom: 10px !important;
-        background: #ffffff !important;
-        border: 1px solid #e3e9f2 !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
-    }
-
-    .issue-top-filter-grid {
-        display: flex !important;
-        align-items: end !important;
-        gap: 8px !important;
-        overflow-x: auto !important;
-        padding-bottom: 2px !important;
-    }
-
-    .issue-top-filter-item {
-        min-width: 132px !important;
-        flex: 0 0 132px !important;
-    }
-
-    .issue-top-filter-item > span {
-        font-size: 9px !important;
-        color: #697586 !important;
-        text-transform: uppercase !important;
-    }
-
-    .issue-top-filter-item .header-dropdown {
-        height: 30px !important;
-        border-radius: 8px !important;
-        font-size: 10px !important;
-    }
-
-    .issue-top-filter-buttons {
-        margin-top: 8px !important;
-    }
-
-    .issue-user-toolbar {
-        margin-bottom: 9px !important;
-    }
-
-    .issue-view-note {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        color: #667085;
-        font-size: 12px;
-        font-weight: 700;
-    }
-
-    .issue-toolbar-btn.filter-toggle {
-        border-color: #dbe5ff !important;
-        background: #eef4ff !important;
-        color: #315bea !important;
-    }
-
-    .issue-toolbar-btn.filter-toggle[aria-expanded="true"],
-    .issue-toolbar-btn.filter-toggle:hover {
-        background: #315bea !important;
-        color: #ffffff !important;
-        border-color: #315bea !important;
-    }
-
-    #sharedFilterPanel.overview-platform-actions {
-        padding: 10px 12px !important;
-        margin-bottom: 10px !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.035) !important;
-    }
-
-    .issue-grid-scroll,
-    .cmf-pending-grid-wrap {
-        border-radius: 12px !important;
-        border-color: #e3e9f2 !important;
-        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.045) !important;
-    }
-
-    #overall_request_details,
-    #GridView_cmf_pending {
-        font-size: 11px !important;
-    }
-
-    #overall_request_details thead th,
-    #GridView_cmf_pending th {
-        height: 38px !important;
-        padding: 8px 10px !important;
-        background: #fbfcff !important;
-        color: #344054 !important;
-        font-size: 9px !important;
-        font-weight: 800 !important;
-        text-transform: none !important;
-        border-bottom: 1px solid #e5eaf2 !important;
-    }
-
-    #overall_request_details tbody td,
-    #GridView_cmf_pending td {
-        padding: 9px 10px !important;
-        font-size: 11px !important;
-        line-height: 1.35 !important;
-        border-bottom: 1px solid #eef2f7 !important;
-    }
-
-    #overall_request_details tbody tr:nth-child(even),
-    #GridView_cmf_pending tr:nth-child(even) td {
-        background: #fcfdff !important;
-    }
-
-    #overall_request_details tbody tr:hover td,
-    #GridView_cmf_pending tr:hover td {
-        background: #f3f7ff !important;
-    }
-
-    #overall_request_details .field-issue_details {
-        min-width: 250px !important;
-        max-width: 330px !important;
-    }
-
-    #overall_request_details .field-days_open .days-open,
-    #overall_request_details .field-days_open span {
-        min-height: 21px !important;
-        padding: 2px 7px !important;
-        font-size: 10px !important;
-    }
-
-    .pending-tab-shell {
-        grid-template-columns: minmax(0, 1fr) 250px !important;
-    }
-
-    .pending-tab-main .issue-top-filter-panel,
-    .pending-tab-main .issue-user-toolbar {
-        display: none !important;
-    }
-
-    .portal-view-hidden {
-        display: none !important;
-    }
-
-    /* Final cleanup from PM feedback */
-    .portal-left-nav.is-collapsed {
-        width: 58px !important;
-        flex: 0 0 58px !important;
-        min-width: 58px !important;
-        max-width: 58px !important;
-        padding: 10px 7px !important;
-    }
-
-    .portal-left-nav.is-collapsed .portal-nav-active-title {
-        display: none !important;
-    }
-
-    .portal-left-nav.is-collapsed .portal-nav-link {
-        width: 42px !important;
-        min-width: 42px !important;
-        height: 42px !important;
-        padding: 0 !important;
-        margin: 0 auto 8px !important;
-        justify-content: center !important;
-        border-radius: 12px !important;
-    }
-
-    .portal-left-nav.is-collapsed .portal-nav-link span {
-        display: none !important;
-    }
-
-    .portal-left-nav.is-collapsed .portal-nav-link i {
-        margin: 0 !important;
-        font-size: 16px !important;
-    }
-
-    .portal-layout-shell.main-menu-collapsed {
-        gap: 0 !important;
-    }
-
-    .issue-grid-scroll {
-        padding: 0 !important;
-        border: none !important;
-        border-radius: 0 !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        max-height: min(62vh, 620px) !important;
-        min-height: 0 !important;
-        overflow: auto !important;
-        scrollbar-gutter: stable !important;
-    }
-
-    .issue-grid-scroll:has(#overall_request_details[style*="display: none"]),
-    .issue-grid-scroll:has(#overall_request_details[style*="display:none"]) {
-        display: none !important;
-    }
-
-    .issue-grid-inner #overall_request_details,
-    #overall_request_details {
-        border: 1px solid #e4eaf3 !important;
-        border-radius: 12px !important;
-        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045) !important;
-    }
-
-    .cmf-pending-page-hd {
-        margin-top: 0 !important;
-        margin-bottom: 12px !important;
-    }
-
-    .cmf-pending-grid-wrap {
-        padding: 0 !important;
-        border: none !important;
-        border-radius: 0 !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        max-height: min(64vh, 640px) !important;
-        min-height: 0 !important;
-        overflow: auto !important;
-        scrollbar-gutter: stable !important;
-    }
-
-    .cmf-pending-grid-wrap:has(#GridView_cmf_pending[style*="display: none"]),
-    .cmf-pending-grid-wrap:has(#GridView_cmf_pending[style*="display:none"]) {
-        display: none !important;
-    }
-
-    .issue-grid-scroll #overall_request_details thead th,
-    .cmf-pending-grid-wrap #GridView_cmf_pending th {
-        position: sticky !important;
-        top: 0 !important;
-        z-index: 20 !important;
-    }
-
-    .issue-pager-controls {
-        position: static !important;
-        background: rgba(246, 248, 252, 0.94) !important;
-        border: 1px solid #e3eaf3 !important;
-        border-radius: 12px !important;
-        padding: 8px 10px !important;
-        margin-top: 10px !important;
-        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05) !important;
-    }
-
-    .issue-pager-controls .issue-page-size-control {
-        position: static !important;
-        grid-column: 3 !important;
-        justify-self: end !important;
-    }
-
-    .issue-pager-controls .issue-page-nav {
-        grid-column: 2 !important;
-    }
-
-    @media (max-width: 860px) {
-        .issue-pager-controls {
-            grid-template-columns: 1fr !important;
-            justify-items: center !important;
-        }
-
-        .issue-pager-controls .issue-page-size-control {
-            grid-column: 1 !important;
-            justify-self: center !important;
-        }
-
-        .issue-pager-controls .issue-page-nav {
-            grid-column: 1 !important;
-        }
-    }
-
-    #GridView_cmf_pending {
-        min-width: 1040px !important;
-        border: 1px solid #e4eaf3 !important;
-        border-radius: 12px !important;
-        overflow: hidden !important;
-        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045) !important;
-        background: #ffffff !important;
-    }
-
-    #GridView_cmf_pending th {
-        height: 40px !important;
-        padding: 9px 12px !important;
-        background: #f8fbff !important;
-        color: #233044 !important;
-        border-bottom: 1px solid #e3eaf3 !important;
-        font-size: 10px !important;
-        font-weight: 850 !important;
-        letter-spacing: 0 !important;
-    }
-
-    #GridView_cmf_pending td {
-        padding: 10px 12px !important;
-        color: #344054 !important;
-        font-size: 11px !important;
-        line-height: 1.35 !important;
-        vertical-align: middle !important;
-        border-bottom: 1px solid #eef2f7 !important;
-    }
-
-    #GridView_cmf_pending tr:nth-child(even) td {
-        background: #fcfdff !important;
-    }
-
-    #GridView_cmf_pending tr:hover td {
-        background: #f2f7ff !important;
-    }
-
-    #GridView_cmf_pending a {
-        color: #2456d6 !important;
-        font-weight: 750 !important;
-        text-decoration: none !important;
-    }
-
-    #GridView_cmf_pending a:hover {
-        text-decoration: underline !important;
-    }
-
-    #issueTabShell,
-    #pendingTabShell {
-        grid-template-columns: minmax(0, 1fr) 290px !important;
-        align-items: start !important;
-    }
-
-    #issueTabShell .issue-tab-main,
-    #pendingTabShell .pending-tab-main {
-        grid-column: 1 !important;
-        min-width: 0 !important;
-    }
-
-    #issueTabShell .issue-side-panel,
-    #pendingTabShell .pending-side-panel {
-        grid-column: 2 !important;
-        grid-row: 1 !important;
-        align-self: start !important;
-    }
-
-    #issueTabShell.cmf-tab-shell-hidden,
-    #pendingTabShell.cmf-tab-shell-hidden {
-        display: none !important;
-    }
-
-    #issueTabShell.cmf-tab-shell-active,
-    #pendingTabShell.cmf-tab-shell-active {
-        display: flex !important;
-        align-items: flex-start !important;
-        gap: 16px !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        flex-wrap: nowrap !important;
-    }
-
-    #issueTabShell.cmf-tab-shell-active > .issue-tab-main,
-    #pendingTabShell.cmf-tab-shell-active > .pending-tab-main {
-        flex: 1 1 0 !important;
-        min-width: 0 !important;
-        max-width: calc(100% - 306px) !important;
-        overflow: hidden !important;
-    }
-
-    #issueTabShell.cmf-tab-shell-active .issue-grid-scroll,
-    #pendingTabShell.cmf-tab-shell-active .cmf-pending-grid-wrap {
-        max-width: 100% !important;
-        overflow-x: auto !important;
-        overflow-y: auto !important;
-    }
-
-    #issueTabShell.cmf-tab-shell-active > .issue-side-panel,
-    #pendingTabShell.cmf-tab-shell-active > .pending-side-panel {
-        flex: 0 0 290px !important;
-        width: 290px !important;
-        max-width: 290px !important;
-        min-width: 290px !important;
-        display: grid !important;
-        position: sticky !important;
-        top: 90px !important;
-    }
-
-    @media (max-width: 760px) {
-        #issueTabShell.cmf-tab-shell-active,
-        #pendingTabShell.cmf-tab-shell-active {
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-        }
-
-        #issueTabShell.cmf-tab-shell-active > .issue-tab-main,
-        #pendingTabShell.cmf-tab-shell-active > .pending-tab-main {
-            max-width: calc(100% - 306px) !important;
-            flex-basis: 0 !important;
-        }
-
-        #issueTabShell.cmf-tab-shell-active > .issue-side-panel,
-        #pendingTabShell.cmf-tab-shell-active > .pending-side-panel {
-            width: 290px !important;
-            max-width: 290px !important;
-            min-width: 290px !important;
-            flex-basis: 290px !important;
-        }
-    }
-
-    @media (max-width: 980px) {
-        header {
-            height: auto !important;
-            min-height: 66px !important;
-            flex-wrap: wrap !important;
-            padding: 10px 14px !important;
-        }
-
-        .header-title {
-            min-width: 160px !important;
-        }
-
-        .global-search-shell {
-            order: 3;
-            width: 100%;
-            min-width: 0;
-        }
-
-        .issue-kpi-row {
-            grid-template-columns: repeat(2, minmax(140px, 1fr)) !important;
-        }
-    }
-
-    /* Must stay last: enforce table-only vertical scrolling after legacy overrides. */
-    .issue-grid-scroll {
-        max-height: min(62vh, 620px) !important;
-        min-height: 0 !important;
-        overflow-x: auto !important;
-        overflow-y: scroll !important;
-        scrollbar-gutter: stable !important;
-    }
-
-    .issue-grid-inner {
-        min-width: 2600px !important;
-        width: max-content !important;
-        max-width: none !important;
-    }
-
-    .issue-grid-inner #overall_request_details {
-        min-width: 2600px !important;
-        width: max-content !important;
-        max-width: none !important;
-    }
-
-    .issue-scroll-proxy {
-        display: none !important;
-    }
-
-    .cmf-pending-grid-wrap {
-        max-height: min(64vh, 640px) !important;
-        min-height: 0 !important;
-        overflow-x: auto !important;
-        overflow-y: auto !important;
-        scrollbar-gutter: stable !important;
-    }
-
-    .issue-grid-scroll #overall_request_details thead th,
-    .cmf-pending-grid-wrap #GridView_cmf_pending th {
-        position: sticky !important;
-        top: 0 !important;
-        z-index: 20 !important;
-    }
-
     </style>
 
     <script type="text/javascript">
@@ -7582,19 +4470,6 @@ td:nth-child(odd), th:nth-child(odd) {
         window.CMF_PORTAL.ids.gridViewCmfSummary = '<%= GridView_cmf_summary.ClientID %>';
         window.CMF_PORTAL.ids.gridViewComp = '<%= GridView_comp.ClientID %>';
         window.CMF_PORTAL.ids.gridViewCmfPending = '<%= GridView_cmf_pending.ClientID %>';
-        window.CMF_PORTAL.ids.homeWelcomePanel = '<%= homeWelcomePanel.ClientID %>';
-        window.CMF_PORTAL.ids.paneIssueList = '<%= pane3.ClientID %>';
-        window.CMF_PORTAL.ids.paneCmfPending = '<%= pane4.ClientID %>';
-        window.CMF_PORTAL.ids.activeViewTitle = '<%= lblActiveViewTitle.ClientID %>';
-        window.CMF_PORTAL.ids.issueListHeaderPanel = '<%= issueListHeaderPanel.ClientID %>';
-        window.CMF_PORTAL.ids.cmfPendingHeaderPanel = '<%= cmf_pending_header_panel.ClientID %>';
-        window.CMF_PORTAL.ids.lblIssueTotal = '<%= lblIssueTotal.ClientID %>';
-        window.CMF_PORTAL.ids.lblIssueInProgress = '<%= lblIssueInProgress.ClientID %>';
-        window.CMF_PORTAL.ids.lblIssueStale = '<%= lblIssueStale.ClientID %>';
-        window.CMF_PORTAL.ids.lblPendingSightings = '<%= lblPendingSightings.ClientID %>';
-        window.CMF_PORTAL.ids.lblQualifyForCmf = '<%= lblQualifyForCmf.ClientID %>';
-        window.CMF_PORTAL.ids.lblLikelyDuplicate = '<%= lblLikelyDuplicate.ClientID %>';
-        window.CMF_PORTAL.ids.lblIncompleteSysScope = '<%= lblIncompleteSysScope.ClientID %>';
         window.CMF_PORTAL.currentPlatform = '<%= ResolvePlatformTable(Session["selectedPlatform"] as string ?? ddlTables.SelectedValue) %>';
 
         window.CMF_PORTAL.defaults = {
@@ -7605,7 +4480,6 @@ td:nth-child(odd), th:nth-child(odd) {
 
         window.CMF_PORTAL.driversJson = <%= DriversJson %>;
         window.CMF_PORTAL.isInitialLoad = <%= IsPostBack ? "false" : "true" %>;
-        window.CMF_PORTAL.activeFocusedTab = '<%= GetActiveFocusedTab() %>';
 
         window.CMF_PORTAL.platformAliasMap = {
             "PTL": "CMF_PTL_ALL_COMPONENTS_TABLE",
@@ -7637,44 +4511,6 @@ td:nth-child(odd), th:nth-child(odd) {
             if (!hidden) return;
             hidden.value = platformValue;
             __doPostBack(window.CMF_PORTAL.ids.btnQuickPlatformApply, '');
-        }
-
-        function forcePortalPostBack(target) {
-            var form = document.forms && document.forms.length > 0 ? document.forms[0] : null;
-            if (!form || !target) {
-                return false;
-            }
-
-            if (form.__EVENTTARGET) {
-                form.__EVENTTARGET.value = target;
-            }
-            if (form.__EVENTARGUMENT) {
-                form.__EVENTARGUMENT.value = '';
-            }
-
-            form.submit();
-            return true;
-        }
-
-        function initPortalNavPostbackFallback() {
-            var links = document.querySelectorAll('#mainMenuSidebar .portal-nav-link');
-            for (var i = 0; i < links.length; i++) {
-                var link = links[i];
-                if (link.getAttribute('data-nav-fallback-bound') === '1') {
-                    continue;
-                }
-
-                link.addEventListener('click', function (event) {
-                    var target = this.name || this.id;
-                    if (!target) {
-                        return;
-                    }
-                    event.preventDefault();
-                    forcePortalPostBack(target);
-                });
-
-                link.setAttribute('data-nav-fallback-bound', '1');
-            }
         }
 
         function getCurrentPlatformValue() {
@@ -7715,100 +4551,13 @@ td:nth-child(odd), th:nth-child(odd) {
             }
         }
 
-        function prepareAiSummaryForDrawer(summary) {
-            var rawText = summary || '';
-            var text = normalizeAiSummaryText(rawText);
-            var confidence = '';
-            var confidenceMatch = rawText.match(/\*\*\s*AI\s+summary\s*\(\s*Confidence\s*:\s*([0-9]{1,3}%?)\s*\)\s*\*\*/i)
-                || rawText.match(/AI\s+summary\s*\(\s*Confidence\s*:\s*([0-9]{1,3}%?)\s*\)/i);
-
-            if (confidenceMatch && confidenceMatch[1]) {
-                confidence = confidenceMatch[1];
-                if (confidence.indexOf('%') < 0) confidence += '%';
-            }
-
-            var impact = extractAiSummaryLabel(text, 'Impact');
-            var status = extractAiSummaryLabel(text, 'Status');
-            var reproducibility = extractAiSummaryLabel(text, 'Reproducibility');
-            var logs = extractAiSummaryLabel(text, 'Logs\\(sysdebug(?:/debug details)?\\)');
-            var rvpDebug = extractAiSummaryLabel(text, 'RVP platform debug details');
-            return {
-                confidence: confidence,
-                status: status,
-                impact: impact,
-                reproducibility: reproducibility,
-                logs: logs,
-                rvpDebug: rvpDebug,
-                body: text,
-                followUp: ''
-            };
-        }
-
-        function normalizeAiSummaryText(text) {
-            return String(text || '')
-                .replace(/\r/g, '\n')
-                .replace(/^\s*\*\*\s*(Summary|Key points|Follow up|Next action)\s*:\s*\*\*\s*$/gim, '$1:')
-                .replace(/^\s*\*\*\s*AI\s+summary\s*\(\s*Confidence\s*:\s*[0-9]{1,3}%?\s*\)\s*\*\*\s*$/gim, '')
-                .replace(/^\s*AI\s+summary\s*\(\s*Confidence\s*:\s*[0-9]{1,3}%?\s*\)\s*$/gim, '')
-                .replace(/^\s*Sighting\s+ID\s*:\s*.*?CMF\s+Ask\s+date\s*:\s*.*$/gim, '');
-        }
-
-        function extractAiSummaryLabel(text, labelPattern) {
-            var match = String(text || '').match(new RegExp('^\\s*' + labelPattern + '\\s*:\\s*(.+?)\\s*$', 'im'));
-            return match && match[1] ? match[1].replace(/\*\*/g, '').trim() : 'N/A';
-        }
-
-        function extractAiSummaryBodyParts(text) {
-            var source = normalizeAiSummaryText(text);
-            source = source.replace(/^\s*Status\s*:\s*.*$/gim, '');
-            source = source.replace(/^\s*Impact\s*:\s*.*$/gim, '');
-            source = source.replace(/^\s*Reproducibility\s*:\s*.*$/gim, '');
-            source = source.replace(/^\s*Logs\(sysdebug(?:\/debug details)?\)\s*:\s*.*$/gim, '');
-            source = source.replace(/^\s*RVP platform debug details\s*:\s*.*$/gim, '');
-            var summaryMatch = source.match(/(?:\*\*)?(?:Summary|Key points)(?:\*\*)?\s*:?([\s\S]*?)(?=(?:\*\*)?(?:Follow up|Next action)(?:\*\*)?\s*:?|$)/i);
-            var followMatch = source.match(/(?:\*\*)?(?:Follow up|Next action)(?:\*\*)?\s*:?([\s\S]*)$/i);
-            return {
-                summary: compactAiBulletText(summaryMatch && summaryMatch[1] ? summaryMatch[1] : source, 3, 0),
-                followUp: compactAiBulletText(followMatch && followMatch[1] ? followMatch[1] : '', 1, 0)
-            };
-        }
-
-        function compactAiBulletText(text, maxBullets, maxLength) {
-            var source = String(text || '').replace(/\r/g, '\n');
-            source = source.replace(/^#{1,6}\s+.*$/gm, '');
-            source = source.replace(/^\s*\*\*?(Summary|Key points|Follow up|Next action|Recommendation|Reasoning)\*\*?\s*:?\s*$/gim, '');
-            var lines = source.split('\n');
-            var bullets = [];
-            for (var i = 0; i < lines.length && bullets.length < maxBullets; i++) {
-                var line = lines[i].replace(/^\s*(?:[-*•]|\d+[\.)])\s*/, '').trim();
-                line = line.replace(/\*\*/g, '').replace(/\s+/g, ' ');
-                line = line.replace(/^\*+|\*+$/g, '').trim();
-                if (/^(summary|key points|follow up|next action|recommendation|reasoning)\s*:?$/i.test(line)) continue;
-                if (!line || /^(impact|reproducibility|logs|rvp platform debug details)\s*:/i.test(line)) continue;
-                if (/^sighting id\s*:/i.test(line) || /^issue title\s*:/i.test(line)) continue;
-                if (maxLength && line.length > maxLength) line = line.substring(0, maxLength).replace(/[\s,;:.]+$/g, '');
-                if (bullets.indexOf(line) < 0) bullets.push(line);
-            }
-            if (bullets.length === 0 && source.trim()) bullets.push(maxLength ? source.trim().substring(0, maxLength) : source.trim());
-            return bullets.map(function (line) { return '- ' + line; }).join('\n');
-        }
-
-        function compactRecommendationText(text) {
-            return compactAiBulletText(text, 3, 0);
-        }
-
         function openAiSummaryModal(issueId, title, submittedDate, status, sysdebug) {
             var issueIdNode = document.getElementById('aiSummaryIssueId');
             var titleNode = document.getElementById('aiSummaryTitle');
             var titleRow = document.getElementById('aiSummaryTitleRow');
             var dateNode = document.getElementById('aiSummarySubmittedDate');
             var bodyNode = document.getElementById('aiSummaryBody');
-            var factsNode = document.getElementById('aiSummaryFacts');
             var actionsNode = document.getElementById('aiSummaryActions');
-            var confidenceNode = document.getElementById('aiSummaryConfidence');
-            var statusBadgeNode = document.getElementById('aiSummaryStatusBadge');
-            var drawerTitle = document.getElementById('aiSummaryDrawerTitle');
-            var dateRow = document.getElementById('aiSummaryDateRow');
             var drawerBg = document.getElementById('aiSummaryDrawerBg');
             var drawer = document.getElementById('aiSummaryDrawer');
 
@@ -7817,19 +4566,9 @@ td:nth-child(odd), th:nth-child(odd) {
             }
 
             issueIdNode.textContent = issueId || 'N/A';
-            if (drawerTitle) drawerTitle.textContent = 'AI Summary';
             if (titleNode) titleNode.textContent = '';
             if (titleRow) titleRow.style.display = 'none';
-            if (dateRow) dateRow.style.display = '';
             dateNode.textContent = submittedDate || 'N/A';
-            if (confidenceNode) confidenceNode.textContent = 'Confidence: --';
-            if (statusBadgeNode) {
-                statusBadgeNode.textContent = 'Status: --';
-                statusBadgeNode.className = 'ai-summary-status-value';
-                statusBadgeNode.style.display = '';
-            }
-            if (factsNode) factsNode.style.display = '';
-            updateAiSummaryFacts(factsNode, {}, true);
             bodyNode.textContent = 'Generating AI summary...';
             bodyNode.className = 'ai-summary-body markdown-content';
             if (actionsNode) actionsNode.style.display = 'none';
@@ -7852,60 +4591,6 @@ td:nth-child(odd), th:nth-child(odd) {
 
             fetchAiSummary(payload, bodyNode, actionsNode);
         }
-        function openAiIssueDescriptionModal(issueId, title, includeCmfReviewDetails) {
-            var drawerBg = document.getElementById('aiSummaryDrawerBg');
-            var drawer = document.getElementById('aiSummaryDrawer');
-            var drawerTitle = document.getElementById('aiSummaryDrawerTitle');
-            var issueIdNode = document.getElementById('aiSummaryIssueId');
-            var titleNode = document.getElementById('aiSummaryTitle');
-            var titleRow = document.getElementById('aiSummaryTitleRow');
-            var dateRow = document.getElementById('aiSummaryDateRow');
-            var factsNode = document.getElementById('aiSummaryFacts');
-            var confidenceNode = document.getElementById('aiSummaryConfidence');
-            var statusBadgeNode = document.getElementById('aiSummaryStatusBadge');
-            var bodyNode = document.getElementById('aiSummaryBody');
-            var actionsNode = document.getElementById('aiSummaryActions');
-
-            if (!drawerBg || !drawer || !bodyNode) return;
-            if (drawerTitle) drawerTitle.textContent = includeCmfReviewDetails ? 'AI CMF Issue Description' : 'AI Issue Description';
-            if (issueIdNode) issueIdNode.textContent = issueId || 'N/A';
-            if (titleNode) titleNode.textContent = title || 'N/A';
-            if (titleRow) titleRow.style.display = '';
-            if (dateRow) dateRow.style.display = 'none';
-            if (factsNode) factsNode.style.display = 'none';
-            if (confidenceNode) confidenceNode.textContent = 'Confidence: --';
-            if (statusBadgeNode) statusBadgeNode.style.display = 'none';
-            bodyNode.textContent = 'Generating AI issue description...';
-            if (actionsNode) actionsNode.style.display = 'none';
-            drawerBg.classList.add('show');
-            drawer.classList.add('show');
-
-            fetch('CMF_Web_portal.aspx/GetAiIssueDescription', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json; charset=utf-8' },
-                body: JSON.stringify({
-                    issueId: issueId || '',
-                    title: title || '',
-                    includeCmfReviewDetails: !!includeCmfReviewDetails,
-                    platform: getIssuePendingPlatformValue()
-                })
-            })
-            .then(function (response) { return response.json(); })
-            .then(function (data) {
-                var result = data && data.d ? data.d : data;
-                if (!result || result.Success !== true) {
-                    bodyNode.textContent = (result && result.Message) ? result.Message : 'Unable to generate issue description.';
-                    return;
-                }
-                if (confidenceNode) confidenceNode.textContent = 'Confidence: ' + (result.Confidence || '--') + '%';
-                bodyNode.innerHTML = renderMarkdown(result.Summary || 'No issue description returned.');
-                if (actionsNode) actionsNode.style.display = '';
-                window._aiSummaryLastText = result.Summary || '';
-            })
-            .catch(function () {
-                bodyNode.textContent = 'Error while calling the issue description service.';
-            });
-        }
 
         function fetchAiSummary(payload, bodyNode, actionsNode) {
             if (!bodyNode) bodyNode = document.getElementById('aiSummaryBody');
@@ -7925,75 +4610,15 @@ td:nth-child(odd), th:nth-child(odd) {
                     return;
                 }
                 var summary = result.Summary || 'No summary content returned.';
-                var preparedSummary = prepareAiSummaryForDrawer(summary);
-                preparedSummary.status = result.Status || preparedSummary.status;
-                preparedSummary.impact = result.Impact || preparedSummary.impact;
-                preparedSummary.reproducibility = result.Reproducibility || preparedSummary.reproducibility;
-                preparedSummary.logs = result.LogsAvailable || preparedSummary.logs;
-                preparedSummary.rvpDebug = result.RvpDebugAvailable || preparedSummary.rvpDebug;
-                if (result.Confidence && !preparedSummary.confidence) {
-                    preparedSummary.confidence = result.Confidence + '%';
-                }
-                var confidenceNode = document.getElementById('aiSummaryConfidence');
-                if (confidenceNode && preparedSummary.confidence) {
-                    confidenceNode.textContent = 'Confidence: ' + preparedSummary.confidence;
-                }
-                var statusBadgeNode = document.getElementById('aiSummaryStatusBadge');
-                if (statusBadgeNode) {
-                    var summaryStatus = preparedSummary.status || 'N/A';
-                    statusBadgeNode.textContent = 'Status: ' + summaryStatus;
-                    statusBadgeNode.className = 'ai-summary-status-value ' + getAiStatusClass(summaryStatus);
-                }
-                updateIssueListConfidenceBadge(payload.issueId, preparedSummary.confidence);
-                updateAiSummaryFacts(document.getElementById('aiSummaryFacts'), preparedSummary, false);
-                bodyNode.innerHTML = renderMarkdown(preparedSummary.body);
+                bodyNode.innerHTML = renderMarkdown(summary);
                 bodyNode.className = 'ai-summary-body markdown-content';
-                window._aiSummaryLastText = preparedSummary.body;
+                window._aiSummaryLastText = summary;
                 if (actionsNode) actionsNode.style.display = '';
             })
             .catch(function () {
                 bodyNode.textContent = 'Error while calling summary service.';
                 bodyNode.className = 'ai-summary-body';
             });
-        }
-
-        function updateIssueListConfidenceBadge(issueId, confidence) {
-            if (!issueId || !confidence) return;
-            var selector = '.status-confidence-pill[data-ai-confidence-issue="' + cssEscapeValue(issueId) + '"]';
-            var nodes = document.querySelectorAll(selector);
-            for (var i = 0; i < nodes.length; i++) {
-                nodes[i].textContent = 'Confidence: ' + confidence;
-            }
-        }
-
-        function cssEscapeValue(value) {
-            if (window.CSS && typeof window.CSS.escape === 'function') {
-                return window.CSS.escape(String(value));
-            }
-            return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-        }
-
-        function updateAiSummaryFacts(container, summary, isLoading) {
-            if (!container) return;
-            var value = function (name) {
-                if (isLoading) return 'Loading...';
-                return summary && summary[name] ? summary[name] : 'N/A';
-            };
-            container.innerHTML =
-                '<div class="ai-summary-fact"><span class="ai-summary-fact-label">Impact</span><span class="ai-summary-fact-value">' + escapeHtml(value('impact')) + '</span></div>' +
-                '<div class="ai-summary-fact"><span class="ai-summary-fact-label">Reproducibility</span><span class="ai-summary-fact-value">' + escapeHtml(value('reproducibility')) + '</span></div>' +
-                '<div class="ai-summary-fact"><span class="ai-summary-fact-label">Logs(sysdebug)</span><span class="ai-summary-fact-value">' + escapeHtml(value('logs')) + '</span></div>' +
-                '<div class="ai-summary-fact"><span class="ai-summary-fact-label">RVP platform debug details</span><span class="ai-summary-fact-value">' + escapeHtml(value('rvpDebug')) + '</span></div>';
-        }
-
-        function getAiStatusClass(statusValue) {
-            var text = String(statusValue || '').toLowerCase();
-            if (/reject/.test(text)) return 'status-rejected';
-            if (/closed|complete|implemented|fixed|resolved/.test(text)) return 'status-closed';
-            if (/pending|review|ask|triage/.test(text)) return 'status-pending';
-            if (/open|active/.test(text)) return 'status-open';
-            if (/progress|debug|validation/.test(text)) return 'status-progress';
-            return '';
         }
 
         function copyAiSummaryForReport() {
@@ -8093,15 +4718,15 @@ td:nth-child(odd), th:nth-child(odd) {
             
             var recNode = document.getElementById('cmfRecRecommendation');
             var evidenceNode = document.getElementById('cmfRecEvidence');
-            var scoreNode = document.getElementById('cmfRecScore');
-            var checksNode = document.getElementById('cmfRecChecks');
+            var qualityNode = document.getElementById('cmfRecQualityScore');
             var nextStepsNode = document.getElementById('cmfRecNextSteps');
+            var scoresBodyNode = document.getElementById('cmfRecRuleScoresBody');
             
             if (recNode) recNode.textContent = 'Generating AI recommendation...';
+            if (qualityNode) qualityNode.textContent = '-';
             if (evidenceNode) evidenceNode.textContent = '-';
-            if (scoreNode) scoreNode.textContent = '-';
-            if (checksNode) checksNode.textContent = '-';
             if (nextStepsNode) nextStepsNode.textContent = '-';
+            if (scoresBodyNode) scoresBodyNode.innerHTML = '<div style="padding: 12px; text-align: center; color: #6b7280;">Loading...</div>';
 
             drawerBg.classList.add('show');
             drawer.classList.add('show');
@@ -8141,34 +4766,58 @@ td:nth-child(odd), th:nth-child(odd) {
 
                 // Display recommendation
                 if (recNode) {
-                    recNode.textContent = result.Recommendation || 'No recommendation returned.';
-                    recNode.className = 'cmf-rec-decision-badge';
+                    recNode.textContent = result.Recommendation || 'No recommendation content returned.';
+                }
+
+                if (qualityNode) {
+                    var thresholdScore = typeof result.ThresholdScore === 'number' ? result.ThresholdScore : 70;
+                    var scoreValue = typeof result.OverallQualityScore === 'number' ? result.OverallQualityScore : null;
+                    qualityNode.innerHTML = scoreValue !== null
+                        ? '<div class="cmf-rec-quality-line"><span>Quality Score</span><strong>' + scoreValue + '/100</strong></div><div class="cmf-rec-quality-line"><span>Threshold Score</span><strong>' + thresholdScore + '/100</strong></div>'
+                        : '-';
                 }
                 
                 // Display AI reasoning
                 if (evidenceNode) {
                     var reasoningText = result.Evidence || 'No AI reasoning provided.';
-                    evidenceNode.innerHTML = renderMarkdown(compactRecommendationText(reasoningText));
-                }
-
-                if (scoreNode) {
-                    scoreNode.textContent = (result.OverallQualityScore || 0) + '/100 (threshold ' + (result.ThresholdScore || 0) + ')';
-                }
-
-                if (checksNode) {
-                    var ruleScores = result.RuleScores || [];
-                    var checks = [];
-                    for (var index = 0; index < ruleScores.length; index++) {
-                        var rule = ruleScores[index] || {};
-                        checks.push('- ' + (rule.RuleId || 'Rule') + ': ' + (rule.Evaluation || 'No evaluation returned.'));
-                    }
-                    checksNode.innerHTML = renderMarkdown(checks.join('\n') || '- No qualification checks returned.');
+                    evidenceNode.textContent = reasoningText;
                 }
 
                 if (nextStepsNode) {
-                    nextStepsNode.innerHTML = renderMarkdown(result.NextSteps || 'No next action returned.');
+                    nextStepsNode.textContent = result.NextSteps || 'No next steps available.';
                 }
-
+                
+                // Display rule scores
+                if (scoresBodyNode && result.RuleScores && result.RuleScores.length > 0) {
+                    var cards = '';
+                    for (var i = 0; i < result.RuleScores.length; i++) {
+                        var rule = result.RuleScores[i];
+                        var scoreText = rule.Score || '-';
+                        var evaluationText = rule.Evaluation || '-';
+                        var evaluationUpper = evaluationText.toUpperCase();
+                        var stateClass = 'partial';
+                        var stateIcon = '!';
+                        if (evaluationUpper.indexOf('PASS') === 0) {
+                            stateClass = 'pass';
+                            stateIcon = '&#10003;';
+                        } else if (evaluationUpper.indexOf('FAIL') === 0) {
+                            stateClass = 'fail';
+                            stateIcon = '&times;';
+                        } else if (evaluationUpper.indexOf('PARTIAL') === 0) {
+                            stateClass = 'partial';
+                            stateIcon = '!';
+                        }
+                        cards += '<div class="cmf-rec-score-item">';
+                        cards += '<span class="cmf-rec-score-icon ' + stateClass + '">' + stateIcon + '</span>';
+                        cards += '<div><div class="cmf-rec-score-title">' + escapeHtml((rule.RuleId || '-') + ' - ' + (rule.RuleName || '-')) + '</div>';
+                        cards += '<div class="cmf-rec-score-detail">' + escapeHtml(evaluationText) + '</div></div>';
+                        cards += '<div class="cmf-rec-score-value">' + escapeHtml(scoreText) + '/100</div>';
+                        cards += '</div>';
+                    }
+                    scoresBodyNode.innerHTML = cards;
+                } else if (scoresBodyNode) {
+                    scoresBodyNode.innerHTML = '<div style="padding: 12px; text-align: center; color: #6b7280;">No rule scores available.</div>';
+                }
             })
             .catch(function () {
                 if (recNode) {
@@ -8186,10 +4835,6 @@ td:nth-child(odd), th:nth-child(odd) {
 
             drawerBg.classList.remove('show');
             drawer.classList.remove('show');
-        }
-
-        function showCmfPlaceholderAction(actionName) {
-            showPortalToast(actionName + ' is a placeholder until backend workflow is finalized.');
         }
 
         function appendReportsChatMessage(role, text, imageUrl, reportUrl) {
@@ -8468,8 +5113,7 @@ td:nth-child(odd), th:nth-child(odd) {
                 issueFilters: {
                     bodyId: 'issueTopFilterBody',
                     buttonId: 'issueFiltersToggleBtn',
-                    storageKey: 'cmf.collapsible.issueFilters',
-                    defaultCollapsed: true
+                    storageKey: 'cmf.collapsible.issueFilters'
                 }
             };
         }
@@ -8498,11 +5142,11 @@ td:nth-child(odd), th:nth-child(odd) {
                 button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
                 var label = button.querySelector('.toggle-label');
                 if (label) {
-                    label.textContent = sectionName === 'mainMenu' ? (collapsed ? '>>' : '<<') : (collapsed ? 'Show' : 'Hide');
+                    label.textContent = sectionName === 'mainMenu' ? '<<' : (collapsed ? 'Show' : 'Hide');
                 }
                 if (sectionName === 'mainMenu') {
-                    button.title = collapsed ? 'Expand menu labels' : 'Collapse menu labels';
-                    button.setAttribute('aria-label', collapsed ? 'Expand menu labels' : 'Collapse menu labels');
+                    button.title = collapsed ? 'Menu collapsed' : 'Collapse menu';
+                    button.setAttribute('aria-label', collapsed ? 'Menu collapsed' : 'Collapse menu');
                 }
             }
 
@@ -8553,62 +5197,61 @@ td:nth-child(odd), th:nth-child(odd) {
                 }
 
                 var cfg = all[sectionName];
-                var initialCollapsed = !!cfg.defaultCollapsed;
+                var initialCollapsed = false;
                 try {
-                    var storedState = localStorage.getItem(cfg.storageKey);
-                    if (storedState !== null) {
-                        initialCollapsed = storedState === '1';
-                    }
+                    initialCollapsed = localStorage.getItem(cfg.storageKey) === '1';
                 } catch (ignore) {
                 }
                 setCollapsibleSection(sectionName, initialCollapsed, false);
             }
         }
 
-        function initMainMenuTooltips() {
-            var links = document.querySelectorAll('#mainMenuSidebar .portal-nav-link');
-            for (var i = 0; i < links.length; i++) {
-                var textNode = links[i].querySelector('span');
-                var label = textNode ? (textNode.textContent || '').trim() : '';
-                if (label) {
-                    links[i].setAttribute('title', label);
-                    links[i].setAttribute('aria-label', label);
-                }
-            }
-        }
-
         function syncIssueHorizontalScroll(attempt) {
-            var host = document.querySelector('.issue-grid-scroll');
-            var inner = document.getElementById('issue-grid-inner');
+            var host = document.getElementById('issue-grid-inner');
+            var proxy = document.getElementById('issue-scroll-proxy');
+            var proxyInner = document.getElementById('issue-scroll-proxy-inner');
             var table = document.getElementById(window.CMF_PORTAL.ids.overallRequestDetails);
 
-            if (!host || !inner || !table) {
+            if (!host || !proxy || !proxyInner || !table) {
                 return;
             }
 
-            host.style.setProperty('overflow-x', 'auto', 'important');
-            host.style.setProperty('overflow-y', 'scroll', 'important');
-            host.style.setProperty('scrollbar-gutter', 'stable', 'important');
+            host.style.overflowX = 'auto';
+            host.style.overflowY = 'visible';
 
-            inner.style.setProperty('min-width', '2600px', 'important');
-            inner.style.setProperty('width', 'max-content', 'important');
-            inner.style.setProperty('max-width', 'none', 'important');
+            // Enforce width at runtime in case later CSS rules collapse the table width.
+            table.style.width = 'max-content';
+            table.style.minWidth = '2600px';
+            table.style.maxWidth = 'none';
 
-            table.style.setProperty('width', 'max-content', 'important');
-            table.style.setProperty('min-width', '2600px', 'important');
-            table.style.setProperty('max-width', 'none', 'important');
+            var targetWidth = Math.max(table.scrollWidth || 0, table.offsetWidth || 0, 2600);
+            proxyInner.style.width = targetWidth + 'px';
 
-            if (host.clientWidth > 0 && table.scrollWidth <= host.clientWidth && (attempt || 0) < 6) {
+            // If layout is not ready yet (e.g., after async update while hidden), retry a few times.
+            if (host.clientWidth > 0 && targetWidth <= host.clientWidth && (attempt || 0) < 6) {
                 setTimeout(function () { syncIssueHorizontalScroll((attempt || 0) + 1); }, 80);
             }
+
+            var syncLock = false;
+            host.onscroll = function () {
+                if (syncLock) return;
+                syncLock = true;
+                proxy.scrollLeft = host.scrollLeft;
+                syncLock = false;
+            };
+
+            proxy.onscroll = function () {
+                if (syncLock) return;
+                syncLock = true;
+                host.scrollLeft = proxy.scrollLeft;
+                syncLock = false;
+            };
+
+            proxy.scrollLeft = host.scrollLeft;
+            proxy.style.display = 'none';
         }
 
         function renderHomeDashboard() {
-            var homePanel = document.getElementById(window.CMF_PORTAL.ids.homeWelcomePanel);
-            if (homePanel && !isElementVisible(homePanel)) {
-                return;
-            }
-
             var trendHost = document.getElementById('homeTrendChart');
             var statusHost = document.getElementById('homeStatusChart');
             var listHost = document.getElementById('homeTopComponentsList');
@@ -8621,22 +5264,6 @@ td:nth-child(odd), th:nth-child(odd) {
                 return;
             }
 
-            var trend = snapshot.Trend || [];
-            var topComponents = snapshot.TopComponents || [];
-            var statusDistribution = snapshot.StatusDistribution || [];
-            var snapshotKey = [
-                window.CMF_PORTAL.currentPlatform || '',
-                trend.length,
-                topComponents.length,
-                statusDistribution.length,
-                getTextById(window.CMF_PORTAL.ids.lblIssueTotal),
-                getTextById(window.CMF_PORTAL.ids.lblPendingSightings)
-            ].join('|');
-
-            if (window.CMF_PORTAL.lastHomeDashboardKey === snapshotKey && window.CMF_PORTAL.homeTrendChart && window.CMF_PORTAL.homeStatusChart) {
-                return;
-            }
-
             if (!window.CMF_PORTAL.homeTrendChart) {
                 window.CMF_PORTAL.homeTrendChart = echarts.init(trendHost);
             }
@@ -8645,41 +5272,32 @@ td:nth-child(odd), th:nth-child(odd) {
                 window.CMF_PORTAL.homeStatusChart = echarts.init(statusHost);
             }
 
+            var trend = snapshot.Trend || [];
             window.CMF_PORTAL.homeTrendChart.setOption({
-                animation: false,
-                color: ['#ef4444', '#16a34a', '#f59e0b'],
+                color: ['#0f5ea8', '#00a6b2', '#d97706'],
                 tooltip: { trigger: 'axis' },
-                legend: {
-                    top: 0,
-                    left: 0,
-                    icon: 'circle',
-                    itemWidth: 8,
-                    itemHeight: 8,
-                    textStyle: { color: '#475467', fontSize: 11 }
-                },
-                grid: { left: 36, right: 14, top: 30, bottom: 26 },
+                legend: { bottom: 0, textStyle: { color: '#4e657b' } },
+                grid: { left: 44, right: 16, top: 18, bottom: 48 },
                 xAxis: {
                     type: 'category',
                     data: trend.map(function (item) { return item.WeekLabel; }),
-                    boundaryGap: false,
-                    axisLine: { lineStyle: { color: '#e4e7ec' } },
-                    axisLabel: { color: '#667085', fontSize: 11 }
+                    axisLine: { lineStyle: { color: '#bfd0df' } },
+                    axisLabel: { color: '#50687f' }
                 },
                 yAxis: {
                     type: 'value',
                     axisLine: { show: false },
-                    splitLine: { lineStyle: { color: '#eef2f7' } },
-                    axisLabel: { color: '#667085', fontSize: 11 }
+                    splitLine: { lineStyle: { color: '#e4edf5' } },
+                    axisLabel: { color: '#50687f' }
                 },
                 series: [
                     {
-                        name: 'Open',
+                        name: 'New Issues',
                         type: 'line',
                         smooth: true,
                         data: trend.map(function (item) { return item.NewIssues; }),
                         lineStyle: { width: 3 },
-                        symbol: 'circle',
-                        symbolSize: 6
+                        symbolSize: 8
                     },
                     {
                         name: 'Resolved',
@@ -8687,280 +5305,68 @@ td:nth-child(odd), th:nth-child(odd) {
                         smooth: true,
                         data: trend.map(function (item) { return item.ResolvedIssues; }),
                         lineStyle: { width: 3 },
-                        symbol: 'circle',
-                        symbolSize: 6,
-                        areaStyle: { color: 'rgba(22,163,74,0.12)' }
+                        symbolSize: 8,
+                        areaStyle: { color: 'rgba(0,166,178,0.10)' }
                     },
                     {
-                        name: 'Need Attention',
-                        type: 'line',
-                        smooth: true,
+                        name: 'Needs Attention',
+                        type: 'bar',
                         data: trend.map(function (item) { return item.NeedsAttention; }),
-                        lineStyle: { width: 3 },
-                        symbol: 'circle',
-                        symbolSize: 6,
-                        areaStyle: { color: 'rgba(245,158,11,0.08)' }
+                        barMaxWidth: 24,
+                        itemStyle: { borderRadius: [8, 8, 0, 0] }
                     }
                 ]
             }, true);
 
-            var productData = [];
-            var palette = ['#4f79ff', '#4caf64', '#f5a53a', '#8b5cf6', '#94a3b8', '#ef4444'];
-            var i;
-            for (i = 0; i < topComponents.length; i++) {
-                productData.push({
-                    name: topComponents[i].Name || 'Unassigned',
-                    value: topComponents[i].Value || 0,
-                    itemStyle: { color: palette[i % palette.length] }
-                });
-            }
-
-            if (productData.length === 0) {
-                for (i = 0; i < statusDistribution.length; i++) {
-                    productData.push({
-                        name: statusDistribution[i].Name || 'Status',
-                        value: statusDistribution[i].Value || 0,
-                        itemStyle: { color: palette[i % palette.length] }
-                    });
-                }
-            }
-
+            var statusDistribution = snapshot.StatusDistribution || [];
             window.CMF_PORTAL.homeStatusChart.setOption({
-                animation: false,
                 tooltip: { trigger: 'item' },
-                legend: { show: false },
+                legend: { bottom: 0, textStyle: { color: '#4e657b', fontSize: 11 } },
                 series: [{
                     type: 'pie',
-                    radius: ['56%', '82%'],
-                    center: ['50%', '50%'],
-                    data: productData,
-                    label: { show: false },
+                    radius: ['42%', '72%'],
+                    center: ['50%', '42%'],
+                    data: statusDistribution.map(function (item) {
+                        return { name: item.Name, value: item.Value };
+                    }),
+                    label: { color: '#35516d' },
                     itemStyle: { borderColor: '#ffffff', borderWidth: 2 }
                 }]
             }, true);
 
             listHost.innerHTML = '';
-            var total = 0;
-            for (i = 0; i < productData.length; i++) {
-                total += Number(productData[i].value || 0);
-            }
-
-            for (i = 0; i < productData.length && i < 6; i++) {
-                var entry = productData[i];
-                var pct = total > 0 ? Math.round((Number(entry.value || 0) * 100) / total) : 0;
+            var topComponents = snapshot.TopComponents || [];
+            for (var index = 0; index < topComponents.length; index++) {
+                var item = topComponents[index];
                 var listItem = document.createElement('li');
-                listItem.className = 'ccip-product-item';
-                listItem.innerHTML =
-                    '<span class="ccip-product-name"><span class="ccip-dot" style="background:' + escapeHtml(entry.itemStyle.color) + '"></span>' +
-                    escapeHtml(entry.name) + '</span>' +
-                    '<span class="ccip-product-value">' + escapeHtml(String(entry.value)) + ' (' + escapeHtml(String(pct)) + '%)</span>';
+                listItem.className = 'home-dashboard-list-item';
+
+                var labelNode = document.createElement('span');
+                labelNode.className = 'home-dashboard-list-label';
+                labelNode.textContent = item.Name || 'Unassigned';
+
+                var valueNode = document.createElement('span');
+                valueNode.className = 'home-dashboard-list-value';
+                valueNode.textContent = String(item.Value || 0);
+
+                listItem.appendChild(labelNode);
+                listItem.appendChild(valueNode);
                 listHost.appendChild(listItem);
             }
 
-            var priorityBody = document.getElementById('homePriorityRows');
-            if (priorityBody) {
-                priorityBody.innerHTML = '';
-                var severityOrder = ['critical', 'high', 'high', 'medium', 'medium'];
-                var statusOrder = ['Active', 'Waiting Info', 'In Progress', 'Investigating', 'Assigned'];
-                var owners = ['John D.', 'Alice M.', 'Sam W.', 'David K.', 'Priya S.'];
-                var customers = ['ABC Corp', 'XYZ Ltd', 'PQR Inc', 'LMN Corp', 'RST Ltd'];
-                for (i = 0; i < productData.length && i < 5; i++) {
-                    var row = document.createElement('tr');
-                    row.innerHTML =
-                        '<td><span class="ccip-severity ' + severityOrder[i] + '">' +
-                        (severityOrder[i] === 'critical' ? 'Critical' : (severityOrder[i] === 'high' ? 'High' : 'Medium')) +
-                        '</span></td>' +
-                        '<td>#' + (2124 - i * 3) + '</td>' +
-                        '<td>' + customers[i] + '</td>' +
-                        '<td>' + escapeHtml(productData[i].name) + '</td>' +
-                        '<td>' + owners[i] + '</td>' +
-                        '<td><span class="ccip-confidence">' + (98 - i * 5) + '%</span></td>' +
-                        '<td><span class="ccip-status-pill">' + statusOrder[i] + '</span></td>' +
-                        '<td>' + (i === 0 ? '2 hrs' : (i === 1 ? '5 hrs' : (i === 2 ? '8 hrs' : (i === 3 ? '12 hrs' : '1 day')))) + '</td>';
-                    priorityBody.appendChild(row);
-                }
-            }
-
-            var recentList = document.getElementById('homeRecentActivity');
-            if (recentList) {
-                recentList.innerHTML = '';
-                var times = ['10m ago', '25m ago', '1h ago', '2h ago', '3h ago'];
-                for (i = 0; i < trend.length && i < 5; i++) {
-                    var activity = document.createElement('li');
-                    activity.innerHTML = '<span class="ccip-time">' + times[i] + '</span><span>Week ' +
-                        escapeHtml(trend[Math.max(0, trend.length - 1 - i)].WeekLabel || '') +
-                        ': Open ' + escapeHtml(String(trend[Math.max(0, trend.length - 1 - i)].NewIssues || 0)) +
-                        ', Resolved ' + escapeHtml(String(trend[Math.max(0, trend.length - 1 - i)].ResolvedIssues || 0)) +
-                        '.</span>';
-                    recentList.appendChild(activity);
-                }
-            }
-
-            var insightsList = document.getElementById('homeAiInsights');
-            if (insightsList) {
-                var topName = productData.length > 0 ? productData[0].name : 'top component';
-                var topValue = productData.length > 0 ? productData[0].value : 0;
-                insightsList.innerHTML =
-                    '<li>Highest concentration is in ' + escapeHtml(String(topName)) + ' with ' + escapeHtml(String(topValue)) + ' active issues.</li>' +
-                    '<li>Resolved trend remains stable over the latest reporting window.</li>' +
-                    '<li>Need-attention items are prioritized in the center table for faster triage.</li>' +
-                    '<li>Use CMF Pending and Reports tabs for recommendation and narrative export workflows.</li>';
-            }
-
-            window.CMF_PORTAL.lastHomeDashboardKey = snapshotKey;
             window.CMF_PORTAL.homeTrendChart.resize();
             window.CMF_PORTAL.homeStatusChart.resize();
-        }
-
-        function getTextById(id) {
-            var node = id ? document.getElementById(id) : null;
-            if (!node) return '0';
-            return (node.textContent || node.innerText || '0').trim();
-        }
-
-        function renderInteractiveIssuePendingSidebars() {
-            var issueTotal = getTextById(window.CMF_PORTAL.ids.lblIssueTotal);
-            var issueProgress = getTextById(window.CMF_PORTAL.ids.lblIssueInProgress);
-            var issueStale = getTextById(window.CMF_PORTAL.ids.lblIssueStale);
-            var pendingTotal = getTextById(window.CMF_PORTAL.ids.lblPendingSightings);
-            var pendingQualify = getTextById(window.CMF_PORTAL.ids.lblQualifyForCmf);
-            var pendingDup = getTextById(window.CMF_PORTAL.ids.lblLikelyDuplicate);
-            var pendingMissing = getTextById(window.CMF_PORTAL.ids.lblIncompleteSysScope);
-
-            var issueTotalNode = document.getElementById('issueSideTotal');
-            var issueProgressNode = document.getElementById('issueSideProgress');
-            var issueStaleNode = document.getElementById('issueSideStale');
-            if (issueTotalNode) issueTotalNode.textContent = issueTotal;
-            if (issueProgressNode) issueProgressNode.textContent = issueProgress;
-            if (issueStaleNode) issueStaleNode.textContent = issueStale;
-
-            var pendingTotalNode = document.getElementById('pendingSideTotal');
-            var pendingQualifyNode = document.getElementById('pendingSideQualify');
-            var pendingDupNode = document.getElementById('pendingSideDup');
-            var pendingMissNode = document.getElementById('pendingSideMissing');
-            if (pendingTotalNode) pendingTotalNode.textContent = pendingTotal;
-            if (pendingQualifyNode) pendingQualifyNode.textContent = pendingQualify;
-            if (pendingDupNode) pendingDupNode.textContent = pendingDup;
-            if (pendingMissNode) pendingMissNode.textContent = pendingMissing;
-        }
-
-        function isElementVisible(element) {
-            if (!element) return false;
-            var style = window.getComputedStyle ? window.getComputedStyle(element) : null;
-            if (style && (style.display === 'none' || style.visibility === 'hidden')) {
-                return false;
-            }
-            return element.offsetParent !== null || (style && style.position === 'fixed');
-        }
-
-        function normalizeIssuePendingShellDom() {
-            // The server renders each side panel in its owning tab shell. Do not move nodes here:
-            // UpdatePanel replacements can otherwise place an Issue panel in the Pending shell.
-        }
-
-        function syncIssuePendingSidePanelVisibility() {
-            normalizeIssuePendingShellDom();
-            var issueShell = document.getElementById('issueTabShell');
-            var pendingShell = document.getElementById('pendingTabShell');
-            var activeViewTitle = document.getElementById(window.CMF_PORTAL.ids.activeViewTitle);
-            var activeText = activeViewTitle ? (activeViewTitle.textContent || activeViewTitle.innerText || '').toLowerCase() : '';
-            var activeTab = (window.CMF_PORTAL.activeFocusedTab || '').toLowerCase();
-            var pendingActive = activeTab === 'pending' || activeText.indexOf('pending') >= 0;
-            var issueActive = !pendingActive && (activeTab === 'issue' || activeText.indexOf('issue') >= 0);
-
-            if (!pendingActive && !issueActive) {
-                var selectedViewText = getFocusedViewText();
-                pendingActive = selectedViewText.indexOf('pending') >= 0;
-                issueActive = !pendingActive && selectedViewText.indexOf('issue') >= 0;
-            }
-
-            if (!pendingActive && !issueActive) {
-                var issueGrid = document.getElementById(window.CMF_PORTAL.ids.overallRequestDetails);
-                issueActive = isElementVisible(issueGrid);
-                pendingActive = !issueActive && !!pendingShell;
-            }
-
-            applyInteractiveShellState(issueShell, issueActive);
-            applyInteractiveShellState(pendingShell, pendingActive);
-            filterPortalVisibleTables();
-        }
-
-        function getFocusedViewText() {
-            var focusedDropdown = document.getElementById('<%= ddlFocusedView.ClientID %>');
-            if (focusedDropdown && focusedDropdown.selectedIndex >= 0) {
-                var option = focusedDropdown.options[focusedDropdown.selectedIndex];
-                return ((option && (option.text || option.value)) || '').toLowerCase();
-            }
-
-            var activeNodes = document.querySelectorAll('.portal-nav-link.is-active, .tab-pill.is-active');
-            for (var i = 0; i < activeNodes.length; i++) {
-                var text = (activeNodes[i].textContent || activeNodes[i].innerText || '').toLowerCase();
-                if (text.indexOf('pending') >= 0 || text.indexOf('issue') >= 0) {
-                    return text;
-                }
-            }
-
-            return '';
-        }
-
-        function applyInteractiveShellState(shell, isActive) {
-            if (!shell) return;
-            shell.classList.toggle('cmf-tab-shell-active', isActive);
-            shell.classList.toggle('cmf-tab-shell-hidden', !isActive);
-            shell.style.setProperty('display', isActive ? 'flex' : 'none', 'important');
-            if (!isActive) return;
-
-            shell.style.setProperty('align-items', 'flex-start', 'important');
-            shell.style.setProperty('gap', '16px', 'important');
-            shell.style.setProperty('width', '100%', 'important');
-            shell.style.setProperty('flex-wrap', 'nowrap', 'important');
-
-            var main = shell.querySelector('.issue-tab-main, .pending-tab-main');
-            var side = shell.querySelector('.issue-side-panel, .pending-side-panel');
-            if (main) {
-                main.style.setProperty('flex', '1 1 0', 'important');
-                main.style.setProperty('min-width', '0', 'important');
-                main.style.setProperty('max-width', 'calc(100% - 306px)', 'important');
-                main.style.setProperty('overflow', 'hidden', 'important');
-            }
-            if (side) {
-                side.style.setProperty('flex', '0 0 290px', 'important');
-                side.style.setProperty('width', '290px', 'important');
-                side.style.setProperty('max-width', '290px', 'important');
-                side.style.setProperty('min-width', '290px', 'important');
-                side.style.setProperty('display', 'grid', 'important');
-                side.style.setProperty('position', 'sticky', 'important');
-                side.style.setProperty('top', '90px', 'important');
-            }
-        }
-
-        function isReportsViewActive() {
-            var activeViewTitle = document.getElementById(window.CMF_PORTAL.ids.activeViewTitle);
-            var text = activeViewTitle ? (activeViewTitle.textContent || activeViewTitle.innerText || '') : '';
-            return text.toLowerCase().indexOf('report') >= 0;
         }
 
         document.addEventListener('DOMContentLoaded', function () {
             window.CMF_PORTAL.currentPlatform = getCurrentPlatformValue();
             window.CMF_PORTAL.homeDashboardSnapshot = <%= string.IsNullOrWhiteSpace(HomeDashboardSnapshotJson) ? "null" : HomeDashboardSnapshotJson %>;
             syncActivePlatformChip();
-            var issueGrid = document.getElementById(window.CMF_PORTAL.ids.overallRequestDetails);
-            if (isElementVisible(issueGrid)) {
-                setTimeout(function () { syncIssueHorizontalScroll(0); }, 60);
-            }
-            if (isReportsViewActive()) {
-                bindReportsPromptEnterHandler();
-                initReportsFormatTemplate();
-            }
+            setTimeout(function () { syncIssueHorizontalScroll(0); }, 60);
+            bindReportsPromptEnterHandler();
+            initReportsFormatTemplate();
             initCollapsibleSections();
-            initMainMenuTooltips();
-            initPortalNavPostbackFallback();
             renderHomeDashboard();
-            renderInteractiveIssuePendingSidebars();
-            syncIssuePendingSidePanelVisibility();
-            bindGlobalSearchShortcut();
-            applyTableOnlyScroll();
-            scheduleInitColumnHideButtons(80);
         });
 
         if (window.Sys && Sys.WebForms && Sys.WebForms.PageRequestManager) {
@@ -8968,53 +5374,24 @@ td:nth-child(odd), th:nth-child(odd) {
                 window.CMF_PORTAL.currentPlatform = getCurrentPlatformValue();
                 window.CMF_PORTAL.homeDashboardSnapshot = <%= string.IsNullOrWhiteSpace(HomeDashboardSnapshotJson) ? "null" : HomeDashboardSnapshotJson %>;
                 syncActivePlatformChip();
-                var issueGrid = document.getElementById(window.CMF_PORTAL.ids.overallRequestDetails);
-                if (isElementVisible(issueGrid)) {
-                    setTimeout(function () { syncIssueHorizontalScroll(0); }, 60);
-                }
-                if (isReportsViewActive()) {
-                    bindReportsPromptEnterHandler();
-                    initReportsFormatTemplate();
-                }
+                setTimeout(function () { syncIssueHorizontalScroll(0); }, 60);
+                bindReportsPromptEnterHandler();
+                initReportsFormatTemplate();
                 initCollapsibleSections();
-                initMainMenuTooltips();
-                initPortalNavPostbackFallback();
                 renderHomeDashboard();
-                renderInteractiveIssuePendingSidebars();
-                syncIssuePendingSidePanelVisibility();
-                bindGlobalSearchShortcut();
-                applyTableOnlyScroll();
-                scheduleInitColumnHideButtons(0);
+                setTimeout(initColumnHideButtons, 0);
             });
         }
 
         // ── Column hide buttons ──────────────────────────────────────────────
         var CMF_HIDDEN_COLS_KEY = 'cmf_hidden_cols';
-        var CMF_COLHIDE_TIMER = null;
-
-        function scheduleInitColumnHideButtons(delay) {
-            if (CMF_COLHIDE_TIMER) {
-                clearTimeout(CMF_COLHIDE_TIMER);
-            }
-            CMF_COLHIDE_TIMER = setTimeout(function () {
-                CMF_COLHIDE_TIMER = null;
-                initColumnHideButtons();
-            }, typeof delay === 'number' ? delay : 0);
-        }
 
         function initColumnHideButtons() {
             var grid = document.getElementById('<%= overall_request_details.ClientID %>');
             if (!grid) return;
-            if (!isElementVisible(grid)) return;
             // Select every header cell that carries a field-* class, regardless of thead/tbody structure
             var headers = grid.querySelectorAll('th[class*="field-"]');
             if (!headers || headers.length === 0) return;
-            var stamp = headers.length + ':' + (grid.rows ? grid.rows.length : 0);
-            var existingButtons = grid.querySelectorAll('.col-hide-btn').length;
-            if (grid.getAttribute('data-colhide-stamp') === stamp && existingButtons >= headers.length) {
-                restoreHiddenColumns();
-                return;
-            }
             headers.forEach(function (th) {
                 if (th.querySelector('.col-hide-btn')) return; // already injected
                 var fieldClass = [].slice.call(th.classList).find(function (c) { return c.indexOf('field-') === 0; });
@@ -9033,7 +5410,6 @@ td:nth-child(odd), th:nth-child(odd) {
                 var target = th.querySelector('.filter-header-text') || th;
                 target.appendChild(btn);
             });
-            grid.setAttribute('data-colhide-stamp', stamp);
             restoreHiddenColumns();
         }
 
@@ -9073,90 +5449,23 @@ td:nth-child(odd), th:nth-child(odd) {
             if (btn) btn.style.display = 'none';
         }
 
-        function filterGridRowsByQuery(grid, query) {
-            if (!grid) return;
-            var rows = grid.querySelectorAll('tbody tr');
-            rows.forEach(function (row) {
-                var text = (row.textContent || row.innerText || '').toLowerCase();
-                row.style.display = (!query || text.indexOf(query) !== -1) ? '' : 'none';
-            });
-        }
-
-        function filterPortalVisibleTables() {
-            var input = document.getElementById('globalPortalSearch');
-            var query = input ? (input.value || '').trim().toLowerCase() : '';
-            var clearBtn = document.getElementById('globalSearchClear');
-            var activeTab = (window.CMF_PORTAL.activeFocusedTab || '').toLowerCase();
-
-            if (activeTab === 'pending') {
-                filterGridRowsByQuery(document.getElementById('<%= GridView_cmf_pending.ClientID %>'), query);
-            } else {
-                filterGridRowsByQuery(document.getElementById('<%= overall_request_details.ClientID %>'), query);
-            }
-
-            if (clearBtn) {
-                clearBtn.style.display = query ? 'inline-flex' : 'none';
-            }
-        }
-
-        function clearGlobalPortalSearch() {
-            var input = document.getElementById('globalPortalSearch');
-            if (!input) return;
-            input.value = '';
-            filterPortalVisibleTables();
-            input.focus();
-        }
-
-        function filterIssueTable() {
-            filterPortalVisibleTables();
-        }
-
-        function clearIssueSearch() {
-            clearGlobalPortalSearch();
-        }
-
-        function bindGlobalSearchShortcut() {
-            if (window.CMF_PORTAL.globalSearchShortcutBound) return;
-            document.addEventListener('keydown', function (event) {
-                if ((event.ctrlKey || event.metaKey) && String(event.key || '').toLowerCase() === 'k') {
-                    var input = document.getElementById('globalPortalSearch');
-                    if (input) {
-                        event.preventDefault();
-                        input.focus();
-                        input.select();
-                    }
-                }
-            });
-            window.CMF_PORTAL.globalSearchShortcutBound = true;
-        }
-
-        function applyTableOnlyScroll() {
-            var issueWrap = document.querySelector('.issue-grid-scroll');
-            var pendingWrap = document.querySelector('.cmf-pending-grid-wrap');
-
-            if (issueWrap) {
-                issueWrap.style.setProperty('max-height', 'min(62vh, 620px)', 'important');
-                issueWrap.style.setProperty('min-height', '0', 'important');
-                issueWrap.style.setProperty('overflow-x', 'auto', 'important');
-                issueWrap.style.setProperty('overflow-y', 'scroll', 'important');
-                issueWrap.style.setProperty('scrollbar-gutter', 'stable', 'important');
-            }
-
-            if (pendingWrap) {
-                pendingWrap.style.setProperty('max-height', 'min(64vh, 640px)', 'important');
-                pendingWrap.style.setProperty('min-height', '0', 'important');
-                pendingWrap.style.setProperty('overflow-x', 'auto', 'important');
-                pendingWrap.style.setProperty('overflow-y', 'auto', 'important');
-                pendingWrap.style.setProperty('scrollbar-gutter', 'stable', 'important');
-            }
-        }
-
         if (window.Sys && Sys.Application) {
-            Sys.Application.add_load(function () {
-                applyTableOnlyScroll();
-                scheduleInitColumnHideButtons(0);
-            });
+            Sys.Application.add_load(function () { initColumnHideButtons(); });
         }
+
+        // Fallback: also hook standard DOM events for full-page postbacks
+        document.addEventListener('DOMContentLoaded', function () { setTimeout(initColumnHideButtons, 100); });
+        window.addEventListener('load', function () { setTimeout(initColumnHideButtons, 200); });
+
+        // Polling guard: inject buttons whenever the grid is visible but has none yet
+        setInterval(function () {
+            var grid = document.getElementById('<%= overall_request_details.ClientID %>');
+            if (!grid) return;
+            var ths = grid.querySelectorAll('th[class*="field-"]');
+            if (ths.length > 0 && grid.querySelectorAll('.col-hide-btn').length === 0) {
+                initColumnHideButtons();
+            }
+        }, 600);
         // ────────────────────────────────────────────────────────────────────
     </script>
     <script src="Scripts/cmf-portal-main.js?v=20260805-ai-recommendation-fix"></script>
@@ -9179,12 +5488,6 @@ td:nth-child(odd), th:nth-child(odd) {
 
 
         <div class="header-title" runat="server" id="headerTitle">CMF Live Dashboard</div>
-        <div class="global-search-shell" role="search">
-            <i class="fas fa-search" aria-hidden="true"></i>
-            <input type="text" id="globalPortalSearch" placeholder="Search issues, customers, components..." autocomplete="off" oninput="filterPortalVisibleTables()" />
-            <button type="button" id="globalSearchClear" class="global-search-clear" onclick="clearGlobalPortalSearch()" aria-label="Clear search">&times;</button>
-            <span class="global-search-shortcut">Ctrl + K</span>
-        </div>
         <div class="header-user-mode">
             <label for="ddlUserMode">Mode</label>
             <asp:DropDownList ID="ddlUserMode" runat="server" CssClass="header-mode-dropdown" AutoPostBack="true" OnSelectedIndexChanged="ddlUserMode_SelectedIndexChanged">
@@ -9193,7 +5496,7 @@ td:nth-child(odd), th:nth-child(odd) {
             </asp:DropDownList>
         </div>
         <div class="sidebar-toggle-div">
-            <button type="button" class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+            <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
         </div>
 
               <div id="updateinfo" runat="server">
@@ -9206,8 +5509,65 @@ td:nth-child(odd), th:nth-child(odd) {
 
 
 
+        <%--        <!-- Sidebar -->
         <div id="sidebar" class="sidebar">
-    <button type="button" class="close-btn" onclick="closeSidebar()">X</button>
+            <button class="close-btn" onclick="closeSidebar()">X</button>
+            <!-- Hardcoded 'All Drivers' link -->
+    <div style="margin-left: 20px">
+        <asp:LinkButton ID="lnkAllDrivers" runat="server" CommandArgument="AllDrivers" OnCommand="lnkValue_Command">
+            All Drivers
+        </asp:LinkButton><br />
+    </div>
+                       <!-- List of distinct values as checkboxes -->
+    <div style="margin-left: 20px">
+    <asp:Repeater ID="rptDistinctValues" runat="server">
+        <ItemTemplate>
+            <!-- Dynamically setting the ID and Value of the CheckBox -->
+            <input type="checkbox" class="chkValue" 
+                   id="chkValue_<%# Eval("drivers") %>" 
+                   value='<%# Eval("drivers") %>' 
+                   onclick="driverCollector()" />
+            <label><%# Eval("drivers") %></label><br />
+        </ItemTemplate>
+    </asp:Repeater>
+</div>--%>
+
+        <!-- Sidebar -->
+        <%--<div id="sidebar" class="sidebar">
+            <button class="close-btn" onclick="closeSidebar()">X</button>
+            <!-- Hardcoded 'All Drivers' link -->
+            <div style="margin-left: 20px">
+                <asp:LinkButton ID="lnkAllDrivers" runat="server" CommandArgument="AllDrivers" OnCommand="lnkValue_Command">
+            All Milestones
+                </asp:LinkButton><br />
+            </div>
+
+            <!-- Select All Checkbox -->
+            <div id="selectallcheckbox" style="margin-left: 20px" runat="server">
+                <input type="checkbox" id="chkSelectAll" onclick="driverCollector()"/>
+                <label style="color: white; font-family: 'Arial', sans-serif;" for="chkSelectAll">Select All</label><br />
+            </div>
+
+            <!-- List of distinct values as checkboxes -->
+            <div style="margin-left: 20px">
+                <asp:Repeater ID="rptDistinctValues" runat="server">
+                    <ItemTemplate>
+                        <!-- Dynamically setting the ID and Value of the CheckBox -->
+                        <input type="checkbox" class="chkValue"
+                            id="chkValue_<%# Eval("drivers") %>"
+                            value='<%# Eval("drivers") %>'
+                            onclick="driverCollector()" />
+                        <label style="color: white; font-family: 'Arial', sans-serif;"><%# Eval("drivers") %></label><br />
+                    </ItemTemplate>
+                </asp:Repeater>
+            </div>
+            <asp:LinkButton ID="submitdrivers" runat="server" CommandArgument="" OnCommand="lnkValue_Command">
+    Submit
+            </asp:LinkButton>
+        </div>--%>
+
+        <div id="sidebar" class="sidebar">
+    <button class="close-btn" onclick="closeSidebar()">X</button>
     <!-- Hardcoded 'All Drivers' link -->
     <div style="margin-left: 20px">
         <asp:LinkButton ID="lnkAllDrivers" runat="server" CommandArgument="AllDrivers" OnCommand="lnkValue_Command">
@@ -9256,9 +5616,6 @@ Submit
                                 <span class="toggle-label">&lt;&lt;</span>
                             </button>
                         </div>
-                        <div class="portal-nav-active-title" aria-live="polite">
-                            <asp:Label ID="lblActiveViewTitle" runat="server" Text="Issue List" />
-                        </div>
                         <div id="mainMenuSectionBody" class="collapsible-body">
                             <asp:LinkButton ID="lnkNavHome" runat="server" CssClass="portal-nav-link" OnClick="btnShowHomeDashboard_Click"><i class="fas fa-chart-pie" aria-hidden="true"></i><span>Dashboard</span></asp:LinkButton>
                             <asp:LinkButton ID="lnkNavIssueList" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView1_Click"><i class="fas fa-fire" aria-hidden="true"></i><span>Issue List</span></asp:LinkButton>
@@ -9273,182 +5630,123 @@ Submit
                     </button>
 
                     <div class="portal-main-workspace">
-                        <asp:Panel ID="homeWelcomePanel" runat="server" Visible="false" CssClass="welcome-home-panel ccip-dashboard-host">
-                            <div class="ccip-dashboard">
-                                <div class="ccip-dash-top">
-                                    <div>
-                                        <asp:Label ID="lblHomeGreeting" runat="server" CssClass="ccip-dash-greeting" Text="Good Morning" />
-                                        <p class="ccip-dash-sub">Here is what is happening with your critical issues today on <%: HomeDashboardPlatformLabel %> in <asp:Label ID="lblWelcomeMode" runat="server" /> mode.</p>
+                        <asp:Panel ID="homeWelcomePanel" runat="server" Visible="false" CssClass="welcome-home-panel">
+                            <div class="home-dashboard-shell">
+                                <div class="home-dashboard-hero">
+                                    <div class="home-dashboard-hero-copy">
+                                        <div class="home-dashboard-badge">Live Infographics</div>
+                                        <h2 class="welcome-home-title" style="margin-bottom:12px;"><%: HomeDashboardPlatformLabel %></h2>
+                                        <p class="welcome-home-desc">
+                                            You are in <asp:Label ID="lblWelcomeMode" runat="server" /> mode. This dashboard reflects overall CMF issue signals across all platforms, including trend, status mix, and concentration by component group.
+                                        </p>
                                     </div>
-                                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                                        <div class="ccip-dash-updated">Updated <asp:Label ID="lblHomeDashboardGeneratedAt" runat="server" /></div>
-                                        <asp:HyperLink ID="lnkPlatformDashboardHome" runat="server" Target="_blank" CssClass="ccip-link-btn" Visible="false">Open platform dashboard</asp:HyperLink>
-                                    </div>
-                                </div>
-
-                                <div class="platform-chip-rail" role="tablist" aria-label="Dashboard platform switch" style="margin-bottom:14px;">
-                                    <button type="button" class="platform-chip" data-platform="CMF_PTL_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_PTL_ALL_COMPONENTS_TABLE')">PTL</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_LNL_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_LNL_ALL_COMPONENTS_TABLE')">LNL</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_ARL_S_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_ARL_S_ALL_COMPONENTS_TABLE')">ARL-S</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_ARL_H_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_ARL_H_ALL_COMPONENTS_TABLE')">ARL-H</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_ARL_U_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_ARL_U_ALL_COMPONENTS_TABLE')">ARL-U</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_ARL_HX_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_ARL_HX_ALL_COMPONENTS_TABLE')">ARL-Hx</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_ARL_Refresh_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_ARL_Refresh_ALL_COMPONENTS_TABLE')">ARL-Refresh</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_GNR_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_GNR_ALL_COMPONENTS_TABLE')">GNR</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_WCL_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_WCL_ALL_COMPONENTS_TABLE')">WCL</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_NVL_S_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_NVL_S_ALL_COMPONENTS_TABLE')">NVL-S</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_NVL_H_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_NVL_H_ALL_COMPONENTS_TABLE')">NVL-H</button>
-                                </div>
-
-                                <asp:Label ID="lblHomeAiNewTodayValue" runat="server" style="display:none;" />
-                                <asp:Label ID="lblHomeAiClosedTodayValue" runat="server" style="display:none;" />
-
-                                <div class="ccip-kpi-row">
-                                    <div class="ccip-kpi kpi-red">
-                                        <div class="ccip-kpi-head"><div class="ccip-kpi-title">Open Critical Issues</div><div class="ccip-kpi-icon"><i class="fas fa-circle-exclamation" aria-hidden="true"></i></div></div>
-                                        <div class="ccip-kpi-value"><asp:Label ID="lblHomeActiveIssuesValue" runat="server" /></div>
-                                        <div class="ccip-kpi-note"><i class="fas fa-arrow-down" aria-hidden="true"></i>12% vs last week</div>
-                                        <div class="ccip-kpi-spark" aria-hidden="true"></div>
-                                    </div>
-                                    <div class="ccip-kpi kpi-orange">
-                                        <div class="ccip-kpi-head"><div class="ccip-kpi-title">Need Attention</div><div class="ccip-kpi-icon"><i class="fas fa-bell" aria-hidden="true"></i></div></div>
-                                        <div class="ccip-kpi-value"><asp:Label ID="lblHomeNeedsAttentionValue" runat="server" /></div>
-                                        <div class="ccip-kpi-note"><i class="fas fa-arrow-up" aria-hidden="true"></i>16% vs last week</div>
-                                        <div class="ccip-kpi-spark" aria-hidden="true"></div>
-                                    </div>
-                                    <div class="ccip-kpi kpi-green">
-                                        <div class="ccip-kpi-head"><div class="ccip-kpi-title">Resolved This Week</div><div class="ccip-kpi-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></div></div>
-                                        <div class="ccip-kpi-value"><asp:Label ID="lblHomeResolvedThisWeekValue" runat="server" /></div>
-                                        <div class="ccip-kpi-note"><i class="fas fa-arrow-up" aria-hidden="true"></i>23% vs last week</div>
-                                        <div class="ccip-kpi-spark" aria-hidden="true"></div>
-                                    </div>
-                                    <div class="ccip-kpi kpi-blue">
-                                        <div class="ccip-kpi-head"><div class="ccip-kpi-title">Avg. Resolution Time</div><div class="ccip-kpi-icon"><i class="fas fa-clock" aria-hidden="true"></i></div></div>
-                                        <div class="ccip-kpi-value"><asp:Label ID="lblHomeResolutionDaysValue" runat="server" /></div>
-                                        <div class="ccip-kpi-note"><i class="fas fa-arrow-down" aria-hidden="true"></i>18% vs last week</div>
-                                        <div class="ccip-kpi-spark" aria-hidden="true"></div>
-                                    </div>
-                                    <div class="ccip-kpi kpi-purple">
-                                        <div class="ccip-kpi-head"><div class="ccip-kpi-title">Customers Affected</div><div class="ccip-kpi-icon"><i class="fas fa-users" aria-hidden="true"></i></div></div>
-                                        <div class="ccip-kpi-value"><asp:Label ID="lblHomeCustomersAffectedValue" runat="server" /></div>
-                                        <div class="ccip-kpi-note"><i class="fas fa-arrow-up" aria-hidden="true"></i>15% vs last week</div>
-                                        <div class="ccip-kpi-spark" aria-hidden="true"></div>
+                                    <div class="home-dashboard-hero-actions">
+                                        <asp:HyperLink ID="lnkPlatformDashboardHome" runat="server" Target="_blank" CssClass="home-dashboard-pill-link" Visible="false">Open platform dashboard</asp:HyperLink>
+                                        <div class="home-dashboard-generated">Updated <asp:Label ID="lblHomeDashboardGeneratedAt" runat="server" /></div>
                                     </div>
                                 </div>
 
-                                <div class="ccip-main-grid">
-                                    <div class="ccip-col ccip-col-left">
-                                        <section class="ccip-card">
-                                            <div class="ccip-card-head">
-                                                <h3 class="ccip-card-mini-title"><i class="fas fa-robot" aria-hidden="true" style="color:#3b82f6; margin-right:6px;"></i>AI Daily Summary</h3>
-                                                <span class="ccip-card-subtitle">Updated <asp:Label ID="lblHomeAiWatchlistValue" runat="server" /> min ago</span>
-                                            </div>
-                                            <ul class="ccip-daily-list">
-                                                <asp:Literal ID="litHomeAiDailySummary" runat="server" />
-                                            </ul>
-                                            <div class="ccip-daily-actions">
-                                                <button type="button" class="ccip-button">View Details</button>
-                                                <button type="button" class="ccip-button primary">Open in AI Copilot</button>
-                                            </div>
-                                        </section>
+                                <div class="home-dashboard-metrics">
+                                    <div class="home-dashboard-metric-card">
+                                        <div class="home-dashboard-metric-top"><div class="home-dashboard-metric-label">Active Issues</div><div class="home-dashboard-metric-icon"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i></div></div>
+                                        <div class="home-dashboard-metric-value"><asp:Label ID="lblHomeActiveIssuesValue" runat="server" /></div>
+                                        <div class="home-dashboard-metric-note">Open workload across all platforms</div>
+                                        <div class="home-dashboard-metric-spark" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+                                    </div>
+                                    <div class="home-dashboard-metric-card">
+                                        <div class="home-dashboard-metric-top"><div class="home-dashboard-metric-label">Needs Attention</div><div class="home-dashboard-metric-icon"><i class="fas fa-bolt" aria-hidden="true"></i></div></div>
+                                        <div class="home-dashboard-metric-value"><asp:Label ID="lblHomeNeedsAttentionValue" runat="server" /></div>
+                                        <div class="home-dashboard-metric-note">High-priority or high-impact issues requiring fast review</div>
+                                        <div class="home-dashboard-metric-spark" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+                                    </div>
+                                    <div class="home-dashboard-metric-card">
+                                        <div class="home-dashboard-metric-top"><div class="home-dashboard-metric-label">Resolved This Week</div><div class="home-dashboard-metric-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></div></div>
+                                        <div class="home-dashboard-metric-value"><asp:Label ID="lblHomeResolvedThisWeekValue" runat="server" /></div>
+                                        <div class="home-dashboard-metric-note">Issues with implemented resolution in the last 7 days</div>
+                                        <div class="home-dashboard-metric-spark" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+                                    </div>
+                                    <div class="home-dashboard-metric-card">
+                                        <div class="home-dashboard-metric-top"><div class="home-dashboard-metric-label">Avg. Resolution Days</div><div class="home-dashboard-metric-icon"><i class="fas fa-clock" aria-hidden="true"></i></div></div>
+                                        <div class="home-dashboard-metric-value"><asp:Label ID="lblHomeResolutionDaysValue" runat="server" /></div>
+                                        <div class="home-dashboard-metric-note">Average days from decision to implementation</div>
+                                        <div class="home-dashboard-metric-spark" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+                                    </div>
+                                    <div class="home-dashboard-metric-card">
+                                        <div class="home-dashboard-metric-top"><div class="home-dashboard-metric-label">Customers Affected</div><div class="home-dashboard-metric-icon"><i class="fas fa-users" aria-hidden="true"></i></div></div>
+                                        <div class="home-dashboard-metric-value"><asp:Label ID="lblHomeCustomersAffectedValue" runat="server" /></div>
+                                        <div class="home-dashboard-metric-note">Rows marked medium-to-critical customer impact</div>
+                                        <div class="home-dashboard-metric-spark" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+                                    </div>
+                                </div>
 
-                                        <section class="ccip-card">
-                                            <div class="ccip-card-head">
-                                                <h3 class="ccip-card-mini-title"><i class="fas fa-lightbulb" aria-hidden="true" style="color:#f59e0b; margin-right:6px;"></i>AI Recommendations</h3>
-                                                <a href="#" class="ccip-card-link" onclick="return false;">View all</a>
+                                <div class="home-ai-panels">
+                                    <div class="home-ai-card">
+                                        <div class="home-ai-card-head">
+                                            <div>
+                                                <h3 class="home-ai-card-title">AI Live Tracker</h3>
+                                                <p class="home-ai-card-subtitle">Live AI triage signals across the dashboard data.</p>
                                             </div>
-                                            <div class="ccip-card-subtitle" style="margin-bottom:8px;">Similar issue cluster detected</div>
-                                            <div class="ccip-rec-list">
-                                                <div class="ccip-rec-row"><span class="ccip-rec-label">GPU Driver</span><span class="ccip-rec-track"><span class="ccip-rec-fill good" style="width:92%"></span></span><span class="ccip-rec-percent">92%</span></div>
-                                                <div class="ccip-rec-row"><span class="ccip-rec-label">Memory Leak</span><span class="ccip-rec-track"><span class="ccip-rec-fill medium" style="width:14%"></span></span><span class="ccip-rec-percent">14%</span></div>
-                                                <div class="ccip-rec-row"><span class="ccip-rec-label">Firmware</span><span class="ccip-rec-track"><span class="ccip-rec-fill low" style="width:5%"></span></span><span class="ccip-rec-percent">5%</span></div>
+                                            <div class="home-ai-card-icon"><i class="fas fa-robot" aria-hidden="true"></i></div>
+                                        </div>
+                                        <div class="home-ai-tracker-grid">
+                                            <div class="home-ai-tracker-item">
+                                                <div class="home-ai-tracker-label">Watchlist</div>
+                                                <div class="home-ai-tracker-value"><asp:Label ID="lblHomeAiWatchlistValue" runat="server" /></div>
                                             </div>
-                                            <div style="margin-top:12px;" class="ccip-card-subtitle">Suggested next step</div>
-                                            <ul class="ccip-daily-list" style="margin-top:8px;">
-                                                <li>Update GPU Driver to v32.0</li>
-                                                <li>Restart inference runtime</li>
-                                                <li>Collect ETL logs</li>
-                                            </ul>
-                                            <button type="button" class="ccip-button" style="width:100%; margin-top:10px;">Apply Recommendation</button>
-                                        </section>
+                                            <div class="home-ai-tracker-item">
+                                                <div class="home-ai-tracker-label">New Today</div>
+                                                <div class="home-ai-tracker-value"><asp:Label ID="lblHomeAiNewTodayValue" runat="server" /></div>
+                                            </div>
+                                            <div class="home-ai-tracker-item">
+                                                <div class="home-ai-tracker-label">Closed Today</div>
+                                                <div class="home-ai-tracker-value"><asp:Label ID="lblHomeAiClosedTodayValue" runat="server" /></div>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div class="ccip-col ccip-col-center">
-                                        <section class="ccip-card">
-                                            <div class="ccip-card-head">
-                                                <h3 class="ccip-card-mini-title"><i class="fas fa-chart-line" aria-hidden="true" style="color:#3b82f6; margin-right:6px;"></i>Issue Trend (Last 7 Days)</h3>
-                                                <a href="#" class="ccip-card-link" onclick="return false;">View Analytics</a>
+                                    <div class="home-ai-card">
+                                        <div class="home-ai-card-head">
+                                            <div>
+                                                <h3 class="home-ai-card-title">AI Daily Summary</h3>
+                                                <p class="home-ai-card-subtitle">Summary of CMF activity detected for today.</p>
                                             </div>
-                                            <div id="homeTrendChart" class="ccip-trend-chart"></div>
-                                        </section>
-
-                                        <section class="ccip-card">
-                                            <div class="ccip-card-head">
-                                                <h3 class="ccip-card-mini-title"><i class="fas fa-fire" aria-hidden="true" style="color:#f97316; margin-right:6px;"></i>Priority Issues</h3>
-                                                <a href="#" class="ccip-card-link" onclick="return false;">View all</a>
-                                            </div>
-                                            <table class="ccip-priority-table">
-                                                <thead>
-                                                    <tr><th>Severity</th><th>Issue ID</th><th>Customer</th><th>Product</th><th>Owner</th><th>AI Confidence</th><th>Status</th><th>ETA</th></tr>
-                                                </thead>
-                                                <tbody id="homePriorityRows"></tbody>
-                                            </table>
-                                        </section>
-
-                                        <section class="ccip-card">
-                                            <div class="ccip-card-head">
-                                                <h3 class="ccip-card-mini-title"><i class="fas fa-clock-rotate-left" aria-hidden="true" style="color:#6366f1; margin-right:6px;"></i>Recent Activity</h3>
-                                                <a href="#" class="ccip-card-link" onclick="return false;">View all</a>
-                                            </div>
-                                            <ul id="homeRecentActivity" class="ccip-activity-list"></ul>
-                                        </section>
+                                            <div class="home-ai-card-icon"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i></div>
+                                        </div>
+                                        <ul class="home-ai-summary-list">
+                                            <asp:Literal ID="litHomeAiDailySummary" runat="server" />
+                                        </ul>
                                     </div>
+                                </div>
 
-                                    <div class="ccip-col ccip-col-right">
-                                        <section class="ccip-card">
-                                            <div class="ccip-card-head">
-                                                <h3 class="ccip-card-mini-title"><i class="fas fa-earth-americas" aria-hidden="true" style="color:#3b82f6; margin-right:6px;"></i>Customers Affected by Region</h3>
-                                                <a href="#" class="ccip-card-link" onclick="return false;">View all</a>
+                                <div class="home-dashboard-grid">
+                                    <div class="home-dashboard-panel">
+                                        <div class="home-dashboard-panel-head">
+                                            <div>
+                                                <h3 class="home-dashboard-panel-title">Overall Issue Trend</h3>
+                                                <p class="home-dashboard-panel-subtitle">Six-week trend for new issues, resolved issues, and high-attention items.</p>
                                             </div>
-                                            <div class="ccip-region-wrap">
-                                                <div class="ccip-region-map" aria-hidden="true"></div>
-                                                <ul class="ccip-region-list">
-                                                    <li><span><span class="ccip-dot blue"></span>North America</span><strong>12</strong></li>
-                                                    <li><span><span class="ccip-dot green"></span>Europe</span><strong>6</strong></li>
-                                                    <li><span><span class="ccip-dot orange"></span>Asia Pacific</span><strong>4</strong></li>
-                                                    <li><span><span class="ccip-dot purple"></span>Latin America</span><strong>1</strong></li>
-                                                    <li><span><span class="ccip-dot red"></span>Middle East</span><strong>0</strong></li>
-                                                </ul>
+                                        </div>
+                                        <div id="homeTrendChart" class="home-dashboard-chart"></div>
+                                    </div>
+                                    <div class="home-dashboard-side-stack">
+                                        <div class="home-dashboard-panel">
+                                            <div class="home-dashboard-panel-head">
+                                                <div>
+                                                    <h3 class="home-dashboard-panel-title">Status Mix</h3>
+                                                    <p class="home-dashboard-panel-subtitle">Largest status buckets across all platforms.</p>
+                                                </div>
                                             </div>
-                                        </section>
-
-                                        <section class="ccip-card">
-                                            <div class="ccip-card-head">
-                                                <h3 class="ccip-card-mini-title"><i class="fas fa-chart-pie" aria-hidden="true" style="color:#3b82f6; margin-right:6px;"></i>Issues by Product</h3>
-                                                <a href="#" class="ccip-card-link" onclick="return false;">View all</a>
+                                            <div id="homeStatusChart" class="home-dashboard-chart-compact"></div>
+                                        </div>
+                                        <div class="home-dashboard-panel">
+                                            <div class="home-dashboard-panel-head">
+                                                <div>
+                                                    <h3 class="home-dashboard-panel-title">Top Component Groups</h3>
+                                                    <p class="home-dashboard-panel-subtitle">Where active issue volume is currently concentrated.</p>
+                                                </div>
                                             </div>
-                                            <div class="ccip-product-wrap">
-                                                <div id="homeStatusChart" class="ccip-product-chart"></div>
-                                                <ul id="homeTopComponentsList" class="ccip-product-list"></ul>
-                                            </div>
-                                        </section>
-
-                                        <section class="ccip-card">
-                                            <div class="ccip-card-head"><h3 class="ccip-card-mini-title"><i class="fas fa-bolt" aria-hidden="true" style="color:#f59e0b; margin-right:6px;"></i>Quick Actions</h3></div>
-                                            <div class="ccip-quick-grid">
-                                                <button type="button" class="ccip-quick-btn">New Issue</button>
-                                                <button type="button" class="ccip-quick-btn">Analyze Logs</button>
-                                                <button type="button" class="ccip-quick-btn">Generate RCA</button>
-                                                <button type="button" class="ccip-quick-btn">Customer Update</button>
-                                                <button type="button" class="ccip-quick-btn">Search Similar Cases</button>
-                                                <button type="button" class="ccip-quick-btn">Upload Logs</button>
-                                            </div>
-                                        </section>
-
-                                        <section class="ccip-card">
-                                            <div class="ccip-card-head"><h3 class="ccip-card-mini-title"><i class="fas fa-brain" aria-hidden="true" style="color:#8b5cf6; margin-right:6px;"></i>AI Insights</h3></div>
-                                            <ul id="homeAiInsights" class="ccip-insights-list"></ul>
-                                        </section>
+                                            <ul id="homeTopComponentsList" class="home-dashboard-list"></ul>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -9559,6 +5857,7 @@ Submit
                     <asp:ListItem Text="ARL-Refresh" Value="CMF_ARL_Refresh_ALL_COMPONENTS_TABLE" />
                     <asp:ListItem Text="NVL-S" Value="CMF_NVL_S_ALL_COMPONENTS_TABLE" />
                     <asp:ListItem Text="NVL-H" Value="CMF_NVL_H_ALL_COMPONENTS_TABLE" />
+<%--                    <asp:ListItem Text="PTL" Value="CMF_PTL_ALL_COMPONENTS_TABLE" />--%>
                 </asp:DropDownList>
 
                 <div class="platform-switcher-modern" style="display:none;">
@@ -9601,6 +5900,8 @@ Submit
                     <asp:Button ID="btnShowGridView5" runat="server" Text="Design Indicator" OnClick="btnShowGridView5_Click" CssClass="modern-button" Visible="false" />
                     <asp:Button ID="btnShowGridView6" runat="server" Text="Ingredient Indicator" OnClick="btnShowGridView6_Click" CssClass="modern-button" Visible="false" />
                     <asp:Button ID="btnShowGridView7" runat="server" Text="OEM Indicator" OnClick="btnShowGridView7_Click" CssClass="modern-button" Visible="false" /> 
+                    
+<%--                    <asp:Button ID="btnExportToPPT" runat="server" Text="Export to PPT" OnClientClick="openExportPopup(); return false;" CssClass="modern-button" />--%>
 
 <asp:Button ID="btnExportToExcel" runat="server" Text="Export to Excel" OnClick="btnExportToExcel_Click" CssClass="modern-button" />
                     <asp:Button ID="btnExportToExcel_ig" runat="server" Text="Export to Excel" OnClick="btnExportToExcel_Click_ingred" CssClass="modern-button" />
@@ -9627,10 +5928,10 @@ Submit
                 <div id="aiSummaryDrawerBg" class="ai-summary-drawer-bg" onclick="closeAiSummaryDrawer()"></div>
                 <aside id="aiSummaryDrawer" class="ai-summary-drawer" aria-hidden="true" role="dialog" aria-label="AI Issue Summary">
                     <button type="button" class="ai-summary-drawer-close" onclick="closeAiSummaryDrawer()" aria-label="Close">&times;</button>
-                    <h2 class="ai-summary-drawer-title"><span id="aiSummaryDrawerTitle">AI Summary</span><span class="ai-summary-title-badges"><span id="aiSummaryConfidence" class="ai-summary-confidence-inline">Confidence: --</span><span id="aiSummaryStatusBadge" class="ai-summary-status-value">Status: --</span></span></h2>
-                    <div class="ai-summary-meta-row ai-summary-meta-combined"><strong>Sighting ID:</strong> <span id="aiSummaryIssueId">-</span><span id="aiSummaryDateRow"><strong>CMF Ask Date:</strong> <span id="aiSummarySubmittedDate">-</span></span></div>
+                    <h2 class="ai-summary-drawer-title">AI Summary</h2>
+                    <div class="ai-summary-meta-row"><strong>Issue ID:</strong> <span id="aiSummaryIssueId">-</span></div>
                     <div class="ai-summary-meta-row" id="aiSummaryTitleRow" style="display:none"><strong>Title:</strong> <span id="aiSummaryTitle">-</span></div>
-                    <div id="aiSummaryFacts" class="ai-summary-facts"></div>
+                    <div class="ai-summary-meta-row"><strong>CMF Ask Date:</strong> <span id="aiSummarySubmittedDate">-</span></div>
                     <div class="ai-summary-body" id="aiSummaryBody">Generating AI summary...</div>
                     <div class="ai-summary-actions" id="aiSummaryActions" style="display:none">
                         <button type="button" class="ai-action-btn ai-action-copy" onclick="copyAiSummaryForReport()" title="Copy summary as plain text for pasting into reports">
@@ -9646,30 +5947,40 @@ Submit
                 <aside id="cmfRecDrawer" class="ai-summary-drawer" aria-hidden="true" role="dialog" aria-label="AI CMF Pending Recommendation">
                     <button type="button" class="ai-summary-drawer-close" onclick="closeCmfRecDrawer()" aria-label="Close">&times;</button>
                     <h2 class="ai-summary-drawer-title">AI Recommendation</h2>
-                    <div class="ai-summary-meta-row cmf-rec-title-row"><strong>Issue Title:</strong> <span id="cmfRecTitle" class="cmf-rec-title-text">-</span><span id="cmfRecRecommendation" class="cmf-rec-decision-badge">Generating...</span></div>
-                    <div class="ai-summary-meta-row"><strong>Sighting ID:</strong> <span id="cmfRecCpId">-</span></div>
-                    <span id="cmfRecComponent" style="display:none">-</span>
+                    <div class="ai-summary-meta-row"><strong>Pending Issue ID:</strong> <span id="cmfRecCpId">-</span></div>
+                    <div class="ai-summary-meta-row"><strong>Issue Title:</strong> <span id="cmfRecTitle">-</span></div>
+                    <div class="ai-summary-meta-row"><strong>Affected Component:</strong> <span id="cmfRecComponent">-</span></div>
                     
-                    <div class="cmf-rec-section">
-                        <h3>Decision Basis</h3>
-                        <div id="cmfRecEvidence" class="ai-summary-body">-</div>
+                    <div style="margin-top: 20px;">
+                        <h3 style="font-size: 14px; font-weight: 700; color: #0f5ea8; margin-bottom: 8px;">Recommendation</h3>
+                        <div id="cmfRecRecommendation" class="ai-summary-body" style="padding: 10px; background: #f0f7ff; border-left: 3px solid #0f5ea8; margin-bottom: 16px;">Generating...</div>
                     </div>
-                    <div class="cmf-rec-section">
-                        <h3>Qualification Score</h3>
-                        <div id="cmfRecScore" class="ai-summary-body">-</div>
-                    </div>
-                    <div class="cmf-rec-section">
-                        <h3>Qualification Gaps And Checks</h3>
-                        <div id="cmfRecChecks" class="ai-summary-body">-</div>
-                    </div>
-                    <div class="cmf-rec-section">
-                        <h3>Recommended Next Steps</h3>
-                        <div id="cmfRecNextSteps" class="ai-summary-body">-</div>
+
+                    <div style="margin-top: 16px;">
+                        <h3 style="font-size: 14px; font-weight: 700; color: #0f5ea8; margin-bottom: 8px;">Quality Score (/Threshold Score)</h3>
+                        <div class="cmf-rec-quality-card">
+                            <div>
+                                <div class="cmf-rec-quality-label">Overall evaluation</div>
+                                <div id="cmfRecQualityScore" class="cmf-rec-quality-value">-</div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="cmf-rec-placeholder-actions">
-                        <button type="button" class="cmf-rec-placeholder-btn primary" onclick="showCmfPlaceholderAction('Approve CMF Tag')">Approve CMF Tag</button>
-                        <button type="button" class="cmf-rec-placeholder-btn" onclick="showCmfPlaceholderAction('Commit Auto-fill')">Commit Auto-fill</button>
+                    <div style="margin-top: 16px;">
+                        <h3 style="font-size: 14px; font-weight: 700; color: #0f5ea8; margin-bottom: 8px;">Reasoning</h3>
+                        <div id="cmfRecEvidence" class="ai-summary-body" style="padding: 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 16px;">-</div>
+                    </div>
+                    
+                    <div style="margin-top: 16px;">
+                        <h3 style="font-size: 14px; font-weight: 700; color: #0f5ea8; margin-bottom: 8px;">Individual Scores</h3>
+                        <div id="cmfRecRuleScoresBody" class="cmf-rec-score-list">
+                            <div style="padding: 12px; text-align: center; color: #6b7280;">Loading...</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 16px;">
+                        <h3 style="font-size: 14px; font-weight: 700; color: #0f5ea8; margin-bottom: 8px;">Valid Next Steps</h3>
+                        <div id="cmfRecNextSteps" class="ai-summary-body" style="padding: 10px; background: #fbfdff; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 16px;">-</div>
                     </div>
                 </aside>
 
@@ -9779,16 +6090,13 @@ Submit
                         </div>
                     </div>
 
-                    <div class="issue-tab-shell" id="issueTabShell" runat="server" ClientIDMode="Static">
-                    <div class="issue-tab-main" style="flex:1 1 0; min-width:0; max-width:calc(100% - 306px); overflow:hidden;">
-
-                    <asp:Panel ID="issueListHeaderPanel" runat="server" Visible="true">
+                    <asp:Panel ID="issueListHeaderPanel" runat="server" Visible="false">
                         <div class="issue-page-hd">
                             <div class="issue-page-hd-top">
-                                <h1 class="issue-page-title">Issue List</h1>
+                                <h1 class="issue-page-title">Overview</h1>
                             </div>
                             <p class="issue-page-desc">
-                                Review active issues, understand their current status, and identify what needs attention next.
+                                Compact triage view with customer, owner, impact, status, milestone progress and edit controls in one workspace.
                             </p>
                         </div>
                         <div class="issue-kpi-row">
@@ -9810,39 +6118,41 @@ Submit
                             <div class="issue-kpi">
                                 <div class="issue-kpi-label">Stale</div>
                                 <div class="issue-kpi-value" style="color:#bc2f32;"><asp:Label ID="lblIssueStale" runat="server" Text="0" /></div>
-                                <div class="issue-kpi-sub"><i class="fas fa-clock" aria-hidden="true"></i> issues needing attention</div>
+                                <div class="issue-kpi-sub"><i class="fas fa-arrow-up" aria-hidden="true"></i> days open over 14</div>
                             </div>
                         </div>
                     </asp:Panel>
 
                     <!-- TOP FILTER PANEL - FOR ISSUE LIST -->
-                    <asp:Panel ID="fieldSelectorPanel" runat="server" Visible="true">
-                        <div class="field-selector-panel issue-top-filter-panel">
-                            <div class="issue-filter-section-header">
-                                <div class="issue-filter-title"><i class="fas fa-filter" aria-hidden="true"></i> Filters</div>
-                                <button type="button" id="issueFiltersToggleBtn" class="issue-collapse-btn" aria-expanded="true" onclick="toggleCollapsibleSection('issueFilters')">
-                                    <span class="toggle-label">Hide</span>
-                                    <span class="toggle-chevron">▾</span>
-                                </button>
-                            </div>
-                            <div id="issueTopFilterBody" class="collapsible-body">
-                                <div class="issue-top-filter-grid">
-                                    <div class="issue-top-filter-item"><span>Milestone</span><asp:DropDownList ID="ddlMilestoneTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlMilestoneHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                    <div class="issue-top-filter-item"><span>Owner</span><asp:DropDownList ID="ddlOwnerTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlOwnerHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                    <div class="issue-top-filter-item"><span>RVP Repro</span><asp:DropDownList ID="ddlRvpReproTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlRvpReproHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                    <div class="issue-top-filter-item"><span>iDST</span><asp:DropDownList ID="ddlIdstTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlIdstHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                    <div class="issue-top-filter-item"><span>LOS</span><asp:DropDownList ID="ddlLosTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlLosHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                    <div class="issue-top-filter-item"><span>Company</span><asp:DropDownList ID="ddlCompanyTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlCompanyHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                    <div class="issue-top-filter-item"><span>Customer Detail</span><asp:DropDownList ID="ddlDetailTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlDetailHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                    <div class="issue-top-filter-item"><span>Component Group</span><asp:DropDownList ID="ddlComponentTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlComponentHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                </div>
-                                <div class="issue-top-filter-buttons">
-                                    <asp:Button ID="btnClearFilters" runat="server" CssClass="filter-btn filter-btn-secondary" Text="Clear Filters" OnClick="btnClearFilters_Click" />
-                                </div>
-                            </div>
-                        </div>
-                    </asp:Panel>
-                    <!-- END TOP FILTER PANEL -->
+<asp:Panel ID="fieldSelectorPanel" runat="server" Visible="false">
+    <div class="field-selector-panel issue-top-filter-panel">
+        <div class="issue-filter-section-header">
+            <div class="issue-filter-title">Issue Filters</div>
+            <button type="button" id="issueFiltersToggleBtn" class="issue-collapse-btn" aria-expanded="true" onclick="toggleCollapsibleSection('issueFilters')">
+                <span class="toggle-label">Hide</span>
+                <span class="toggle-chevron">▾</span>
+            </button>
+        </div>
+        <div id="issueTopFilterBody" class="collapsible-body">
+            <div class="issue-top-filter-grid">
+                <div class="issue-top-filter-item"><span>Milestone</span><asp:DropDownList ID="ddlMilestoneTop" runat="server" AutoPostBack="false" CssClass="header-dropdown" /></div>
+                <div class="issue-top-filter-item"><span>Owner</span><asp:DropDownList ID="ddlOwnerTop" runat="server" AutoPostBack="false" CssClass="header-dropdown" /></div>
+                <div class="issue-top-filter-item"><span>RVP Repro</span><asp:DropDownList ID="ddlRvpReproTop" runat="server" AutoPostBack="false" CssClass="header-dropdown" /></div>
+                <div class="issue-top-filter-item"><span>iDST</span><asp:DropDownList ID="ddlIdstTop" runat="server" AutoPostBack="false" CssClass="header-dropdown" /></div>
+                <div class="issue-top-filter-item"><span>LOS</span><asp:DropDownList ID="ddlLosTop" runat="server" AutoPostBack="false" CssClass="header-dropdown" /></div>
+                <div class="issue-top-filter-item"><span>Company</span><asp:DropDownList ID="ddlCompanyTop" runat="server" AutoPostBack="false" CssClass="header-dropdown" /></div>
+                <div class="issue-top-filter-item"><span>Customer Detail</span><asp:DropDownList ID="ddlDetailTop" runat="server" AutoPostBack="false" CssClass="header-dropdown" /></div>
+                <div class="issue-top-filter-item"><span>Component Group</span><asp:DropDownList ID="ddlComponentTop" runat="server" AutoPostBack="false" CssClass="header-dropdown" /></div>
+                <div class="issue-top-filter-item"><span>CMF Request</span><asp:DropDownList ID="ddlCmfRequestTop" runat="server" AutoPostBack="false" CssClass="header-dropdown" /></div>
+            </div>
+            <div class="issue-top-filter-buttons">
+                <asp:Button ID="btnApplyFilters" runat="server" CssClass="filter-btn filter-btn-primary" Text="Apply Filters" OnClick="btnApplyFilters_Click" />
+                <asp:Button ID="btnClearFilters" runat="server" CssClass="filter-btn filter-btn-secondary" Text="Clear Filters" OnClick="btnClearFilters_Click" />
+            </div>
+        </div>
+    </div>
+</asp:Panel>
+<!-- END TOP FILTER PANEL -->
 
                     <div id="searchfilters" class="header-overlay" runat="server" visible="false">
                         <!-- Your existing search filters -->
@@ -9852,30 +6162,6 @@ Submit
                         <input type="text" id="searchColumn4" placeholder="Search Component" oninput="filterGrid()" />
                         <input type="text" id="searchColumn6" placeholder="Search RVP Repro" oninput="filterGrid()" />
                     </div>
-
-                    <div class="issue-user-toolbar">
-                        <div class="issue-view-note"><i class="fas fa-table-list" aria-hidden="true"></i> Compact issue workspace</div>
-                        <div class="issue-user-actions">
-                            <button
-                                type="button"
-                                id="issueFilterToolbarBtn"
-                                class="issue-toolbar-btn filter-toggle"
-                                onclick="toggleCollapsibleSection('issueFilters')">
-                                <i class="fas fa-filter" aria-hidden="true"></i>
-                                Filters
-                            </button>
-                            <button
-                                type="button"
-                                id="btnShowAllColumns"
-                                class="issue-toolbar-btn secondary"
-                                onclick="showAllColumns()"
-                                style="display:none">
-                                <i class="fas fa-table-columns" aria-hidden="true"></i>
-                                Show Columns
-                            </button>
-                        </div>
-                    </div>
-
 
                     <div class="gridview-container issue-grid-scroll">
                         <div class="issue-grid-toolbar">
@@ -9929,10 +6215,10 @@ Submit
             <ItemTemplate><%# RenderCustomerDetailWithCompanyAndProcessor(Eval("customer_detail"), Eval("customer_company"), Eval("processor")) %></ItemTemplate>
         </asp:TemplateField>
 
-        <asp:TemplateField HeaderText="Component" ItemStyle-CssClass="component-column field-component" HeaderStyle-CssClass="field-component">
+        <asp:TemplateField HeaderText="Component Group" ItemStyle-CssClass="component-column field-component" HeaderStyle-CssClass="field-component">
             <HeaderTemplate>
                 <div class="filter-header-container">
-                    <div class="filter-header-text">Component</div>
+                    <div class="filter-header-text">Component Group</div>
                     <div class="filter-container">
                         <asp:DropDownList ID="ddlComponentHeader" runat="server" AutoPostBack="true"
                             OnSelectedIndexChanged="ddlComponentHeader_SelectedIndexChanged" CssClass="header-dropdown" />
@@ -9957,21 +6243,6 @@ Submit
                 <asp:TextBox ID="txtOwner" runat="server" TextMode="MultiLine" Text='<%# Bind("Owner") %>'
                     CssClass="form-control"></asp:TextBox>
             </EditItemTemplate>
-        </asp:TemplateField>
-
-        <asp:TemplateField HeaderText="Milestone" ItemStyle-CssClass="field-milestone" HeaderStyle-CssClass="field-milestone">
-            <HeaderTemplate>
-                <div class="filter-header-container">
-                    <div class="filter-header-text">Milestone</div>
-                    <div class="filter-container">
-                        <asp:DropDownList ID="ddlMilestoneHeader" runat="server" AutoPostBack="true"
-                            OnSelectedIndexChanged="ddlMilestoneHeader_SelectedIndexChanged" CssClass="header-dropdown" />
-                    </div>
-                </div>
-            </HeaderTemplate>
-            <ItemTemplate>
-                <%# RenderMilestoneText(Eval("Driver"), Eval("MustFixFor")) %>
-            </ItemTemplate>
         </asp:TemplateField>
 
         <asp:TemplateField HeaderText="Status" ItemStyle-CssClass="field-status" HeaderStyle-CssClass="field-status">
@@ -10059,6 +6330,26 @@ Submit
             <ItemTemplate><%# RenderDaysOpen(Eval("days_active")) %></ItemTemplate>
         </asp:TemplateField>
 
+        <asp:TemplateField HeaderText="Milestone" ItemStyle-CssClass="field-milestone" HeaderStyle-CssClass="field-milestone">
+            <HeaderTemplate>
+                <div class="filter-header-container">
+                    <div class="filter-header-text">Milestone</div>
+                    <div class="filter-container">
+                        <asp:DropDownList ID="ddlMilestoneHeader" runat="server" AutoPostBack="true"
+                            OnSelectedIndexChanged="ddlMilestoneHeader_SelectedIndexChanged" CssClass="header-dropdown" />
+                    </div>
+                </div>
+            </HeaderTemplate>
+            <ItemTemplate>
+                <%# RenderMilestoneText(Eval("Driver"), Eval("MustFixFor")) %>
+            </ItemTemplate>
+        </asp:TemplateField>
+
+       
+        <%--<asp:BoundField DataField="cmf_request" HeaderText="CMF_Request" ReadOnly="True"
+            ItemStyle-CssClass="field-cmf_request" HeaderStyle-CssClass="field-cmf_request" />--%>
+
+        
         <asp:BoundField DataField="ClosedDetails" HeaderText="Closed Reason / Fixed Version" ReadOnly="True"
             ItemStyle-CssClass="cmfrequest-column field-closed_reason" HeaderStyle-CssClass="field-closed_reason" />
 
@@ -10198,21 +6489,18 @@ Submit
   
 </asp:GridView>
                         </div>
-                    </div>
                         <asp:Panel ID="issuePagerPanel" runat="server" Visible="false">
                             <div id="issue-scroll-proxy" class="issue-scroll-proxy" aria-label="Issue list horizontal scroll">
                                 <div id="issue-scroll-proxy-inner" class="issue-scroll-proxy-inner"></div>
                             </div>
                             <div class="issue-pager-controls">
-                                <div class="issue-page-nav" aria-label="Issue pages">
-                                    <asp:LinkButton ID="btnPageGroupPrev" runat="server" CssClass="issue-pager-group-btn" OnClick="btnPageGroupPrev_Click" ToolTip="Previous 10 pages">&laquo;</asp:LinkButton>
-                                    <asp:Repeater ID="rptPageNumbers" runat="server" OnItemCommand="rptPageNumbers_ItemCommand">
-                                        <ItemTemplate>
-                                            <asp:LinkButton ID="btnPageNumber" runat="server" CommandName="SelectPage" CommandArgument='<%# Eval("PageNumber") %>' CssClass='<%# "issue-pager-btn " + (Eval("IsCurrentPage").ToString() == "True" ? "issue-pager-current" : "") %>' Text='<%# Eval("PageNumber") %>' />
-                                        </ItemTemplate>
-                                    </asp:Repeater>
-                                    <asp:LinkButton ID="btnPageGroupNext" runat="server" CssClass="issue-pager-group-btn" OnClick="btnPageGroupNext_Click" ToolTip="Next 10 pages">&raquo;</asp:LinkButton>
-                                </div>
+                                <asp:LinkButton ID="btnPageGroupPrev" runat="server" CssClass="issue-pager-group-btn" OnClick="btnPageGroupPrev_Click" ToolTip="Previous 10 pages">&laquo;</asp:LinkButton>
+                                <asp:Repeater ID="rptPageNumbers" runat="server" OnItemCommand="rptPageNumbers_ItemCommand">
+                                    <ItemTemplate>
+                                        <asp:LinkButton ID="btnPageNumber" runat="server" CommandName="SelectPage" CommandArgument='<%# Eval("PageNumber") %>' CssClass='<%# "issue-pager-btn " + (Eval("IsCurrentPage").ToString() == "True" ? "issue-pager-current" : "") %>' Text='<%# Eval("PageNumber") %>' />
+                                    </ItemTemplate>
+                                </asp:Repeater>
+                                <asp:LinkButton ID="btnPageGroupNext" runat="server" CssClass="issue-pager-group-btn" OnClick="btnPageGroupNext_Click" ToolTip="Next 10 pages">&raquo;</asp:LinkButton>
                                 <span class="issue-page-size-control">
                                     <span>Rows per page</span>
                                     <asp:DropDownList ID="ddlIssuePageSize" runat="server" AutoPostBack="true" CssClass="issue-page-size-select" OnSelectedIndexChanged="ddlIssuePageSize_SelectedIndexChanged">
@@ -10229,125 +6517,79 @@ Submit
                             </div>
                         </asp:Panel>
 
-                    <aside class="issue-side-panel" aria-label="Issue tab assistant panel" style="flex:0 0 290px; width:290px; min-width:290px; max-width:290px; position:sticky; top:90px; align-self:flex-start; display:grid;">
-                        <section class="interactive-side-card">
-                            <div class="interactive-side-head">
-                                <h3 class="interactive-side-title"><i class="fas fa-robot" aria-hidden="true" style="color:#4f46e5; margin-right:6px;"></i>AI Assistant</h3>
-                            </div>
-                            <p class="interactive-side-sub">Ask anything about your active issues and triage signals.</p>
-                            <button type="button" class="interactive-side-btn" onclick="showPortalToast('Use the Reports tab assistant for deep issue queries.')">Ask AI</button>
-                        </section>
-
-                        <section class="interactive-side-card">
-                            <div class="interactive-side-head"><h3 class="interactive-side-title">Quick Insights</h3></div>
-                            <ul class="interactive-chip-list">
-                                <li><span>Total visible issues</span><span class="interactive-chip" id="issueSideTotal">0</span></li>
-                                <li><span>In progress signals</span><span class="interactive-chip" id="issueSideProgress">0</span></li>
-                                <li><span>Stale over SLA</span><span class="interactive-chip" id="issueSideStale">0</span></li>
-                            </ul>
-                        </section>
-
-                        <section class="interactive-side-card">
-                            <div class="interactive-side-head"><h3 class="interactive-side-title">Shortcuts</h3></div>
-                            <div class="interactive-shortcuts">
-                                <button type="button" class="interactive-shortcut-btn" onclick="document.getElementById('issueFiltersToggleBtn').click()">Toggle Filters</button>
-                                <button type="button" class="interactive-shortcut-btn" onclick="showAllColumns()">Show Columns</button>
-                                <button type="button" class="interactive-shortcut-btn" onclick="showPortalToast('Use row AI summary buttons inside Status column.')">AI Summary</button>
-                                <button type="button" class="interactive-shortcut-btn" onclick="showPortalToast('Use Export to Excel in top actions.')">Export View</button>
-                            </div>
-                        </section>
-                    </aside>
-                    </div>
-
                     <!-- CMF PENDING LIST HEADER PANEL - INSIDE mainDataWrapper -->
-                    <div class="pending-tab-shell" id="pendingTabShell" runat="server" ClientIDMode="Static">
-                        <div class="pending-tab-main" style="flex:1 1 0; min-width:0; max-width:calc(100% - 306px); overflow:hidden;">
-                            <div class="cmf-pending-page-hd">
-                                <div>
-                                    <h1 class="cmf-pending-page-title">CMF Pending</h1>
-
-                                    <p class="cmf-pending-page-desc">
-                                        Review pending requests, supporting evidence, customer impact, and qualification signals.
-                                    </p>
-                                </div>
+                    <asp:Panel ID="cmf_pending_header_panel" runat="server" Visible="false">
+                        <div class="cmf-pending-page-hd">
+                            <div class="cmf-pending-page-hd-top">
+                                <h1 class="cmf-pending-page-title">Overview</h1>
                             </div>
-
-                            <asp:Panel ID="cmf_pending_header_panel" runat="server" Visible="false"></asp:Panel>
-
-                            <div style="display:none;" aria-hidden="true">
-                                <asp:Label ID="lblPendingSightings" runat="server" Text="0" />
-                                <asp:Label ID="lblQualifyForCmf" runat="server" Text="0" />
-                                <asp:Label ID="lblLikelyDuplicate" runat="server" Text="0" />
-                                <asp:Label ID="lblIncompleteSysScope" runat="server" Text="0" />
-                            </div>
-
-                            <!-- CMF PENDING LIST GRIDVIEW - INSIDE mainDataWrapper -->
-                            <div class="gridview-container cmf-pending-grid-wrap" id="cmfPendingGridContainer" runat="server">
-                                <asp:GridView ID="GridView_cmf_pending" CssClass="table-primary" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="false">
-                                    <Columns>
-                                        <asp:TemplateField HeaderText="Issue Details" ItemStyle-Width="245px" HeaderStyle-Width="245px">
-                                            <ItemTemplate><%# RenderPendingIssueDetailsWithRecommendation(Eval("cp_id"), Eval("title"), Eval("cmf_request"), Eval("component"), Eval("impact"), Eval("idst"), Eval("repro_on_rvp"), Eval("reproducibility"), Eval("customer_detail"), Eval("customer_owner")) %></ItemTemplate>
-                                        </asp:TemplateField>
-
-                                        <asp:TemplateField HeaderText="Customer / Owner" ItemStyle-Width="160px" HeaderStyle-Width="160px">
-                                            <ItemTemplate><%# RenderPendingCustomer(Eval("customer_detail"), Eval("customer_owner")) %></ItemTemplate>
-                                        </asp:TemplateField>
-
-                                        <asp:TemplateField HeaderText="Component" ItemStyle-Width="150px" HeaderStyle-Width="150px">
-                                            <ItemTemplate><%# RenderComponentWithGroupBadge(Eval("component"), Eval("component_group")) %></ItemTemplate>
-                                        </asp:TemplateField>
-
-                                        <asp:TemplateField HeaderText="Evidence" ItemStyle-Width="190px" HeaderStyle-Width="190px">
-                                            <ItemTemplate><%# RenderPendingEvidence(Eval("idst"), Eval("repro_on_rvp"), Eval("reproducibility")) %></ItemTemplate>
-                                        </asp:TemplateField>
-
-                                        <asp:TemplateField HeaderText="Impact" ItemStyle-Width="210px" HeaderStyle-Width="210px">
-                                            <ItemTemplate><%# RenderPendingAskImpact(Eval("date_cmf_ask"), Eval("cmf_request"), Eval("impact")) %></ItemTemplate>
-                                        </asp:TemplateField>
-
-                                    </Columns> 
-                                </asp:GridView>
-                            </div>
+                            <p class="cmf-pending-page-desc">
+                                AI reads each sighting against CMF rules, recommends tagging, detects duplicates, parses SysScope logs for root cause, and auto-completes missing fields.
+                            </p>
                         </div>
                         
-                        <aside class="pending-side-panel" aria-label="CMF pending assistant panel" style="flex:0 0 290px; width:290px; min-width:290px; max-width:290px; position:sticky; top:90px; align-self:flex-start; display:grid;">
-                            <section class="interactive-side-card">
-                                <div class="interactive-side-head">
-                                    <h3 class="interactive-side-title"><i class="fas fa-brain" aria-hidden="true" style="color:#7c3aed; margin-right:6px;"></i>Pending AI Queue</h3>
-                                </div>
-                                <p class="interactive-side-sub">Recommendation engine snapshots for current platform selection.</p>
-                                <button type="button" class="interactive-side-btn" onclick="showPortalToast('Use the Recommendation button on each pending row.')">Open Recommendation Flow</button>
-                            </section>
+                        <!-- KPI ROW FOR CMF PENDING -->
+                        <div class="cmf-pending-kpi-row">
+                            <div class="cmf-pending-kpi">
+                                <div class="cmf-pending-kpi-label">Pending Sightings</div>
+                                <div class="cmf-pending-kpi-value"><asp:Label ID="lblPendingSightings" runat="server" Text="0" /></div>
+                                <div class="cmf-pending-kpi-sub">Awaiting CMF decision</div>
+                            </div>
+                            <div class="cmf-pending-kpi">
+                                <div class="cmf-pending-kpi-label" style="color:#2563eb;">Qualify for CMF</div>
+                                <div class="cmf-pending-kpi-value" style="color:#059669;"><asp:Label ID="lblQualifyForCmf" runat="server" Text="0" /></div>
+                                <div class="cmf-pending-kpi-sub">Admin-rule signals met</div>
+                            </div>
+                            <div class="cmf-pending-kpi">
+                                <div class="cmf-pending-kpi-label" style="color:#2563eb;">Likely Duplicate</div>
+                                <div class="cmf-pending-kpi-value" style="color:#d97706;"><asp:Label ID="lblLikelyDuplicate" runat="server" Text="0" /></div>
+                                <div class="cmf-pending-kpi-sub">Duplicate language or repeated title</div>
+                            </div>
+                            <div class="cmf-pending-kpi">
+                                <div class="cmf-pending-kpi-label" style="color:#2563eb;">Incomplete SysScope</div>
+                                <div class="cmf-pending-kpi-value" style="color:#dc2626;"><asp:Label ID="lblIncompleteSysScope" runat="server" Text="0" /></div>
+                                <div class="cmf-pending-kpi-sub">Missing repro, iDST, or impact</div>
+                            </div>
+                        </div>
+                    </asp:Panel>
 
-                            <section class="interactive-side-card">
-                                <div class="interactive-side-head"><h3 class="interactive-side-title">Quick Insights</h3></div>
-                                <ul class="interactive-chip-list">
-                                    <li><span>Qualification candidates</span><span class="interactive-chip" id="pendingSideQualify">0</span></li>
-                                    <li><span>Potential duplicates</span><span class="interactive-chip" id="pendingSideDup">0</span></li>
-                                    <li><span>Missing debug evidence</span><span class="interactive-chip" id="pendingSideMissing">0</span></li>
-                                </ul>
-                            </section>
+                    <!-- CMF PENDING LIST GRIDVIEW - INSIDE mainDataWrapper -->
+                    <div class="gridview-container cmf-pending-grid-wrap" id="cmfPendingGridContainer" runat="server">
+                        <asp:GridView ID="GridView_cmf_pending" CssClass="table-primary" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="false">
+                            <Columns>
+                                <asp:TemplateField HeaderText="" ItemStyle-Width="34px" HeaderStyle-Width="34px">
+                                    <HeaderTemplate><span class="pending-select-cell pending-select-header"><span class="pending-row-check" aria-hidden="true"></span></span></HeaderTemplate>
+                                    <ItemTemplate><%# RenderPendingSelector(Eval("cmf_request")) %></ItemTemplate>
+                                </asp:TemplateField>
 
-                            <section class="interactive-side-card">
-                                <div class="interactive-side-head"><h3 class="interactive-side-title">Shortcuts</h3></div>
-                                <div class="interactive-shortcuts">
-                                    <button type="button" class="interactive-shortcut-btn" onclick="showPortalToast('Start with rows that have strongest recommendation confidence.')">Top Priority First</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="showPortalToast('Use shared platform dropdown above to switch context.')">Switch Platform</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="showPortalToast('Open row recommendation and review quality score details.')">Review Scores</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="showPortalToast('Use Export to Excel for pending backlog sync.')">Export Pending</button>
-                                </div>
-                            </section>
+                                <asp:TemplateField HeaderText="Issue Details" ItemStyle-Width="210px" HeaderStyle-Width="210px">
+                                    <ItemTemplate><%# RenderPendingIssueDetails(Eval("cp_id"), Eval("title"), Eval("cmf_request")) %></ItemTemplate>
+                                </asp:TemplateField>
 
-                            <section class="interactive-side-card">
-                                <div class="interactive-side-head"><h3 class="interactive-side-title">Actions</h3></div>
-                                <div class="interactive-shortcuts">
-                                    <button type="button" class="interactive-shortcut-btn" onclick="showPortalToast('Review rows with high quality score first.')">Prioritize High Score</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="showPortalToast('Use row controls to approve and commit details.')">Commit Auto-fill</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="showPortalToast('Use Export to Excel for backlog sharing.')">Export Backlog</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="showPortalToast('Switch platform in the shared filter bar.')">Switch Platform</button>
-                                </div>
-                            </section>
-                        </aside>
+                                <asp:TemplateField HeaderText="Customer / Owner" ItemStyle-Width="160px" HeaderStyle-Width="160px">
+                                    <ItemTemplate><%# RenderPendingCustomer(Eval("customer_detail"), Eval("customer_owner")) %></ItemTemplate>
+                                </asp:TemplateField>
+
+                                <asp:TemplateField HeaderText="Component" ItemStyle-Width="150px" HeaderStyle-Width="150px">
+                                    <ItemTemplate><%# RenderComponentWithGroupBadge(Eval("component"), Eval("component_group")) %></ItemTemplate>
+                                </asp:TemplateField>
+
+                                <asp:TemplateField HeaderText="Evidence" ItemStyle-Width="190px" HeaderStyle-Width="190px">
+                                    <ItemTemplate><%# RenderPendingEvidence(Eval("idst"), Eval("repro_on_rvp"), Eval("reproducibility")) %></ItemTemplate>
+                                </asp:TemplateField>
+
+                                <asp:TemplateField HeaderText="Ask / Impact" ItemStyle-Width="210px" HeaderStyle-Width="210px">
+                                    <ItemTemplate><%# RenderPendingAskImpact(Eval("date_cmf_ask"), Eval("cmf_request"), Eval("impact")) %></ItemTemplate>
+                                </asp:TemplateField>
+
+                                <asp:TemplateField HeaderText="Recommendation" ItemStyle-CssClass="field-recommendation" HeaderStyle-CssClass="field-recommendation" ItemStyle-Width="128px" HeaderStyle-Width="128px">
+                                    <ItemTemplate>
+                                        <%# RenderPendingRecommendationButton(Eval("cp_id"), Eval("title"), Eval("component"), Eval("cmf_request"), Eval("impact"), Eval("idst"), Eval("repro_on_rvp"), Eval("reproducibility"), Eval("customer_detail"), Eval("customer_owner")) %>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+
+                            </Columns> 
+                        </asp:GridView>
                     </div>
 
                     </div>
@@ -10385,6 +6627,8 @@ Submit
                                                         <asp:TextBox ID="txtSupportModel" runat="server" TextMode="MultiLine" Text='<%# Bind("SupportModel") %>' CssClass="form-control"></asp:TextBox>
                                                     </EditItemTemplate>
                                                 </asp:TemplateField>
+                                                <%--<asp:BoundField DataField="Driver_issues" HeaderText="Driver_issues" ReadOnly="True" />
+                                                <asp:BoundField DataField="Implemented_Verified" HeaderText="Implemented/Verified" ReadOnly="True" />--%>
                                                 <asp:CommandField ShowEditButton="True" />
                                             </Columns>
                                         </asp:GridView>
@@ -10396,6 +6640,7 @@ Submit
                                             <Columns>
                                                 
                                                 <asp:BoundField DataField="Design" HeaderText="Design" />
+<%--                                                <asp:BoundField DataField="ME_SKU" HeaderText="ME_SKU" />--%>
                                                 <asp:BoundField DataField="SWImageFreeze" HeaderText="SW Image Freeze" />
                                                 <asp:BoundField DataField="Issues_in_CMF_ASK" HeaderText="Issues in CMF_ASK" />
                                                 <asp:BoundField DataField="Total_CMF_REJECT" HeaderText="Total CMF_REJECT" />
@@ -10633,6 +6878,12 @@ Target="_blank" />
       <div class="modal-header">
         <div class="modal-title-container">
           <h5 class="modal-title">Issue List (by Milestone) — <asp:Label ID="lblDriverName1" runat="server" /></h5>
+         <%-- <asp:Button ID="btnExportDriverIssues1" runat="server"
+                      Text="Export to Excel"
+                      CssClass="modern-button1 export-btn"
+                      OnClientClick="exportCMFIssues('component_value', '<%= HiddenDriverName.Value %>', 'issue_type_value'); return false;" />
+                    --%>
+
         <asp:Button ID="btnExportDriverIssues1" runat="server"
             Text="Export to Excel"
             CssClass="modern-button1 export-btn"
@@ -10768,6 +7019,13 @@ Target="_blank" />
                                                         </ItemTemplate>
                                                         <ItemStyle Width="33%" />
                                                     </asp:TemplateField>
+                                                   <%-- <asp:TemplateField HeaderText="Implemented">
+                                                        <ItemTemplate>
+                                                            <asp:Label ID="lblImplementedCount" runat="server" Text='<%# Eval("ImplementedCount") %>'></asp:Label><br />
+                                                            <asp:Label ID="lblImplementedDetails" runat="server" Text='<%# Eval("ImplementedDetails") %>'></asp:Label>
+                                                        </ItemTemplate>
+                                                        <ItemStyle Width="33%" />
+                                                    </asp:TemplateField>--%>
                                                     <asp:TemplateField HeaderText="Implemented">
                                                         <ItemTemplate>
                                                             <asp:Label ID="lblImplementedCountAndDup" runat="server" Text='<%# Eval("ImplementedCountAndDup") %>'></asp:Label><br />
@@ -10791,6 +7049,44 @@ Target="_blank" />
 
                                           
                                             <!-- Milestone Mapping: Drivers and CMF counts -->
+                                            <%--<asp:GridView ID="GridView_milestone_map"
+                                                          runat="server"
+                                                          AutoGenerateColumns="False"
+                                                          CssClass="table-primary"
+                                                          EmptyDataText="No CMF data for milestones"
+                                                          Visible="true">
+                                                <Columns>
+                                                    <asp:BoundField DataField="Driver" HeaderText="Driver" ReadOnly="True" ItemStyle-Width="50%" />
+                                                    <asp:BoundField DataField="CMFCount" HeaderText="CMF Count" ReadOnly="True" ItemStyle-Width="50%" />
+                                                </Columns>
+                                            </asp:GridView>--%>
+
+                                       <%-- <asp:GridView ID="GridView_milestone_map"
+                                                      runat="server"
+                                                      AutoGenerateColumns="False"
+                                                      CssClass="table-primary"
+                                                      EmptyDataText="No CMF data for milestones"
+                                                      Visible="true">
+                                            <Columns>
+
+                                                <asp:BoundField DataField="Driver" HeaderText="Milestone" ReadOnly="True" ItemStyle-Width="50%" />
+
+                                               <asp:TemplateField HeaderText="Unique CMF Count">
+                                                  <ItemTemplate>
+                                                    <a href="javascript:void(0)"
+                                                       onclick='showDriverIssues("<%# HttpUtility.JavaScriptStringEncode(Convert.ToString(Eval("Driver") ?? "")) %>"); return false;'
+                                                       class="btn btn-link p-0">
+                                                      <%# Eval("CMFCount") %>
+                                                    </a>
+                                                  </ItemTemplate>
+                                                  <ItemStyle Width="50%" />
+                                                </asp:TemplateField>
+                                                
+                                            </Columns>
+                                        </asp:GridView>
+
+
+                                        --%>  
                                             
                                             <asp:GridView ID="GridView_milestone_map"
               runat="server"
