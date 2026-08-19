@@ -7279,7 +7279,8 @@ td:nth-child(odd), th:nth-child(odd) {
         box-shadow: none !important;
         max-height: min(62vh, 620px) !important;
         min-height: 0 !important;
-        overflow: auto !important;
+        overflow-x: auto !important;
+        overflow-y: scroll !important;
         scrollbar-gutter: stable !important;
     }
 
@@ -10043,6 +10044,7 @@ Submit
   
 </asp:GridView>
                         </div>
+                    </div>
                         <asp:Panel ID="issuePagerPanel" runat="server" Visible="false">
                             <div id="issue-scroll-proxy" class="issue-scroll-proxy" aria-label="Issue list horizontal scroll">
                                 <div id="issue-scroll-proxy-inner" class="issue-scroll-proxy-inner"></div>
@@ -10073,7 +10075,6 @@ Submit
                             </div>
                         </asp:Panel>
 
-                    </div>
                     <aside class="issue-side-panel" aria-label="Issue tab assistant panel">
                         <section class="interactive-side-card">
                             <div class="interactive-side-head">
