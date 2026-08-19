@@ -607,16 +607,17 @@ public partial class CMF_Web_portal : System.Web.UI.Page
     private void ApplyInteractiveTabShellVisibility()
     {
         string activeTab = GetActiveFocusedTab();
-        if (string.Equals(activeTab, "pending", StringComparison.OrdinalIgnoreCase) && !GridView_cmf_pending.Visible)
+        bool pendingActive = string.Equals(activeTab, "pending", StringComparison.OrdinalIgnoreCase) || pane4.Visible;
+        bool issueActive = !pendingActive && (string.Equals(activeTab, "issue", StringComparison.OrdinalIgnoreCase) || pane3.Visible);
+
+        if (pendingActive)
         {
             EnsurePendingTabVisibleForPostback();
             BindGridView_cmf_pending();
             UpdateCmfPendingKpis();
         }
 
-        SetInteractiveTabShellVisibility(
-            string.Equals(activeTab, "issue", StringComparison.OrdinalIgnoreCase),
-            string.Equals(activeTab, "pending", StringComparison.OrdinalIgnoreCase));
+        SetInteractiveTabShellVisibility(issueActive, pendingActive);
     }
 
     private void RegisterActiveTabClientState()

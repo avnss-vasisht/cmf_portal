@@ -7444,13 +7444,23 @@ td:nth-child(odd), th:nth-child(odd) {
         align-items: flex-start !important;
         gap: 16px !important;
         width: 100% !important;
+        max-width: 100% !important;
+        flex-wrap: nowrap !important;
     }
 
     #issueTabShell.cmf-tab-shell-active > .issue-tab-main,
     #pendingTabShell.cmf-tab-shell-active > .pending-tab-main {
-        flex: 1 1 auto !important;
+        flex: 1 1 0 !important;
         min-width: 0 !important;
-        width: calc(100% - 306px) !important;
+        max-width: calc(100% - 306px) !important;
+        overflow: hidden !important;
+    }
+
+    #issueTabShell.cmf-tab-shell-active .issue-grid-scroll,
+    #pendingTabShell.cmf-tab-shell-active .cmf-pending-grid-wrap {
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
     }
 
     #issueTabShell.cmf-tab-shell-active > .issue-side-panel,
@@ -7458,7 +7468,10 @@ td:nth-child(odd), th:nth-child(odd) {
         flex: 0 0 290px !important;
         width: 290px !important;
         max-width: 290px !important;
+        min-width: 290px !important;
         display: grid !important;
+        position: sticky !important;
+        top: 90px !important;
     }
 
     @media (max-width: 760px) {
@@ -8871,14 +8884,16 @@ td:nth-child(odd), th:nth-child(odd) {
             var main = shell.querySelector('.issue-tab-main, .pending-tab-main');
             var side = shell.querySelector('.issue-side-panel, .pending-side-panel');
             if (main) {
-                main.style.setProperty('flex', '1 1 auto', 'important');
+                main.style.setProperty('flex', '1 1 0', 'important');
                 main.style.setProperty('min-width', '0', 'important');
-                main.style.setProperty('width', 'calc(100% - 306px)', 'important');
+                main.style.setProperty('max-width', 'calc(100% - 306px)', 'important');
+                main.style.setProperty('overflow', 'hidden', 'important');
             }
             if (side) {
                 side.style.setProperty('flex', '0 0 290px', 'important');
                 side.style.setProperty('width', '290px', 'important');
                 side.style.setProperty('max-width', '290px', 'important');
+                side.style.setProperty('min-width', '290px', 'important');
                 side.style.setProperty('display', 'grid', 'important');
                 side.style.setProperty('position', 'sticky', 'important');
                 side.style.setProperty('top', '90px', 'important');
@@ -9731,7 +9746,7 @@ Submit
                     </div>
 
                     <div class="issue-tab-shell" id="issueTabShell" runat="server" ClientIDMode="Static">
-                    <div class="issue-tab-main">
+                    <div class="issue-tab-main" style="flex:1 1 0; min-width:0; max-width:calc(100% - 306px); overflow:hidden;">
 
                     <asp:Panel ID="issueListHeaderPanel" runat="server" Visible="true">
                         <div class="issue-page-hd">
@@ -10180,7 +10195,7 @@ Submit
                         </asp:Panel>
 
                     </div>
-                    <aside class="issue-side-panel" aria-label="Issue tab assistant panel">
+                    <aside class="issue-side-panel" aria-label="Issue tab assistant panel" style="flex:0 0 290px; width:290px; min-width:290px; max-width:290px; position:sticky; top:90px; align-self:flex-start; display:grid;">
                         <section class="interactive-side-card">
                             <div class="interactive-side-head">
                                 <h3 class="interactive-side-title"><i class="fas fa-robot" aria-hidden="true" style="color:#4f46e5; margin-right:6px;"></i>AI Assistant</h3>
@@ -10212,7 +10227,7 @@ Submit
 
                     <!-- CMF PENDING LIST HEADER PANEL - INSIDE mainDataWrapper -->
                     <div class="pending-tab-shell" id="pendingTabShell" runat="server" ClientIDMode="Static">
-                        <div class="pending-tab-main">
+                        <div class="pending-tab-main" style="flex:1 1 0; min-width:0; max-width:calc(100% - 306px); overflow:hidden;">
                             <div class="cmf-pending-page-hd">
                                 <div>
                                     <h1 class="cmf-pending-page-title">CMF Pending</h1>
@@ -10261,7 +10276,7 @@ Submit
                             </div>
                         </div>
                         
-                        <aside class="pending-side-panel" aria-label="CMF pending assistant panel">
+                        <aside class="pending-side-panel" aria-label="CMF pending assistant panel" style="flex:0 0 290px; width:290px; min-width:290px; max-width:290px; position:sticky; top:90px; align-self:flex-start; display:grid;">
                             <section class="interactive-side-card">
                                 <div class="interactive-side-head">
                                     <h3 class="interactive-side-title"><i class="fas fa-brain" aria-hidden="true" style="color:#7c3aed; margin-right:6px;"></i>Pending AI Queue</h3>
