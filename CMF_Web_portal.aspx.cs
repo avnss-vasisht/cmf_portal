@@ -610,6 +610,12 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         bool pendingActive = string.Equals(activeTab, "pending", StringComparison.OrdinalIgnoreCase) || pane4.Visible;
         bool issueActive = !pendingActive && (string.Equals(activeTab, "issue", StringComparison.OrdinalIgnoreCase) || pane3.Visible);
 
+        if (!pendingActive && !issueActive && sharedFilterPanel.Visible)
+        {
+            issueActive = overall_request_details.Visible;
+            pendingActive = !issueActive;
+        }
+
         if (pendingActive)
         {
             EnsurePendingTabVisibleForPostback();
@@ -812,8 +818,8 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         pendingTabShell.Visible = true;
         issueTabShell.Attributes["class"] = "issue-tab-shell " + (showIssue ? "cmf-tab-shell-active" : "cmf-tab-shell-hidden");
         pendingTabShell.Attributes["class"] = "pending-tab-shell " + (showPending ? "cmf-tab-shell-active" : "cmf-tab-shell-hidden");
-        issueTabShell.Attributes["style"] = showIssue ? "display:flex !important;align-items:flex-start !important;gap:16px !important;width:100% !important;" : "display:none !important;";
-        pendingTabShell.Attributes["style"] = showPending ? "display:flex !important;align-items:flex-start !important;gap:16px !important;width:100% !important;" : "display:none !important;";
+        issueTabShell.Attributes["style"] = showIssue ? "display:flex !important;align-items:flex-start !important;gap:16px !important;width:100% !important;flex-wrap:nowrap !important;" : "display:none !important;";
+        pendingTabShell.Attributes["style"] = showPending ? "display:flex !important;align-items:flex-start !important;gap:16px !important;width:100% !important;flex-wrap:nowrap !important;" : "display:none !important;";
     }
 
     private static string GetTimeBasedGreeting()

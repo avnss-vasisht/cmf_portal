@@ -7477,16 +7477,22 @@ td:nth-child(odd), th:nth-child(odd) {
     @media (max-width: 760px) {
         #issueTabShell.cmf-tab-shell-active,
         #pendingTabShell.cmf-tab-shell-active {
-            flex-direction: column !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
         }
 
         #issueTabShell.cmf-tab-shell-active > .issue-tab-main,
-        #pendingTabShell.cmf-tab-shell-active > .pending-tab-main,
+        #pendingTabShell.cmf-tab-shell-active > .pending-tab-main {
+            max-width: calc(100% - 306px) !important;
+            flex-basis: 0 !important;
+        }
+
         #issueTabShell.cmf-tab-shell-active > .issue-side-panel,
         #pendingTabShell.cmf-tab-shell-active > .pending-side-panel {
-            width: 100% !important;
-            max-width: none !important;
-            flex-basis: auto !important;
+            width: 290px !important;
+            max-width: 290px !important;
+            min-width: 290px !important;
+            flex-basis: 290px !important;
         }
     }
 
@@ -8865,6 +8871,12 @@ td:nth-child(odd), th:nth-child(odd) {
             var pendingActive = activeTab === 'pending' || activeText.indexOf('pending') >= 0;
             var issueActive = !pendingActive && (activeTab === 'issue' || activeText.indexOf('issue') >= 0);
 
+            if (!pendingActive && !issueActive) {
+                var issueGrid = document.getElementById(window.CMF_PORTAL.ids.overallRequestDetails);
+                issueActive = isElementVisible(issueGrid);
+                pendingActive = !issueActive && !!pendingShell;
+            }
+
             applyInteractiveShellState(issueShell, issueActive);
             applyInteractiveShellState(pendingShell, pendingActive);
             filterPortalVisibleTables();
@@ -8880,6 +8892,7 @@ td:nth-child(odd), th:nth-child(odd) {
             shell.style.setProperty('align-items', 'flex-start', 'important');
             shell.style.setProperty('gap', '16px', 'important');
             shell.style.setProperty('width', '100%', 'important');
+            shell.style.setProperty('flex-wrap', 'nowrap', 'important');
 
             var main = shell.querySelector('.issue-tab-main, .pending-tab-main');
             var side = shell.querySelector('.issue-side-panel, .pending-side-panel');
@@ -10164,6 +10177,7 @@ Submit
   
 </asp:GridView>
                         </div>
+                    </div>
                         <asp:Panel ID="issuePagerPanel" runat="server" Visible="false">
                             <div id="issue-scroll-proxy" class="issue-scroll-proxy" aria-label="Issue list horizontal scroll">
                                 <div id="issue-scroll-proxy-inner" class="issue-scroll-proxy-inner"></div>
@@ -10194,7 +10208,6 @@ Submit
                             </div>
                         </asp:Panel>
 
-                    </div>
                     <aside class="issue-side-panel" aria-label="Issue tab assistant panel" style="flex:0 0 290px; width:290px; min-width:290px; max-width:290px; position:sticky; top:90px; align-self:flex-start; display:grid;">
                         <section class="interactive-side-card">
                             <div class="interactive-side-head">
