@@ -1,0 +1,21 @@
+--- CMF Portal Database ---
+Sighting ID: 22022523971
+Title: [Samsung][Huqin][WCL]GB6-14_WCL_BE]]Units may hang with Samsung Galaxy Logo when doing restart Cycling test. (F/R: 2/10 units, 3/50 times), points to VPU
+Operating System: windows.11_v25H2
+Component: platform.Common.sw.win-driver.VPU Driver
+CMF Request: cmf_ok
+Must Fix For: WCL_PR5
+Closed Reason: N/A
+Customer Impact: 2-high
+Priority: p2-high
+CMF Status: [iDSTWW33.5] The issue remains under active debug, with investigations currently focused on isolating the impact of NPK, VTD, ATS invalidation, and NPU driver settings through a series of targeted experiments and additional trace collection involving both platform and IDC VPU hardware teams.
+Promoted Status: [iDSTWW33.5] The issue remains under active debug, with investigations currently focused on isolating the impact of NPK, VTD, ATS invalidation, and NPU driver settings through a series of targeted experiments and additional trace collection involving both platform and IDC VPU hardware teams.
+Drivers: WCL_PR5
+Sysdebug: customer_must_fix
+Impact: High FR and block customer for production 
+All systems will fail in 12hrs Sx cycling test, blocked customer validation
+Processor: wildcatlak
+Reproducibility: always_100%
+RVP Platform Debug Details: unknown
+Promoted ID: 15019431169
+Promoted Issue Lookup: Not found in current platform table

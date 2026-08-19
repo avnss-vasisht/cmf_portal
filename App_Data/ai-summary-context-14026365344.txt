@@ -1,0 +1,20 @@
+--- CMF Portal Database ---
+Sighting ID: 14026365344
+Title: [HONOR][ZHUQUEC][PTL] Meet compilation errors when integrating OpenVINO25.3
+Operating System: windows.11_v24H2
+Component: platform.Common.sw.win-driver.VPU Driver
+CMF Request: cmf_ok
+Must Fix For: PTL_BE_PV
+Closed Reason: internal_sw_bug
+Customer Impact: 3-medium
+Priority: p1-showstopper
+CMF Status: N/A
+Promoted Status: complete
+Drivers: PTL_BE_PV
+Sysdebug: customer_must_fix
+Impact: Impact on customer's AI feature hence impact on design's PVT Exit
+Processor: pantherlake_h484
+Reproducibility: always_100%
+RVP Platform Debug Details: yes
+Promoted ID: CVS-175618
+Promoted Issue Lookup: Not found in current platform table
