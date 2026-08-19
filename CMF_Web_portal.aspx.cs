@@ -140,6 +140,7 @@ public partial class CMF_Web_portal : System.Web.UI.Page
     private const string IssuePendingPlatformSessionKey = "issuePendingSelectedPlatform";
     private const string IssueGridCacheKeySessionKey = "issueGridCacheKey";
     private const string IssueGridCacheDataSessionKey = "issueGridCacheData";
+    private const string IssueGlobalSearchSessionKey = "issueGlobalSearch";
 
     private static readonly HashSet<string> AllowedPlatformTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -682,6 +683,11 @@ public partial class CMF_Web_portal : System.Web.UI.Page
     {
         string activeTab = Session[ActiveFocusedTabSessionKey] as string;
         return string.IsNullOrWhiteSpace(activeTab) ? "issue" : activeTab;
+    }
+
+    protected string GetIssueGlobalSearchQuery()
+    {
+        return Session[IssueGlobalSearchSessionKey] as string ?? string.Empty;
     }
 
     private void RebindFocusedTabData(bool includeReportsData)
@@ -2006,6 +2012,8 @@ ORDER BY issue_count DESC", con))
         keyBuilder.Append(ResolvePlatformTable(selectedPlatform));
         keyBuilder.Append("|driver=");
         keyBuilder.Append(string.IsNullOrWhiteSpace(filterValue) ? "" : filterValue.Trim());
+        keyBuilder.Append("|search=");
+        keyBuilder.Append(GetIssueGlobalSearchQuery().Trim());
 
         if (columnFilters != null)
         {
@@ -2019,6 +2027,30 @@ ORDER BY issue_count DESC", con))
         }
 
         return keyBuilder.ToString();
+    }
+
+    private DataTable ApplyIssueGlobalSearch(DataTable dt)
+    {
+        string query = GetIssueGlobalSearchQuery().Trim();
+        if (dt == null || string.IsNullOrWhiteSpace(query))
+        {
+            return dt;
+        }
+
+        DataTable filtered = dt.Clone();
+        foreach (DataRow row in dt.Rows)
+        {
+            foreach (object value in row.ItemArray)
+            {
+                if (value != null && value != DBNull.Value && value.ToString().IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    filtered.ImportRow(row);
+                    break;
+                }
+            }
+        }
+
+        return filtered;
     }
 
     private void CacheIssueGridData(string filterValue, Dictionary<string, string> columnFilters, DataTable dt)
@@ -3666,11 +3698,26 @@ LEFT JOIN " + designTable + @" AS d
                         }
                     }
 
+                    dt = ApplyIssueGlobalSearch(dt);
                     BindIssueGridFromDataTable(dt, bindRelatedGrids);
                     CacheIssueGridData(filterValue, columnFilters, dt);
                 }
             }
         }
+    }
+
+    protected void btnIssueGlobalSearchApply_Click(object sender, EventArgs e)
+    {
+        ApplyIssuePendingPlatformContext();
+        EnsureIssueTabVisibleForPostback();
+        SetActiveFocusedTab("issue");
+        Session[IssueGlobalSearchSessionKey] = (hfIssueGlobalSearch.Value ?? string.Empty).Trim();
+        overall_request_details.PageIndex = 0;
+        ApplyIssuePageSizeFromSession();
+
+        string filterValue = Session["filterValue"] as string;
+        Dictionary<string, string> filters = GetAllFilterValues();
+        BindGridView(filterValue, filters, bindRelatedGrids: false);
     }
 
     protected void overall_request_details_PageIndexChanging(object sender, GridViewPageEventArgs e)

@@ -8948,20 +8948,52 @@ td:nth-child(odd), th:nth-child(odd) {
             var input = document.getElementById('globalPortalSearch');
             var query = input ? (input.value || '').trim().toLowerCase() : '';
             var clearBtn = document.getElementById('globalSearchClear');
+            var activeTab = (window.CMF_PORTAL.activeFocusedTab || '').toLowerCase();
 
-            filterGridRowsByQuery(document.getElementById('<%= overall_request_details.ClientID %>'), query);
-            filterGridRowsByQuery(document.getElementById('<%= GridView_cmf_pending.ClientID %>'), query);
+            if (activeTab === 'pending') {
+                filterGridRowsByQuery(document.getElementById('<%= GridView_cmf_pending.ClientID %>'), query);
+            }
 
             if (clearBtn) {
                 clearBtn.style.display = query ? 'inline-flex' : 'none';
             }
         }
 
+        var issueGlobalSearchTimer = null;
+
+        function scheduleIssueGlobalSearch() {
+            var input = document.getElementById('globalPortalSearch');
+            var query = input ? (input.value || '').trim() : '';
+            var clearBtn = document.getElementById('globalSearchClear');
+            var activeTab = (window.CMF_PORTAL.activeFocusedTab || '').toLowerCase();
+
+            if (clearBtn) {
+                clearBtn.style.display = query ? 'inline-flex' : 'none';
+            }
+
+            if (activeTab === 'pending') {
+                filterPortalVisibleTables();
+                return;
+            }
+
+            if (issueGlobalSearchTimer) {
+                clearTimeout(issueGlobalSearchTimer);
+            }
+
+            issueGlobalSearchTimer = setTimeout(function () {
+                var hidden = document.getElementById('<%= hfIssueGlobalSearch.ClientID %>');
+                if (hidden) {
+                    hidden.value = query;
+                }
+                __doPostBack('<%= btnIssueGlobalSearchApply.UniqueID %>', '');
+            }, 450);
+        }
+
         function clearGlobalPortalSearch() {
             var input = document.getElementById('globalPortalSearch');
             if (!input) return;
             input.value = '';
-            filterPortalVisibleTables();
+            scheduleIssueGlobalSearch();
             input.focus();
         }
 
@@ -9028,6 +9060,8 @@ td:nth-child(odd), th:nth-child(odd) {
     <asp:HiddenField ID="HiddenDriverName" runat="server" />
     <asp:HiddenField ID="HiddenComponentName" runat="server" />
     <asp:HiddenField ID="HiddenIssueType" runat="server" />
+    <asp:HiddenField ID="hfIssueGlobalSearch" runat="server" />
+    <asp:LinkButton ID="btnIssueGlobalSearchApply" runat="server" OnClick="btnIssueGlobalSearchApply_Click" Style="display:none;" />
 <!-- You already have HiddenDriverName -->
     <asp:HiddenField ID="dw_trigger" runat="server" />
 
@@ -9039,7 +9073,7 @@ td:nth-child(odd), th:nth-child(odd) {
         <div class="header-title" runat="server" id="headerTitle">CMF Live Dashboard</div>
         <div class="global-search-shell" role="search">
             <i class="fas fa-search" aria-hidden="true"></i>
-            <input type="text" id="globalPortalSearch" placeholder="Search issues, customers, components..." autocomplete="off" oninput="filterPortalVisibleTables()" />
+            <input type="text" id="globalPortalSearch" placeholder="Search issues, customers, components..." autocomplete="off" value="<%= HttpUtility.HtmlAttributeEncode(GetIssueGlobalSearchQuery()) %>" oninput="scheduleIssueGlobalSearch()" />
             <button type="button" id="globalSearchClear" class="global-search-clear" onclick="clearGlobalPortalSearch()" aria-label="Clear search">&times;</button>
             <span class="global-search-shortcut">Ctrl + K</span>
         </div>
