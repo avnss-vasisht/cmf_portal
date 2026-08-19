@@ -1,0 +1,22 @@
+--- CMF Portal Database ---
+Sighting ID: 14026172314
+Title: [WW44-46WS][HP_CMIT_NB][PTL-H][IEC][Merino] : The SUT will do cycle power off and on when doing remote reset through WEBUI.
+Operating System: windows.11_v24H2
+Component: platform.Common.sw.firmware.CSME
+CMF Request: cmf_ok
+Must Fix For: PTL_BE_PV
+Closed Reason: internal_fw_bug
+Customer Impact: 1-critical
+Priority: p1-showstopper
+CMF Status: iDST_WW45.4 
+positive result from HP customer with the latest candidate fix.  Need ETA for formal release
+Promoted Status: iDST_WW45.4 
+positive result from HP customer with the latest candidate fix.  Need ETA for formal release
+Drivers: PTL_BE_PV
+Sysdebug: customer_must_fix
+Impact: This issue impacts AMT remote shutdown function.
+Processor: pantherlake_h484
+Reproducibility: frequently_50%-90%
+RVP Platform Debug Details: no
+Promoted ID: 15018594267
+Promoted Issue Lookup: Not found in current platform table

@@ -706,7 +706,7 @@ public partial class CMF_Web_portal : System.Web.UI.Page
             }
             return;
         }
-
+        
         if (string.Equals(activeTab, "home", StringComparison.OrdinalIgnoreCase))
         {
             ShowWelcomeHome();
@@ -789,6 +789,23 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         }
     }
 
+    private static string GetTimeBasedGreeting()
+    {
+        int hour = DateTime.Now.Hour;
+
+        if (hour < 12)
+        {
+            return "Good Morning";
+        }
+
+        if (hour < 17)
+        {
+            return "Good Afternoon";
+        }
+
+        return "Good Evening";
+    }
+
     private void ShowWelcomeHome()
     {
         LoadCmfRulesEditor();
@@ -801,6 +818,11 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         if (lblWelcomeMode != null && ddlUserMode != null && ddlUserMode.SelectedItem != null)
         {
             lblWelcomeMode.Text = ddlUserMode.SelectedItem.Text;
+        }
+
+        if (lblHomeGreeting != null)
+        {
+            lblHomeGreeting.Text = GetTimeBasedGreeting();
         }
 
         BindHomeDashboard();

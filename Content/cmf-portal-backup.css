@@ -1,40 +1,16 @@
-﻿:root {
-    --cmf-bg: #f4f7fb;
-    --cmf-surface: #ffffff;
-    --cmf-surface-soft: #f8fafc;
-
-    --cmf-text: #172033;
-    --cmf-text-secondary: #5f6b7a;
-    --cmf-text-muted: #8792a2;
-
-    --cmf-border: #e3e8ef;
-    --cmf-border-strong: #d5dce6;
-
-    --cmf-primary: #0071c5;
-    --cmf-primary-dark: #005a9e;
-    --cmf-primary-soft: #eaf4fb;
-
-    --cmf-success: #16845b;
-    --cmf-success-soft: #eaf7f1;
-
-    --cmf-warning: #b7791f;
-    --cmf-warning-soft: #fff7e6;
-
-    --cmf-danger: #c53d3d;
-    --cmf-danger-soft: #fdf0f0;
-
-    --cmf-radius-sm: 8px;
-    --cmf-radius-md: 12px;
-    --cmf-radius-lg: 16px;
-
-    --cmf-shadow-sm:
-        0 1px 2px rgba(15, 23, 42, 0.04),
-        0 4px 12px rgba(15, 23, 42, 0.04);
-
-    --cmf-shadow-md:
-        0 4px 16px rgba(15, 23, 42, 0.07),
-        0 1px 3px rgba(15, 23, 42, 0.04);
-}
+            :root {
+                --portal-bg: #edf3f8;
+                --portal-surface: #ffffff;
+                --portal-surface-soft: #f7fafc;
+                --portal-ink: #19324a;
+                --portal-ink-muted: #5c7087;
+                --portal-primary: #0f5ea8;
+                --portal-primary-deep: #083d74;
+                --portal-accent: #00a6b2;
+                --portal-border: #cdd9e5;
+                --portal-shadow: 0 18px 42px rgba(17, 43, 70, 0.12);
+                --portal-radius: 18px;
+            }
 
             body {
                 overflow-x: hidden;
@@ -48,7 +24,127 @@
                     linear-gradient(180deg, #f4f8fb 0%, var(--portal-bg) 100%);
             }
 
+            header {
+                z-index: 100;
+                min-height: 88px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background: linear-gradient(120deg, var(--portal-primary-deep) 0%, var(--portal-primary) 48%, var(--portal-accent) 100%);
+                color: white;
+                padding: 20px 30px;
+                box-shadow: 0 14px 35px rgba(8, 61, 116, 0.28);
+                position: sticky;
+                top: 0;
+            }
+
+            .header-title {
+                font-size: 1.2rem;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                text-align: center;
+                z-index: 110;
+                text-shadow: 0 1px 12px rgba(0, 0, 0, 0.16);
+            }
+
+            .sidebar-toggle {
+                background: rgba(255, 255, 255, 0.14);
+                color: white;
+                border: 1px solid rgba(255, 255, 255, 0.24);
+                font-size: 16px;
+                cursor: pointer;
+                z-index: 10;
+                border-radius: 999px;
+                width: 42px;
+                height: 42px;
+                backdrop-filter: blur(8px);
+            }
+
+            .sidebar-toggle-div {
+                position: absolute;
+                right: 1.2rem;
+            }
+
+            .sidebar {
+                font-size: 12px;
+                position: fixed;
+                top: 0;
+                right: -280px;
+                height: 100%;
+                width: 250px;
+                background: linear-gradient(180deg, #0b417b 0%, #0f5ea8 100%);
+                padding-top: 68px;
+                transition: right 0.3s ease-in-out;
+                z-index: 120;
+                overflow-y: auto;
+                box-shadow: -16px 0 32px rgba(5, 25, 48, 0.22);
+            }
+
+            .close-btn {
+                position: absolute;
+                top: 12px;
+                right: 14px;
+                background-color: transparent;
+                color: white;
+                font-size: 20px;
+                border: none;
+                cursor: pointer;
+            }
+
+            .sidebar a {
+                color: #eef7ff;
+                padding: 12px 20px;
+                text-decoration: none;
+                display: block;
+                font-size: 12px;
+            }
+
+            .sidebar a:hover {
+                background-color: rgba(255, 255, 255, 0.12);
+            }
+
+            .table-container {
+                margin-top: 0;
+                position: relative;
+                width: 100%;
+                max-height: 75vh;
+                overflow-y: auto;
+                border-radius: var(--portal-radius);
+                box-shadow: 0 12px 30px rgba(21, 49, 79, 0.10);
+                background-color: var(--portal-surface);
+                border: 1px solid var(--portal-border);
+                padding: 10px;
+            }
+
+                /* Make the header sticky */
+                .table-container thead {
+                    position: sticky;
+                    top: 0;
+                    background-color: #fff; /* Set a background color to cover any content scrolling beneath */
+                    z-index: 1; /* Keep the header above the rows */
+                }
+
             
+            .table-primary {
+                font-weight: 600;
+                font-family: "Segoe UI", sans-serif;
+                border-collapse: separate;
+                border-spacing: 0;
+                font-size: .82em;
+                border-radius: 14px;
+                overflow: hidden;
+                transition: box-shadow 0.3s ease;
+                border: 1px solid var(--portal-border);
+                margin-bottom: 10px;
+                background: var(--portal-surface);
+            }
+
+            .table-primary th, .table-primary td {
+                padding: 12px 14px;
+                text-align: left;
+                border: 1px solid #d7e0ea;
+            }
 
             .table-primary thead {
                 position: sticky;
@@ -129,6 +225,33 @@
     min-height: 60px;
 }
 
+.filter-header-text {
+    font-weight: bold;
+    margin-bottom: 5px;
+    align-self: center;
+}
+
+.filter-container {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.header-dropdown {
+    font-size: 11px;
+    padding: 4px 8px;
+    width: 132px;
+    height: 30px;
+    border: 1px solid #bfd0df;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--portal-ink);
+}
+
+/* RESTORE ORIGINAL TABLE STYLING FOR OTHER TABS */
+.table-primary th {
+    vertical-align: top;
+    padding: 8px;
 }
 
 .gridview-container {
@@ -890,6 +1013,41 @@ margin-top: -150px;
             padding: 10px;
         }
 
+        /*.main-header-cell {
+            border: 2px solid black !important;
+            padding: 10px !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+            font-weight: bold !important;
+        }
+
+        .table-primary th {
+            background-color: #2a62c2;
+            color: white;
+            font-weight: 500;
+            vertical-align: middle;
+            text-align: center;
+            line-height: 1.2;
+            padding: 8px 4px;
+            border: 2px solid black !important;
+        }*/
+
+        /* Make sure the sub-headers are properly styled */
+        /*.table-primary thead tr:nth-child(2) th {
+            background-color: #4a7bc8;*/ /* Slightly lighter blue for sub-headers */
+            /*font-size: 0.9em;
+        }
+
+        .table-primary-header {
+            border: 2px solid black !important;
+            padding: 10px !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+            font-weight: bold !important;
+            background-color: #2a62c2 !important;
+            color: white !important;
+        }*/
+Q
  /* First row within .table-primary */
  .table-primary tr:first-child {
      background-color: #ffebcc; /* Mild yellow background for the first row */
@@ -919,6 +1077,69 @@ margin-top: -150px;
     margin-bottom: 2vh;
 }
 
+.table-primary7 {
+    height: 100%; /* Make the table fill the container's height */
+    width: 100%; /* Ensure the table takes up the full width of the container */
+    border-collapse: collapse; /* Ensures borders are merged between cells */
+    /*table-layout: fixed;*/
+}
+
+.table-primary7 th {
+    color: white; /* White text color */
+    font-weight: bold; /* Bold text for headers */
+    padding: 10px; /* Padding for better readability */
+    text-align: left; /* Align text to the left */
+    border: 1px solid #ddd; /* Border around headers */
+    /*vertical-align: middle;*/
+}
+
+.table-primary7 td {
+    padding: 8px; /* Padding for cells */
+    border: 1px solid #ddd; /* Border around table cells */
+    /*text-align: left;  Changed from center to left to match css1 */
+}
+
+/* Driver group borders - every 3 columns (matching the nth-child pattern from css1) */
+.table-primary7 td:nth-child(3n+1), 
+.table-primary7 th:nth-child(3n+1) {
+    border-left: solid 2px black;
+}
+
+/* Apply the same border pattern as css1 for consistency */
+.table-primary7 td:nth-child(even), 
+.table-primary7 th:nth-child(even) {
+    border-left: solid 2px black;
+}
+
+.table-primary7 td:nth-child(odd), 
+.table-primary7 th:nth-child(odd) {
+    border-left: solid 2px black;
+}
+
+
+/* First row within .table-primary7 - matching css1 */
+.table-primary7 tr:first-child {
+    background-color: #ffebcc; /* Mild yellow background for the first row */
+    border-bottom: solid 2px black;
+}
+
+/* Second header row - slightly different yellow to distinguish */
+.table-primary7 tr:nth-child(2) {
+    background-color: #e0f1fb !important; /* Same mild yellow as first row */
+    border-bottom: solid 2px black;
+}
+
+/* Even rows within .table-primary7 - starting from 3rd row (after headers) */
+.table-primary7 tr:nth-child(n+3):nth-child(even) {
+    background-color: #c2e0f7; /* Mild blue background for even rows */
+    border-bottom: solid 2px black;
+}
+
+/* Odd rows within .table-primary7 - starting from 3rd row (after headers) */
+.table-primary7 tr:nth-child(n+3):nth-child(odd) {
+    background-color: #e0f1fb; /* Very light blue background for odd rows */
+    border-bottom: solid 2px black;
+}
 
 /* Total row styling - keeping orange but with consistent borders */
 .total-row {
@@ -928,7 +1149,77 @@ margin-top: -150px;
     border-bottom: solid 2px black !important;
 }
 
-.modal-import {
+/* Merged cells in total row */
+.table-primary7 .total-row td[colspan="2"] {
+    background-color: orange !important;
+    border: 1px solid #ddd !important; /* Changed to match standard cell borders */
+    border-left: solid 2px black !important; /* Maintain the left border pattern */
+    font-weight: bold !important;
+    padding: 8px; /* Match standard cell padding */
+}
+
+/* Ensure total row cells follow the same border pattern */
+.table-primary7 .total-row td {
+    border: 1px solid #ddd !important;
+    border-bottom: solid 2px black !important;
+}
+
+       
+.table-primary2 {
+    height: 100%; /* Make the table fill the container's height */
+    width: 100%; /* Ensure the table takes up the full width of the container */
+    border-collapse: collapse; /* Ensures borders are merged between cells */
+}
+
+.table-primary2 th {
+    color: white; /* White text color */
+    font-weight: bold; /* Bold text for headers */
+    padding: 10px; /* Padding for better readability */
+    text-align: left; /* Align text to the left */
+    border: 1px solid #ddd; /* Border around headers */
+}
+
+.table-primary2 td {
+    padding: 8px; /* Padding for cells */
+    border: 1px solid #ddd; /* Border around table cells */
+}
+
+td:nth-child(even), th:nth-child(even) {
+    border-left: solid 2px black;
+}
+
+td:nth-child(odd), th:nth-child(odd) {
+    border-left: solid 2px black;
+}
+
+/* First row within .table-primary2 */
+.table-primary2 tr:first-child {
+    background-color: #ffebcc; /* Mild yellow background for the first row */
+    border-bottom: solid 2px black;
+}
+
+/* Even rows within .table-primary2 */
+.table-primary2 tr:nth-child(even) {
+    background-color: #c2e0f7; /* Mild blue background for even rows */
+    border-bottom: solid 2px black;
+}
+
+/* Odd rows within .table-primary2 */
+.table-primary2 tr:nth-child(odd) {
+    background-color: #e0f1fb; /* Very light blue background for odd rows */
+    border-bottom: solid 2px black;
+}
+
+/* Last row should have an orange background */
+.table-primary2 tr:last-child {
+    background-color: orange; /* Orange background for the last row */
+    border-bottom: solid 2px black; /* Keep the border on the last row */
+}
+
+
+
+
+        .modal-import {
             display: none;
             position: fixed;
             z-index: 1060;
@@ -1263,6 +1554,50 @@ left: 1vw;
     box-shadow:
         0 2px 6px rgba(15, 23, 42, 0.06) !important;
 }
+
+/* ============================================================
+   CMF PORTAL — GLOBAL UI POLISH
+   Phase 1: Application shell / typography / cards / controls
+   ============================================================ */
+
+:root {
+    --cmf-bg: #f4f7fb;
+    --cmf-surface: #ffffff;
+    --cmf-surface-soft: #f8fafc;
+
+    --cmf-text: #172033;
+    --cmf-text-secondary: #5f6b7a;
+    --cmf-text-muted: #8792a2;
+
+    --cmf-border: #e3e8ef;
+    --cmf-border-strong: #d5dce6;
+
+    --cmf-primary: #0071c5;
+    --cmf-primary-dark: #005a9e;
+    --cmf-primary-soft: #eaf4fb;
+
+    --cmf-success: #16845b;
+    --cmf-success-soft: #eaf7f1;
+
+    --cmf-warning: #b7791f;
+    --cmf-warning-soft: #fff7e6;
+
+    --cmf-danger: #c53d3d;
+    --cmf-danger-soft: #fdf0f0;
+
+    --cmf-radius-sm: 8px;
+    --cmf-radius-md: 12px;
+    --cmf-radius-lg: 16px;
+
+    --cmf-shadow-sm:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 4px 12px rgba(15, 23, 42, 0.04);
+
+    --cmf-shadow-md:
+        0 4px 16px rgba(15, 23, 42, 0.07),
+        0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
 
 /* ------------------------------------------------------------
    GLOBAL PAGE
@@ -2408,6 +2743,13 @@ table[id$="overall_request_details"] tbody tr:hover td:nth-child(2) {
    CMF PORTAL — SIDEBAR COLLAPSE
    Phase 1 UI Fix
    ============================================================ */
+
+:root {
+    --cmf-sidebar-expanded: 160px;
+    --cmf-sidebar-collapsed: 64px;
+    --cmf-sidebar-transition: 0.22s ease;
+}
+
 
 /* ------------------------------------------------------------
    SIDEBAR

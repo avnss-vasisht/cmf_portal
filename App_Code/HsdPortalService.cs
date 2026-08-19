@@ -5,6 +5,7 @@ using System.Configuration;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Security.Principal;
 using System.Web.Script.Serialization;
 
 // Represents the fields fetched from the HSD portal for a single sighting/article.
@@ -74,7 +75,7 @@ public static class HsdPortalService
 
         try
         {
-            string json = HttpGetNtlm(articleUrl);
+            string json = HttpGetSspi(articleUrl);
             if (string.IsNullOrWhiteSpace(json))
             {
                 result.FetchError = "Empty response from HSD API.";
@@ -168,7 +169,7 @@ public static class HsdPortalService
         {
             try
             {
-                string json = HttpGetNtlm(endpoint);
+                string json = HttpGetSspi(endpoint);
                 if (string.IsNullOrWhiteSpace(json)) continue;
 
                 ParseCommentsJson(json, result);
@@ -178,13 +179,11 @@ public static class HsdPortalService
         }
     }
 
-    private static string HttpGetNtlm(string url)
+    private static string HttpGetSspi(string url)
     {
         int timeoutMs = 10000;
 
-        string timeoutStr =
-            ConfigurationManager.AppSettings["HSD:TimeoutSeconds"];
-
+        string timeoutStr = ConfigurationManager.AppSettings["HSD:TimeoutSeconds"];
         int secs;
 
         if (!string.IsNullOrWhiteSpace(timeoutStr) &&
@@ -194,87 +193,76 @@ public static class HsdPortalService
             timeoutMs = secs * 1000;
         }
 
-        HttpWebRequest request =
-            (HttpWebRequest)WebRequest.Create(url);
+        HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 
         request.Method = "GET";
         request.Accept = "application/json";
+        request.ContentType = "application/json";
         request.Timeout = timeoutMs;
+        request.ReadWriteTimeout = timeoutMs;
+        request.AllowAutoRedirect = true;
+        request.KeepAlive = true;
 
-        string identityDebugPath = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory,
-            "App_Data",
-            "hsd-identity-debug.txt"
+        // Use the user / process identity that is already logged into the Intel domain so
+        // the challenge is negotiated as Kerberos/NTLM (SSPI) rather than using a hardcoded
+        // network account that usually doesn't have HSD access.
+        bool useDefaultCredentials = true;
+        string useDefaultCredentialsSetting = ConfigurationManager.AppSettings["HSD:UseDefaultCredentials"];
+        if (!string.IsNullOrWhiteSpace(useDefaultCredentialsSetting) &&
+            !bool.TryParse(useDefaultCredentialsSetting, out useDefaultCredentials))
+        {
+            useDefaultCredentials = true;
+        }
+
+        request.UseDefaultCredentials = useDefaultCredentials;
+        request.Credentials = useDefaultCredentials
+            ? CredentialCache.DefaultCredentials
+            : CredentialCache.DefaultNetworkCredentials;
+        request.PreAuthenticate = true;
+
+        // HSD is usually accessible from the corporate network. If a proxy is required,
+        // preserve the same Windows identity so the proxy and the upstream HSD endpoint
+        // can negotiate authentication correctly.
+        request.Proxy = BuildHsdProxy();
+
+        WindowsIdentity identity = WindowsIdentity.GetCurrent();
+        System.Diagnostics.Debug.WriteLine(
+            "HSD SSPI Windows Identity: " +
+            (identity != null ? identity.Name : "NULL")
         );
 
-        string identityInfo =
-            "HSD request Windows identity: " +
-            System.Security.Principal.WindowsIdentity.GetCurrent().Name +
-            Environment.NewLine +
-            "HSD request IsAuthenticated: " +
-            System.Security.Principal.WindowsIdentity.GetCurrent().IsAuthenticated +
-            Environment.NewLine;
-
-        File.WriteAllText(identityDebugPath, identityInfo);
-
-        CredentialCache creds = new CredentialCache();
-
-        creds.Add(
-            new Uri(url),
-            "Negotiate",
-            CredentialCache.DefaultNetworkCredentials
+        System.Diagnostics.Debug.WriteLine(
+            "HSD SSPI Authentication Type: " +
+            (identity != null ? identity.AuthenticationType : "NULL")
         );
 
-        request.Credentials = creds;
-        request.PreAuthenticate = false;
-        request.Proxy = null;
-
-        try
+        using (HttpWebResponse response =
+            (HttpWebResponse)request.GetResponse())
+        using (StreamReader reader =
+            new StreamReader(response.GetResponseStream(), Encoding.UTF8))
         {
-            using (HttpWebResponse response =
-                (HttpWebResponse)request.GetResponse())
-            using (StreamReader reader =
-                new StreamReader(
-                    response.GetResponseStream(),
-                    Encoding.UTF8))
-            {
-                return reader.ReadToEnd();
-            }
+            return reader.ReadToEnd();
         }
-        catch (WebException ex)
+    }
+
+    private static IWebProxy BuildHsdProxy()
+    {
+        string explicitProxy = ConfigurationManager.AppSettings["HSD:Proxy"];
+        if (!string.IsNullOrWhiteSpace(explicitProxy))
         {
-            HttpWebResponse errorResponse =
-                ex.Response as HttpWebResponse;
-
-            if (errorResponse != null)
-            {
-                string authHeader = errorResponse.Headers["WWW-Authenticate"];
-                string authScheme = "Unknown";
-
-                if (!string.IsNullOrWhiteSpace(authHeader))
-                {
-                    if (authHeader.StartsWith("Negotiate",
-                        StringComparison.OrdinalIgnoreCase))
-                    {
-                        authScheme = "Negotiate";
-                    }
-                    else if (authHeader.StartsWith("Basic",
-                        StringComparison.OrdinalIgnoreCase))
-                    {
-                        authScheme = "Basic";
-                    }
-                }
-
-                string errorDetails =
-                    "HSD HTTP " + (int)errorResponse.StatusCode + " " +
-                    errorResponse.StatusDescription + ". " +
-                    "WWW-Authenticate scheme: " + authScheme;
-
-                throw new Exception(errorDetails, ex);
-            }
-
-            throw;
+            WebProxy proxy = new WebProxy(explicitProxy.Trim(), true);
+            proxy.Credentials = CredentialCache.DefaultCredentials;
+            return proxy;
         }
+
+        IWebProxy systemProxy = WebRequest.GetSystemWebProxy();
+        if (systemProxy != null)
+        {
+            systemProxy.Credentials = CredentialCache.DefaultCredentials;
+            return systemProxy;
+        }
+
+        return null;
     }
 
     private static void ParseArticleJson(string json, HsdArticleData result)
