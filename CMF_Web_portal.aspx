@@ -7524,8 +7524,24 @@ td:nth-child(odd), th:nth-child(odd) {
         max-height: min(62vh, 620px) !important;
         min-height: 0 !important;
         overflow-x: auto !important;
-        overflow-y: auto !important;
+        overflow-y: scroll !important;
         scrollbar-gutter: stable !important;
+    }
+
+    .issue-grid-inner {
+        min-width: 2600px !important;
+        width: max-content !important;
+        max-width: none !important;
+    }
+
+    .issue-grid-inner #overall_request_details {
+        min-width: 2600px !important;
+        width: max-content !important;
+        max-width: none !important;
+    }
+
+    .issue-scroll-proxy {
+        display: none !important;
     }
 
     .cmf-pending-grid-wrap {
@@ -8562,48 +8578,29 @@ td:nth-child(odd), th:nth-child(odd) {
         }
 
         function syncIssueHorizontalScroll(attempt) {
-            var host = document.getElementById('issue-grid-inner');
-            var proxy = document.getElementById('issue-scroll-proxy');
-            var proxyInner = document.getElementById('issue-scroll-proxy-inner');
+            var host = document.querySelector('.issue-grid-scroll');
+            var inner = document.getElementById('issue-grid-inner');
             var table = document.getElementById(window.CMF_PORTAL.ids.overallRequestDetails);
 
-            if (!host || !proxy || !proxyInner || !table) {
+            if (!host || !inner || !table) {
                 return;
             }
 
-            host.style.overflowX = 'auto';
-            host.style.overflowY = 'visible';
+            host.style.setProperty('overflow-x', 'auto', 'important');
+            host.style.setProperty('overflow-y', 'scroll', 'important');
+            host.style.setProperty('scrollbar-gutter', 'stable', 'important');
 
-            // Enforce width at runtime in case later CSS rules collapse the table width.
-            table.style.width = 'max-content';
-            table.style.minWidth = '2600px';
-            table.style.maxWidth = 'none';
+            inner.style.setProperty('min-width', '2600px', 'important');
+            inner.style.setProperty('width', 'max-content', 'important');
+            inner.style.setProperty('max-width', 'none', 'important');
 
-            var targetWidth = Math.max(table.scrollWidth || 0, table.offsetWidth || 0, 2600);
-            proxyInner.style.width = targetWidth + 'px';
+            table.style.setProperty('width', 'max-content', 'important');
+            table.style.setProperty('min-width', '2600px', 'important');
+            table.style.setProperty('max-width', 'none', 'important');
 
-            // If layout is not ready yet (e.g., after async update while hidden), retry a few times.
-            if (host.clientWidth > 0 && targetWidth <= host.clientWidth && (attempt || 0) < 6) {
+            if (host.clientWidth > 0 && table.scrollWidth <= host.clientWidth && (attempt || 0) < 6) {
                 setTimeout(function () { syncIssueHorizontalScroll((attempt || 0) + 1); }, 80);
             }
-
-            var syncLock = false;
-            host.onscroll = function () {
-                if (syncLock) return;
-                syncLock = true;
-                proxy.scrollLeft = host.scrollLeft;
-                syncLock = false;
-            };
-
-            proxy.onscroll = function () {
-                if (syncLock) return;
-                syncLock = true;
-                host.scrollLeft = proxy.scrollLeft;
-                syncLock = false;
-            };
-
-            proxy.scrollLeft = host.scrollLeft;
-            proxy.style.display = 'none';
         }
 
         function renderHomeDashboard() {
@@ -8872,6 +8869,12 @@ td:nth-child(odd), th:nth-child(odd) {
             var issueActive = !pendingActive && (activeTab === 'issue' || activeText.indexOf('issue') >= 0);
 
             if (!pendingActive && !issueActive) {
+                var selectedViewText = getFocusedViewText();
+                pendingActive = selectedViewText.indexOf('pending') >= 0;
+                issueActive = !pendingActive && selectedViewText.indexOf('issue') >= 0;
+            }
+
+            if (!pendingActive && !issueActive) {
                 var issueGrid = document.getElementById(window.CMF_PORTAL.ids.overallRequestDetails);
                 issueActive = isElementVisible(issueGrid);
                 pendingActive = !issueActive && !!pendingShell;
@@ -8880,6 +8883,24 @@ td:nth-child(odd), th:nth-child(odd) {
             applyInteractiveShellState(issueShell, issueActive);
             applyInteractiveShellState(pendingShell, pendingActive);
             filterPortalVisibleTables();
+        }
+
+        function getFocusedViewText() {
+            var focusedDropdown = document.getElementById('<%= ddlFocusedView.ClientID %>');
+            if (focusedDropdown && focusedDropdown.selectedIndex >= 0) {
+                var option = focusedDropdown.options[focusedDropdown.selectedIndex];
+                return ((option && (option.text || option.value)) || '').toLowerCase();
+            }
+
+            var activeNodes = document.querySelectorAll('.portal-nav-link.is-active, .tab-pill.is-active');
+            for (var i = 0; i < activeNodes.length; i++) {
+                var text = (activeNodes[i].textContent || activeNodes[i].innerText || '').toLowerCase();
+                if (text.indexOf('pending') >= 0 || text.indexOf('issue') >= 0) {
+                    return text;
+                }
+            }
+
+            return '';
         }
 
         function applyInteractiveShellState(shell, isActive) {
@@ -9117,7 +9138,7 @@ td:nth-child(odd), th:nth-child(odd) {
                 issueWrap.style.setProperty('max-height', 'min(62vh, 620px)', 'important');
                 issueWrap.style.setProperty('min-height', '0', 'important');
                 issueWrap.style.setProperty('overflow-x', 'auto', 'important');
-                issueWrap.style.setProperty('overflow-y', 'auto', 'important');
+                issueWrap.style.setProperty('overflow-y', 'scroll', 'important');
                 issueWrap.style.setProperty('scrollbar-gutter', 'stable', 'important');
             }
 
