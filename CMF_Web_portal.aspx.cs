@@ -791,8 +791,18 @@ public partial class CMF_Web_portal : System.Web.UI.Page
 
     private void SetInteractiveTabShellVisibility(bool showIssue, bool showPending)
     {
-        issueTabShell.Style["display"] = showIssue ? "grid" : "none";
-        pendingTabShell.Style["display"] = showPending ? "grid" : "none";
+        issueTabShell.Visible = showIssue;
+        pendingTabShell.Visible = showPending;
+
+        if (showIssue)
+        {
+            issueTabShell.Style["display"] = "grid";
+        }
+
+        if (showPending)
+        {
+            pendingTabShell.Style["display"] = "grid";
+        }
     }
 
     private static string GetTimeBasedGreeting()

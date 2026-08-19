@@ -7414,6 +7414,25 @@ td:nth-child(odd), th:nth-child(odd) {
         text-decoration: underline !important;
     }
 
+    #issueTabShell,
+    #pendingTabShell {
+        grid-template-columns: minmax(0, 1fr) 290px !important;
+        align-items: start !important;
+    }
+
+    #issueTabShell .issue-tab-main,
+    #pendingTabShell .pending-tab-main {
+        grid-column: 1 !important;
+        min-width: 0 !important;
+    }
+
+    #issueTabShell .issue-side-panel,
+    #pendingTabShell .pending-side-panel {
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        align-self: start !important;
+    }
+
     @media (max-width: 980px) {
         header {
             height: auto !important;
@@ -9629,7 +9648,7 @@ Submit
                         </div>
                     </div>
 
-                    <div class="issue-tab-shell" id="issueTabShell" runat="server" ClientIDMode="Static" style="display:none;">
+                    <div class="issue-tab-shell" id="issueTabShell" runat="server" ClientIDMode="Static">
                     <div class="issue-tab-main">
 
                     <asp:Panel ID="issueListHeaderPanel" runat="server" Visible="true">
@@ -10110,7 +10129,7 @@ Submit
                     </div>
 
                     <!-- CMF PENDING LIST HEADER PANEL - INSIDE mainDataWrapper -->
-                    <div class="pending-tab-shell" id="pendingTabShell" runat="server" ClientIDMode="Static" style="display:none;">
+                    <div class="pending-tab-shell" id="pendingTabShell" runat="server" ClientIDMode="Static">
                         <div class="pending-tab-main">
                             <div class="cmf-pending-page-hd">
                                 <div>
