@@ -26,6 +26,8 @@ public class ReportsAssistantResponse
 public static class ReportsAssistantService
 {
     private const string ReportsContextSessionKey = "ReportsAssistantContextByPlatform";
+    private const string AllCmfDataContextKey = "ALL_CMF_DATA";
+    private const int MaxHsdRowsForReports = 40;
     private static readonly Dictionary<string, string> PlatformPromptMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         { "ptl", "CMF_PTL_ALL_COMPONENTS_TABLE" },
@@ -101,21 +103,19 @@ public static class ReportsAssistantService
 
         string resolvedPlatform = ResolvePlatform(platform);
         List<string> promptPlatforms = ResolvePlatformsFromPrompt(safePrompt);
-        if (promptPlatforms.Count == 1)
-        {
-            resolvedPlatform = promptPlatforms[0];
-        }
+        List<string> reportPlatforms = ResolveReportPlatformScope(promptPlatforms, resolvedPlatform);
+        string reportScopeKey = BuildReportScopeKey(reportPlatforms);
 
-        if (string.IsNullOrWhiteSpace(resolvedPlatform))
+        if (reportPlatforms.Count == 0)
         {
             return new ReportsAssistantResponse
             {
                 Success = false,
-                Message = "Invalid platform selected for reports assistant."
+                Message = "Unable to resolve CMF data scope for reports assistant."
             };
         }
 
-        string conversationContextJson = ReadConversationContext(resolvedPlatform);
+        string conversationContextJson = ReadConversationContext(reportScopeKey);
         bool hasPriorConversation = !string.IsNullOrWhiteSpace(conversationContextJson) && conversationContextJson != "{}";
 
         // Validate that the prompt is relevant to the CMF portal.
@@ -135,7 +135,8 @@ public static class ReportsAssistantService
         }
 
         string intent = ResolveIntent(safePrompt);
-        string platformCode = promptPlatforms.Count > 1 ? BuildCombinedPlatformCode(promptPlatforms) : ResolvePlatformCode(resolvedPlatform);
+        string platformCode = BuildCombinedPlatformCode(reportPlatforms);
+        if (string.IsNullOrWhiteSpace(platformCode)) platformCode = "ALL_CMF";
         if (string.IsNullOrWhiteSpace(conversationContextJson))
         {
             conversationContextJson = "{}";
@@ -164,30 +165,8 @@ public static class ReportsAssistantService
             || safePrompt.IndexOf("versus", StringComparison.OrdinalIgnoreCase) >= 0
             || safePrompt.IndexOf(" vs ", StringComparison.OrdinalIgnoreCase) >= 0;
 
-        if (promptPlatforms.Count > 1)
-        {
-            issues = new DataTable();
-            bool initialized = false;
-
-            for (int index = 0; index < promptPlatforms.Count; index++)
-            {
-                DataTable next = LoadIssueData(promptPlatforms[index]);
-                if (!initialized)
-                {
-                    issues = next.Clone();
-                    initialized = true;
-                }
-
-                for (int rowIndex = 0; rowIndex < next.Rows.Count; rowIndex++)
-                {
-                    issues.ImportRow(next.Rows[rowIndex]);
-                }
-            }
-        }
-        else
-        {
-            issues = LoadIssueData(resolvedPlatform);
-        }
+        issues = reportPlatforms.Count == 1 ? LoadIssueData(reportPlatforms[0]) : LoadCombinedIssueData(reportPlatforms);
+        EnrichIssueDataWithHsdContext(issues, MaxHsdRowsForReports);
 
         if (issues.Rows.Count == 0)
         {
@@ -334,7 +313,7 @@ public static class ReportsAssistantService
 
         if (success && !string.IsNullOrWhiteSpace(updatedContextJson))
         {
-            WriteConversationContext(resolvedPlatform, updatedContextJson);
+            WriteConversationContext(reportScopeKey, updatedContextJson);
         }
 
         return new ReportsAssistantResponse
@@ -352,28 +331,18 @@ public static class ReportsAssistantService
     public static ReportsAssistantResponse GenerateFromTemplate(string templateContent, string platform)
     {
         // Similar to ProcessPrompt but uses provided template content to populate report
+        List<string> templatePlatforms = ResolvePlatformsFromPrompt(templateContent);
         string resolvedPlatform = ResolvePlatform(platform);
-        if (string.IsNullOrWhiteSpace(resolvedPlatform))
+        List<string> reportPlatforms = ResolveReportPlatformScope(templatePlatforms, resolvedPlatform);
+        DataTable issues;
+        if (reportPlatforms.Count == 0)
         {
-            return new ReportsAssistantResponse { Success = false, Message = "Invalid platform selected for report generation." };
+            return new ReportsAssistantResponse { Success = false, Message = "Unable to resolve CMF data scope for report generation." };
         }
 
-        List<string> templatePlatforms = ResolvePlatformsFromPrompt(templateContent);
-        DataTable issues;
-        if (templatePlatforms.Count > 1)
-        {
-            issues = LoadCombinedIssueData(templatePlatforms);
-            resolvedPlatform = templatePlatforms[0];
-        }
-        else if (templatePlatforms.Count == 1)
-        {
-            resolvedPlatform = templatePlatforms[0];
-            issues = LoadIssueData(resolvedPlatform);
-        }
-        else
-        {
-            issues = LoadIssueData(resolvedPlatform);
-        }
+        resolvedPlatform = reportPlatforms[0];
+        issues = reportPlatforms.Count == 1 ? LoadIssueData(reportPlatforms[0]) : LoadCombinedIssueData(reportPlatforms);
+        EnrichIssueDataWithHsdContext(issues, MaxHsdRowsForReports);
         if (issues.Rows.Count == 0)
         {
             return new ReportsAssistantResponse { Success = false, Message = "No issue rows available for report generation in the selected platform." };
@@ -425,7 +394,7 @@ public static class ReportsAssistantService
             "--prompt", QuoteArg("Generate report from saved template"),
             "--context-json", QuoteArg("{}"),
             "--template", QuoteArg(templatePath),
-            "--platform", QuoteArg(templatePlatforms.Count > 1 ? BuildCombinedPlatformCode(templatePlatforms) : ResolvePlatformCode(resolvedPlatform)),
+            "--platform", QuoteArg(BuildCombinedPlatformCode(reportPlatforms)),
             "--output-dir", QuoteArg(webOutputRoot)
         });
 
@@ -510,7 +479,7 @@ public static class ReportsAssistantService
 
         if (success && !string.IsNullOrWhiteSpace(updatedContextJson))
         {
-            WriteConversationContext(resolvedPlatform, updatedContextJson);
+            WriteConversationContext(BuildReportScopeKey(reportPlatforms), updatedContextJson);
         }
 
         return new ReportsAssistantResponse
@@ -530,6 +499,42 @@ public static class ReportsAssistantService
             : platform.Trim();
 
         return AllowedPlatformTables.Contains(selected) ? selected : string.Empty;
+    }
+
+    private static List<string> ResolveReportPlatformScope(List<string> requestedPlatforms, string fallbackPlatform)
+    {
+        if (requestedPlatforms != null && requestedPlatforms.Count > 0)
+        {
+            return new List<string>(requestedPlatforms);
+        }
+
+        return GetAllPlatformTables();
+    }
+
+    private static List<string> GetAllPlatformTables()
+    {
+        return new List<string>(new string[]
+        {
+            "CMF_PTL_ALL_COMPONENTS_TABLE",
+            "CMF_LNL_ALL_COMPONENTS_TABLE",
+            "CMF_ARL_S_ALL_COMPONENTS_TABLE",
+            "CMF_ARL_H_ALL_COMPONENTS_TABLE",
+            "CMF_ARL_U_ALL_COMPONENTS_TABLE",
+            "CMF_ARL_HX_ALL_COMPONENTS_TABLE",
+            "CMF_GNR_ALL_COMPONENTS_TABLE",
+            "CMF_WCL_ALL_COMPONENTS_TABLE",
+            "CMF_ARL_Refresh_ALL_COMPONENTS_TABLE",
+            "CMF_NVL_S_ALL_COMPONENTS_TABLE",
+            "CMF_NVL_H_ALL_COMPONENTS_TABLE",
+            "CMF_NVL_U_ALL_COMPONENTS_TABLE"
+        });
+    }
+
+    private static string BuildReportScopeKey(List<string> platformTables)
+    {
+        if (platformTables == null || platformTables.Count == 0) return AllCmfDataContextKey;
+        if (platformTables.Count == AllowedPlatformTables.Count) return AllCmfDataContextKey;
+        return BuildCombinedPlatformCode(platformTables);
     }
 
     private static DataTable LoadCombinedIssueData(List<string> platformTables)
@@ -554,6 +559,88 @@ public static class ReportsAssistantService
         }
 
         return combined;
+    }
+
+    private static void EnrichIssueDataWithHsdContext(DataTable table, int maxRows)
+    {
+        if (table == null || table.Rows.Count == 0 || maxRows <= 0)
+        {
+            return;
+        }
+
+        EnsureColumn(table, "HSD_Sighting_Context");
+        EnsureColumn(table, "HSD_Promoted_Context");
+
+        int enriched = 0;
+        for (int index = 0; index < table.Rows.Count && enriched < maxRows; index++)
+        {
+            DataRow row = table.Rows[index];
+            string sightingId = FirstRowValue(row, "SightingID", "cp_id");
+            string promotedId = FirstRowValue(row, "promoted_id", "merge_id");
+
+            if (!string.IsNullOrWhiteSpace(sightingId))
+            {
+                row["HSD_Sighting_Context"] = BuildCompactHsdContext(sightingId, "Sighting " + sightingId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(promotedId) && !string.Equals(promotedId.Trim(), sightingId.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                row["HSD_Promoted_Context"] = BuildCompactHsdContext(promotedId, "Promoted " + promotedId);
+            }
+
+            enriched++;
+        }
+    }
+
+    private static void EnsureColumn(DataTable table, string columnName)
+    {
+        if (table != null && !table.Columns.Contains(columnName))
+        {
+            table.Columns.Add(columnName, typeof(string));
+        }
+    }
+
+    private static string BuildCompactHsdContext(string articleId, string label)
+    {
+        try
+        {
+            HsdArticleData article = HsdPortalService.FetchArticle(articleId.Trim());
+            string context = HsdPortalService.FormatForAiContext(article, label);
+            return BuildCompactText(context, 1800);
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    private static string FirstRowValue(DataRow row, params string[] columnNames)
+    {
+        if (row == null || columnNames == null) return string.Empty;
+        for (int index = 0; index < columnNames.Length; index++)
+        {
+            string columnName = columnNames[index];
+            if (!row.Table.Columns.Contains(columnName)) continue;
+            object value = row[columnName];
+            if (value == null || value == DBNull.Value) continue;
+            string text = value.ToString().Trim();
+            if (!string.IsNullOrWhiteSpace(text)) return text;
+        }
+
+        return string.Empty;
+    }
+
+    private static string BuildCompactText(string text, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        string normalized = text.Replace("\r", " ").Replace("\n", " ").Trim();
+        while (normalized.IndexOf("  ", StringComparison.Ordinal) >= 0)
+        {
+            normalized = normalized.Replace("  ", " ");
+        }
+
+        if (normalized.Length <= maxLength) return normalized;
+        return normalized.Substring(0, maxLength) + "...";
     }
 
     private static string BuildCombinedPlatformCode(List<string> platformTables)

@@ -12,12 +12,24 @@ Web.config
 
 # Generated diagnostics and captures
 page500_ai_confidence.html
+page*.html
+rendered*.html
+portal-after-*.html
+*_smoke.json
+provider_diagnostic*.json
+webconfig_gnai_*.json
+utputFormat
+App_Data/ai-summary-context-*.txt
+App_Data/hsd-debug-*.txt
+App_Data/hsd-raw-response-*.json
+App_Data/article_*.json
 *.log
 
 # Generated report/data outputs
 Content/generated-reports/
 App_Data/reports-assistant/issues_*.csv
 App_Data/reports-assistant/template_*.md
+App_Data/reports-assistant/templates/*_manual-template.md
 
 # Python caches
 __pycache__/

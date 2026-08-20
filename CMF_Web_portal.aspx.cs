@@ -116,6 +116,19 @@ public class HomeDashboardCategoryPoint
     public int Value { get; set; }
 }
 
+public class HomeDashboardFact
+{
+    public string Label { get; set; }
+    public string Value { get; set; }
+    public string Note { get; set; }
+}
+
+public class HomeDashboardTable
+{
+    public List<string> Columns { get; set; }
+    public List<List<string>> Rows { get; set; }
+}
+
 public class HomeDashboardSnapshot
 {
     public string PlatformLabel { get; set; }
@@ -128,6 +141,16 @@ public class HomeDashboardSnapshot
     public int NewToday { get; set; }
     public int ResolvedToday { get; set; }
     public int AiWatchlist { get; set; }
+    public int ProgramReadinessScore { get; set; }
+    public string ProgramRiskLevel { get; set; }
+    public string TopRisk { get; set; }
+    public string RiskConcentration { get; set; }
+    public List<string> PredictedBlockers { get; set; }
+    public List<HomeDashboardFact> SummaryFacts { get; set; }
+    public List<HomeDashboardFact> TptFacts { get; set; }
+    public HomeDashboardTable MilestoneSummary { get; set; }
+    public HomeDashboardTable ComponentSummary { get; set; }
+    public HomeDashboardTable PendingSummary { get; set; }
     public List<HomeDashboardTrendPoint> Trend { get; set; }
     public List<HomeDashboardCategoryPoint> StatusDistribution { get; set; }
     public List<HomeDashboardCategoryPoint> TopComponents { get; set; }
@@ -647,7 +670,7 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         {
             btnShowGridView8.CssClass = baseClass + " is-active";
             lnkNavReports.CssClass = navBaseClass + " is-active";
-            lblActiveViewTitle.Text = "Reports";
+            lblActiveViewTitle.Text = "Reports & Analytics";
         }
         else if (tabKey == "config")
         {
@@ -962,11 +985,6 @@ public partial class CMF_Web_portal : System.Web.UI.Page
             lblHomeCustomersAffectedValue.Text = snapshot.CustomersAffected.ToString(CultureInfo.InvariantCulture);
         }
 
-        if (lblHomeAiWatchlistValue != null)
-        {
-            lblHomeAiWatchlistValue.Text = snapshot.AiWatchlist.ToString(CultureInfo.InvariantCulture);
-        }
-
         if (lblHomeAiNewTodayValue != null)
         {
             lblHomeAiNewTodayValue.Text = snapshot.NewToday.ToString(CultureInfo.InvariantCulture);
@@ -975,11 +993,6 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         if (lblHomeAiClosedTodayValue != null)
         {
             lblHomeAiClosedTodayValue.Text = snapshot.ResolvedToday.ToString(CultureInfo.InvariantCulture);
-        }
-
-        if (litHomeAiDailySummary != null)
-        {
-            litHomeAiDailySummary.Text = BuildHomeAiDailySummaryHtml(snapshot);
         }
 
         if (lblHomeDashboardGeneratedAt != null)
@@ -1007,29 +1020,6 @@ public partial class CMF_Web_portal : System.Web.UI.Page
 FROM " + platformTable + ") AS platform_cmf_issues";
     }
 
-    private static string BuildHomeAiDailySummaryHtml(HomeDashboardSnapshot snapshot)
-    {
-        if (snapshot == null)
-        {
-            return "<li><i class=\"fas fa-circle-info\" aria-hidden=\"true\"></i><span>No dashboard activity snapshot is available yet.</span></li>";
-        }
-
-        List<string> items = new List<string>();
-        items.Add(string.Format(CultureInfo.InvariantCulture, "AI scanned {0} active CMF issues and highlighted {1} watchlist items for follow-up.", snapshot.ActiveIssues, snapshot.AiWatchlist));
-        items.Add(string.Format(CultureInfo.InvariantCulture, "Today added {0} new CMF asks and closed {1} issues from implementation activity.", snapshot.NewToday, snapshot.ResolvedToday));
-        items.Add(string.Format(CultureInfo.InvariantCulture, "Customer-impact monitoring is tracking {0} active medium-to-critical rows.", snapshot.CustomersAffected));
-
-        StringBuilder html = new StringBuilder();
-        foreach (string item in items)
-        {
-            html.AppendFormat(
-                CultureInfo.InvariantCulture,
-                "<li><i class=\"fas fa-check-circle\" aria-hidden=\"true\"></i><span>{0}</span></li>",
-                HttpUtility.HtmlEncode(item));
-        }
-        return html.ToString();
-    }
-
     private HomeDashboardSnapshot BuildHomeDashboardSnapshot()
     {
         string dashboardPlatform = ResolvePlatformTable(Session["selectedPlatform"] as string ?? ddlTables.SelectedValue);
@@ -1037,6 +1027,12 @@ FROM " + platformTable + ") AS platform_cmf_issues";
         HomeDashboardSnapshot snapshot = new HomeDashboardSnapshot();
         snapshot.PlatformLabel = BuildPlatformDisplayName(dashboardPlatform);
         snapshot.GeneratedAt = DateTime.Now.ToString("dd MMM yyyy HH:mm", CultureInfo.InvariantCulture);
+        snapshot.PredictedBlockers = new List<string>();
+        snapshot.SummaryFacts = new List<HomeDashboardFact>();
+        snapshot.TptFacts = new List<HomeDashboardFact>();
+        snapshot.MilestoneSummary = NewDashboardTable("Milestone", "Unique CMF Count");
+        snapshot.ComponentSummary = NewDashboardTable("Component", "Open (LOS)", "Impl/Verified");
+        snapshot.PendingSummary = NewDashboardTable("Component", "CMF Pending Count");
         snapshot.Trend = new List<HomeDashboardTrendPoint>();
         snapshot.StatusDistribution = new List<HomeDashboardCategoryPoint>();
         snapshot.TopComponents = new List<HomeDashboardCategoryPoint>();
@@ -1181,12 +1177,217 @@ ORDER BY issue_count DESC", con))
             }
         }
 
+        PopulateHomeCmfSummaryTables(snapshot, dashboardPlatform);
+        PopulateHomePortalHealth(snapshot);
+
         if (snapshot.Trend.Count > 1)
         {
             snapshot.Trend = snapshot.Trend.OrderBy(point => point.WeekLabel, StringComparer.Ordinal).ToList();
         }
 
         return snapshot;
+    }
+
+    private static HomeDashboardTable NewDashboardTable(params string[] columns)
+    {
+        HomeDashboardTable table = new HomeDashboardTable();
+        table.Columns = new List<string>(columns ?? new string[0]);
+        table.Rows = new List<List<string>>();
+        return table;
+    }
+
+    private void PopulateHomeCmfSummaryTables(HomeDashboardSnapshot snapshot, string platformTable)
+    {
+        if (snapshot == null) return;
+        platformTable = ResolvePlatformTable(platformTable);
+        string basePlatform = platformTable.Replace("_ALL_COMPONENTS_TABLE", string.Empty);
+        string pendingTable = basePlatform + "_CMF_ASK";
+
+        using (SqlConnection con = new SqlConnection(ConnectionString))
+        {
+            con.Open();
+
+            using (SqlCommand summaryCommand = new SqlCommand(@"
+SELECT
+    SUM(CASE WHEN cmf_request IN ('cmf_ok','cmf_duplicate') AND sysdebug LIKE '%customer_must_fix%' THEN 1 ELSE 0 END) AS TotalCount,
+    SUM(CASE WHEN cmf_request = 'cmf_duplicate' AND sysdebug LIKE '%customer_must_fix%' THEN 1 ELSE 0 END) AS Duplicates,
+    SUM(CASE WHEN cmf_request IN ('cmf_ok','cmf_duplicate') AND sysdebug LIKE '%customer_must_fix%' AND status IN ('complete','rejected') THEN 1 ELSE 0 END) AS ClosedCount,
+    SUM(CASE WHEN cmf_request = 'cmf_duplicate' AND sysdebug LIKE '%customer_must_fix%' AND status IN ('complete','rejected') THEN 1 ELSE 0 END) AS ClosedDup,
+    SUM(CASE WHEN cmf_request IN ('cmf_ok','cmf_duplicate') AND sysdebug LIKE '%customer_must_fix%' AND status IN ('implemented','verified') THEN 1 ELSE 0 END) AS ImplementedCount,
+    SUM(CASE WHEN cmf_request = 'cmf_duplicate' AND sysdebug LIKE '%customer_must_fix%' AND status IN ('implemented','verified') THEN 1 ELSE 0 END) AS ImplementedDup,
+    SUM(CASE WHEN cmf_request IN ('cmf_ok','cmf_duplicate') AND sysdebug LIKE '%customer_must_fix%' AND status = 'open' THEN 1 ELSE 0 END) AS PendingCount,
+    ISNULL(AVG(CAST(DATEDIFF(DAY, ISNULL(date_cmf_ask, date_cmf_decided), date_cmf_decided) AS INT)), 0) AS DispositionTpt,
+    ISNULL(AVG(CAST(CASE WHEN TRY_CAST(implemented_date AS DATE) < TRY_CAST(date_cmf_decided AS DATE) THEN 0 ELSE DATEDIFF(DAY, ISNULL(date_cmf_decided, implemented_date), implemented_date) END AS INT)), 0) AS ResolutionTpt,
+    ISNULL(AVG(CAST(days_active AS INT)), 0) AS OverallTpt
+FROM " + platformTable + @"
+WHERE sysdebug LIKE '%customer_must_fix%'", con))
+            using (SqlDataReader reader = summaryCommand.ExecuteReader())
+            {
+                if (reader.Read())
+                {
+                    int total = ReadInt(reader, 0);
+                    int duplicates = ReadInt(reader, 1);
+                    int closed = ReadInt(reader, 2);
+                    int closedDup = ReadInt(reader, 3);
+                    int implemented = ReadInt(reader, 4);
+                    int implementedDup = ReadInt(reader, 5);
+                    int pending = ReadInt(reader, 6);
+                    int dispositionTpt = ReadInt(reader, 7);
+                    int resolutionTpt = ReadInt(reader, 8);
+                    int overallTpt = ReadInt(reader, 9);
+
+                    snapshot.SummaryFacts.Add(new HomeDashboardFact { Label = "Total CMFs", Value = total.ToString(CultureInfo.InvariantCulture), Note = duplicates + " duplicates" });
+                    snapshot.SummaryFacts.Add(new HomeDashboardFact { Label = "Closed", Value = closed.ToString(CultureInfo.InvariantCulture), Note = closedDup + " duplicates" });
+                    snapshot.SummaryFacts.Add(new HomeDashboardFact { Label = "Implemented", Value = implemented.ToString(CultureInfo.InvariantCulture), Note = implementedDup + " duplicates" });
+                    snapshot.SummaryFacts.Add(new HomeDashboardFact { Label = "Pending", Value = pending.ToString(CultureInfo.InvariantCulture), Note = "open CMFs" });
+                    snapshot.TptFacts.Add(new HomeDashboardFact { Label = "CMF Disposition TPT", Value = dispositionTpt.ToString(CultureInfo.InvariantCulture), Note = "days" });
+                    snapshot.TptFacts.Add(new HomeDashboardFact { Label = "CMF Resolution TPT", Value = resolutionTpt.ToString(CultureInfo.InvariantCulture), Note = "days" });
+                    snapshot.TptFacts.Add(new HomeDashboardFact { Label = "CMF Overall TPT", Value = overallTpt.ToString(CultureInfo.InvariantCulture), Note = "days" });
+                }
+            }
+
+            using (SqlCommand milestoneCommand = new SqlCommand(@"
+SELECT LTRIM(RTRIM(drivers)) AS Driver, COUNT(*) AS CMFCount
+FROM " + platformTable + @"
+WHERE ISNULL(LTRIM(RTRIM(drivers)), '') <> ''
+  AND cmf_request IN ('cmf_ok')
+  AND sysdebug LIKE '%customer_must_fix%'
+GROUP BY LTRIM(RTRIM(drivers))
+ORDER BY LTRIM(RTRIM(drivers))", con))
+            using (SqlDataReader reader = milestoneCommand.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    snapshot.MilestoneSummary.Rows.Add(new List<string> { ReadString(reader, 0), ReadInt(reader, 1).ToString(CultureInfo.InvariantCulture) });
+                }
+            }
+
+            using (SqlCommand componentCommand = new SqlCommand(@"
+SELECT
+    CASE WHEN ISNULL(component_group, '') = '' THEN 'Unassigned' ELSE component_group END AS Component,
+    SUM(CASE WHEN status = 'open' AND cmf_request NOT IN ('cmf_duplicate','cmf_reject') THEN 1 ELSE 0 END) AS OpenCount,
+    SUM(CASE WHEN status = 'open' AND los = 'Yes' THEN 1 ELSE 0 END) AS LosCount,
+    SUM(CASE WHEN status = 'open' AND cmf_request = 'cmf_duplicate' THEN 1 ELSE 0 END) AS DuplicateCount,
+    SUM(CASE WHEN status IN ('implemented','verified') AND cmf_request = 'cmf_ok' THEN 1 ELSE 0 END) AS ImplementedCount
+FROM " + platformTable + @"
+WHERE status IN ('open','implemented','verified')
+  AND sysdebug LIKE '%customer_must_fix%'
+  AND cmf_request NOT IN ('cmf_reject')
+GROUP BY CASE WHEN ISNULL(component_group, '') = '' THEN 'Unassigned' ELSE component_group END
+ORDER BY Component", con))
+            using (SqlDataReader reader = componentCommand.ExecuteReader())
+            {
+                int totalOpen = 0;
+                int totalLos = 0;
+                int totalDuplicates = 0;
+                int totalImplemented = 0;
+                while (reader.Read())
+                {
+                    int open = ReadInt(reader, 1);
+                    int los = ReadInt(reader, 2);
+                    int duplicates = ReadInt(reader, 3);
+                    int implemented = ReadInt(reader, 4);
+                    totalOpen += open;
+                    totalLos += los;
+                    totalDuplicates += duplicates;
+                    totalImplemented += implemented;
+                    snapshot.ComponentSummary.Rows.Add(new List<string>
+                    {
+                        ReadString(reader, 0),
+                        open.ToString(CultureInfo.InvariantCulture) + "(" + los.ToString(CultureInfo.InvariantCulture) + ")",
+                        implemented.ToString(CultureInfo.InvariantCulture)
+                    });
+                }
+                snapshot.ComponentSummary.Rows.Add(new List<string>
+                {
+                    "Total (LOS) + Duplicates + Implemented",
+                    totalOpen.ToString(CultureInfo.InvariantCulture) + "(" + totalLos.ToString(CultureInfo.InvariantCulture) + ") + " + totalDuplicates.ToString(CultureInfo.InvariantCulture) + " Dups",
+                    totalImplemented.ToString(CultureInfo.InvariantCulture)
+                });
+            }
+
+            if (SqlTableExists(con, pendingTable))
+            {
+                using (SqlCommand pendingCommand = new SqlCommand(@"
+SELECT
+    CASE WHEN component_group IS NULL OR component_group = '' OR component_group = 'no iDST assigned' THEN 'Unassigned' ELSE component_group END AS component_group,
+    COUNT(cp_id) AS pending_count
+FROM " + pendingTable + @"
+WHERE status NOT IN ('complete', 'rejected')
+GROUP BY CASE WHEN component_group IS NULL OR component_group = '' OR component_group = 'no iDST assigned' THEN 'Unassigned' ELSE component_group END
+ORDER BY component_group", con))
+                using (SqlDataReader reader = pendingCommand.ExecuteReader())
+                {
+                    int totalPending = 0;
+                    while (reader.Read())
+                    {
+                        int count = ReadInt(reader, 1);
+                        totalPending += count;
+                        snapshot.PendingSummary.Rows.Add(new List<string> { ReadString(reader, 0), count.ToString(CultureInfo.InvariantCulture) });
+                    }
+                    snapshot.PendingSummary.Rows.Add(new List<string> { "Total", totalPending.ToString(CultureInfo.InvariantCulture) });
+                }
+            }
+        }
+    }
+
+    private void PopulateHomePortalHealth(HomeDashboardSnapshot snapshot)
+    {
+        if (snapshot == null) return;
+        int overallTpt = 0;
+        if (snapshot.TptFacts != null && snapshot.TptFacts.Count >= 3)
+        {
+            int.TryParse(snapshot.TptFacts[2].Value, out overallTpt);
+        }
+
+        int score = 100;
+        score -= Math.Min(35, snapshot.NeedsAttention * 4);
+        score -= Math.Min(20, snapshot.ActiveIssues * 2);
+        score -= Math.Min(25, Math.Max(0, overallTpt - 30) / 2);
+        score += Math.Min(10, snapshot.ResolvedThisWeek * 2);
+        snapshot.ProgramReadinessScore = Math.Max(0, Math.Min(100, score));
+        snapshot.ProgramRiskLevel = snapshot.ProgramReadinessScore >= 85 ? "Low Risk" : (snapshot.ProgramReadinessScore >= 70 ? "Moderate Risk" : "High Risk");
+        snapshot.TopRisk = snapshot.TopComponents != null && snapshot.TopComponents.Count > 0
+            ? snapshot.TopComponents[0].Name
+            : "No concentrated component risk";
+
+        int topValue = snapshot.TopComponents != null && snapshot.TopComponents.Count > 0 ? snapshot.TopComponents[0].Value : 0;
+        int active = Math.Max(1, snapshot.ActiveIssues);
+        snapshot.RiskConcentration = topValue > 0 ? Math.Round((topValue * 100.0) / active).ToString("0", CultureInfo.InvariantCulture) + "%" : "0%";
+
+        if (snapshot.TopComponents != null)
+        {
+            foreach (HomeDashboardCategoryPoint component in snapshot.TopComponents.Take(3))
+            {
+                if (component.Value > 0)
+                {
+                    snapshot.PredictedBlockers.Add(component.Name + " (" + component.Value.ToString(CultureInfo.InvariantCulture) + ")");
+                }
+            }
+        }
+        if (snapshot.PredictedBlockers.Count == 0)
+        {
+            snapshot.PredictedBlockers.Add("No blocker concentration detected");
+        }
+    }
+
+    private static bool SqlTableExists(SqlConnection connection, string tableName)
+    {
+        using (SqlCommand command = new SqlCommand("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @TableName", connection))
+        {
+            command.Parameters.AddWithValue("@TableName", tableName);
+            return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) > 0;
+        }
+    }
+
+    private static int ReadInt(SqlDataReader reader, int index)
+    {
+        return reader.IsDBNull(index) ? 0 : Convert.ToInt32(reader.GetValue(index), CultureInfo.InvariantCulture);
+    }
+
+    private static string ReadString(SqlDataReader reader, int index)
+    {
+        return reader.IsDBNull(index) ? string.Empty : Convert.ToString(reader.GetValue(index), CultureInfo.InvariantCulture);
     }
 
     private string BuildPlatformDisplayName(string platformTable)
@@ -3855,16 +4056,17 @@ LEFT JOIN " + designTable + @" AS d
         return links.Count > 0 ? string.Join(", ", links) : "NA";
     }
 
-    protected string RenderIssueDetails(object sightingIdValue, object promotedIdValue, object titleValue, object cmfRequestValue)
+    protected string RenderIssueDetails(object sightingIdValue, object promotedIdValue, object titleValue, object cmfRequestValue, object submittedDateValue, object statusValue, object sysdebugValue)
     {
         string sightingId = sightingIdValue == null || sightingIdValue == DBNull.Value ? string.Empty : sightingIdValue.ToString().Trim();
-        string promotedId = promotedIdValue == null || promotedIdValue == DBNull.Value ? string.Empty : promotedIdValue.ToString().Trim();
         string title = titleValue == null || titleValue == DBNull.Value ? string.Empty : titleValue.ToString().Trim();
-        string cmfRequest = cmfRequestValue == null || cmfRequestValue == DBNull.Value ? string.Empty : cmfRequestValue.ToString().Trim();
+        string status = statusValue == null || statusValue == DBNull.Value ? string.Empty : statusValue.ToString().Trim();
+        string sysdebug = sysdebugValue == null || sysdebugValue == DBNull.Value ? string.Empty : sysdebugValue.ToString().Replace("\r", " ").Replace("\n", " ").Trim();
+        string onclick = "openAiSummaryModal(\"" + JsEncode(sightingIdValue) + "\", \"" + JsEncode(titleValue) + "\", \"" + JsEncode(FormatDateOnly(submittedDateValue)) + "\", \"" + JsEncode(status) + "\", \"" + JsEncode(sysdebug) + "\", \"details\")";
 
         StringBuilder sb = new StringBuilder();
         sb.Append("<span class=\"issue-details-cell\">");
-        sb.Append("<span class=\"issue-meta-row\">");
+        sb.Append("<span class=\"issue-meta-row issue-meta-row-primary\">");
         if (!string.IsNullOrWhiteSpace(sightingId))
         {
             sb.AppendFormat(
@@ -3872,18 +4074,7 @@ LEFT JOIN " + designTable + @" AS d
                 HttpUtility.HtmlAttributeEncode(sightingId),
                 HttpUtility.HtmlEncode(sightingId));
         }
-        if (!string.IsNullOrWhiteSpace(promotedId))
-        {
-            sb.AppendFormat(
-                "<a class=\"issue-promoted-id\" href=\"https://hsdes.intel.com/appstore/article/#{0}\" target=\"_blank\" title=\"Open promoted issue {1} in HSDES\">PRM-{2}</a>",
-                HttpUtility.HtmlAttributeEncode(promotedId),
-                HttpUtility.HtmlAttributeEncode(promotedId),
-                HttpUtility.HtmlEncode(promotedId));
-        }
-        if (!string.IsNullOrWhiteSpace(cmfRequest))
-        {
-            sb.AppendFormat("<span class=\"cmf-request-chip\">{0}</span>", HttpUtility.HtmlEncode(cmfRequest.Replace('_', ' ')));
-        }
+        sb.Append("<button type=\"button\" class=\"ai-summary-btn ai-summary-btn-inline issue-details-ai-btn\" onclick='" + onclick + "' title=\"AI issue details\" aria-label=\"AI issue details\">✦</button>");
         sb.Append("</span>");
         sb.AppendFormat("<span class=\"issue-title-text\">{0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(title) ? "Untitled issue" : title));
         sb.Append("</span>");
@@ -3909,18 +4100,18 @@ LEFT JOIN " + designTable + @" AS d
             HttpUtility.HtmlAttributeEncode(title));
     }
 
-    protected string RenderPendingIssueDetails(object cpIdValue, object titleValue, object cmfRequestValue)
+    protected string RenderPendingIssueDetails(object cpIdValue, object titleValue, object componentValue)
     {
         string title = titleValue == null || titleValue == DBNull.Value ? string.Empty : titleValue.ToString().Trim();
-        string cmfRequest = cmfRequestValue == null || cmfRequestValue == DBNull.Value ? string.Empty : cmfRequestValue.ToString().Trim();
+        string component = componentValue == null || componentValue == DBNull.Value ? string.Empty : componentValue.ToString().Trim();
 
         StringBuilder sb = new StringBuilder();
         sb.Append("<span class=\"pending-issue-cell\">");
         sb.Append(RenderPendingId(cpIdValue));
         sb.AppendFormat("<span class=\"pending-title-text\">{0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(title) ? "Untitled pending issue" : title));
-        if (!string.IsNullOrWhiteSpace(cmfRequest))
+        if (!string.IsNullOrWhiteSpace(component))
         {
-            sb.AppendFormat("<span class=\"pending-chip\">{0}</span>", HttpUtility.HtmlEncode(cmfRequest.Replace('_', ' ')));
+            sb.AppendFormat("<span class=\"pending-mini-label\">Component</span><span>{0}</span>", HttpUtility.HtmlEncode(component));
         }
         sb.Append("</span>");
         return sb.ToString();
@@ -3929,7 +4120,32 @@ LEFT JOIN " + designTable + @" AS d
     protected string RenderPendingIssueDetailsWithRecommendation(object cpIdValue, object titleValue, object cmfRequestValue, object componentValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
     {
         return "<span class=\"pending-issue-with-action\">" +
-            RenderPendingIssueDetails(cpIdValue, titleValue, cmfRequestValue) +
+            RenderPendingIssueDetails(cpIdValue, titleValue, componentValue) +
+            "<span class=\"pending-issue-action-row\">" +
+            RenderPendingDecisionDetailsButton(cpIdValue, titleValue, componentValue, cmfRequestValue, impactValue, idstValue, reproOnRvpValue, reproducibilityValue, customerDetailValue, customerOwnerValue) +
+            "</span>" +
+            "</span>";
+    }
+
+    protected string RenderPendingDecisionDetailsButton(object cpIdValue, object titleValue, object componentValue, object cmfRequestValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
+    {
+        return string.Format(
+            "<button type=\"button\" class=\"pending-recommendation-btn pending-decision-details-btn\" onclick='openCmfPendingDetailsModal(\"{0}\", \"{1}\", \"{2}\", \"{3}\", \"{4}\", \"{5}\", \"{6}\", \"{7}\", \"{8}\", \"{9}\")' title=\"AI CMF decision details\" aria-label=\"AI CMF decision details\"><i class=\"fas fa-magic\" aria-hidden=\"true\"></i></button>",
+            JsEncode(cpIdValue),
+            JsEncode(titleValue),
+            JsEncode(componentValue),
+            JsEncode(cmfRequestValue),
+            JsEncode(impactValue),
+            JsEncode(idstValue),
+            JsEncode(reproOnRvpValue),
+            JsEncode(reproducibilityValue),
+            JsEncode(customerDetailValue),
+            JsEncode(customerOwnerValue));
+    }
+
+    protected string RenderPendingRecommendationCell(object cpIdValue, object titleValue, object componentValue, object cmfRequestValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
+    {
+        return "<span class=\"pending-ai-rec-cell\">" +
             RenderPendingRecommendationButton(cpIdValue, titleValue, componentValue, cmfRequestValue, impactValue, idstValue, reproOnRvpValue, reproducibilityValue, customerDetailValue, customerOwnerValue) +
             "</span>";
     }
@@ -3987,8 +4203,9 @@ LEFT JOIN " + designTable + @" AS d
 
     protected string RenderPendingRecommendationButton(object cpIdValue, object titleValue, object componentValue, object cmfRequestValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
     {
+        string cpId = cpIdValue == null || cpIdValue == DBNull.Value ? string.Empty : cpIdValue.ToString();
         return string.Format(
-            "<button type=\"button\" class=\"pending-recommendation-btn\" onclick='openCmfPendingRecommendationModal(\"{0}\", \"{1}\", \"{2}\", \"{3}\", \"{4}\", \"{5}\", \"{6}\", \"{7}\", \"{8}\", \"{9}\")' title=\"AI Recommendation\" aria-label=\"AI Recommendation\"><i class=\"fas fa-brain\" aria-hidden=\"true\"></i><span>Recommend</span></button>",
+            "<button type=\"button\" class=\"pending-recommendation-btn pending-ai-rec-btn\" data-cmf-rec-id=\"{10}\" onclick='openCmfPendingRecommendationModal(\"{0}\", \"{1}\", \"{2}\", \"{3}\", \"{4}\", \"{5}\", \"{6}\", \"{7}\", \"{8}\", \"{9}\")' title=\"Run AI recommendation\" aria-label=\"Run AI recommendation\"><span class=\"pending-ai-rec-label\">Run AI</span><span class=\"pending-ai-rec-confidence\">Not generated</span></button>",
             JsEncode(cpIdValue),
             JsEncode(titleValue),
             JsEncode(componentValue),
@@ -3998,7 +4215,43 @@ LEFT JOIN " + designTable + @" AS d
             JsEncode(reproOnRvpValue),
             JsEncode(reproducibilityValue),
             JsEncode(customerDetailValue),
-            JsEncode(customerOwnerValue));
+            JsEncode(customerOwnerValue),
+                HttpUtility.HtmlAttributeEncode(cpId));
+    }
+
+    private static string EstimatePendingRecommendationLabel(object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue)
+    {
+        string impact = impactValue == null || impactValue == DBNull.Value ? string.Empty : impactValue.ToString();
+        string idst = idstValue == null || idstValue == DBNull.Value ? string.Empty : idstValue.ToString();
+        string rvp = reproOnRvpValue == null || reproOnRvpValue == DBNull.Value ? string.Empty : reproOnRvpValue.ToString();
+        string repro = reproducibilityValue == null || reproducibilityValue == DBNull.Value ? string.Empty : reproducibilityValue.ToString();
+        bool hasRepro = ContainsText(rvp, "yes") || ContainsText(repro, "100") || ContainsText(repro, "frequent") || ContainsText(repro, "always");
+        bool hasImpact = ContainsText(impact, "high") || ContainsText(impact, "block") || ContainsText(impact, "critical") || ContainsText(impact, "customer");
+        bool hasDebug = !string.IsNullOrWhiteSpace(idst);
+        if (hasRepro && hasImpact && hasDebug) return "CMF_OK";
+        if (hasRepro || hasImpact) return "CMF_INCOMPLETE";
+        return "CMF_REJECT";
+    }
+
+    private static int EstimatePendingRecommendationConfidence(object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue)
+    {
+        int score = 45;
+        if (HasValue(impactValue)) score += 12;
+        if (HasValue(idstValue)) score += 12;
+        if (HasValue(reproOnRvpValue)) score += 10;
+        if (HasValue(reproducibilityValue)) score += 12;
+        if (HasValue(customerDetailValue)) score += 9;
+        return Math.Min(92, score);
+    }
+
+    private static bool HasValue(object value)
+    {
+        return value != null && value != DBNull.Value && !string.IsNullOrWhiteSpace(value.ToString());
+    }
+
+    private static bool ContainsText(string value, string token)
+    {
+        return !string.IsNullOrWhiteSpace(value) && value.IndexOf(token, StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     protected string RenderMilestoneProgress(object milestoneValue, object progressValue, object fallbackMilestoneValue)
@@ -4208,13 +4461,6 @@ LEFT JOIN " + designTable + @" AS d
         }
         string sysdebug = sysdebugValue == null || sysdebugValue == DBNull.Value ? string.Empty : sysdebugValue.ToString().Replace("\r", " ").Replace("\n", " ").Trim();
         string sightingId = sightingIdValue == null || sightingIdValue == DBNull.Value ? string.Empty : sightingIdValue.ToString();
-        int confidence = AiSummaryService.EstimateSummaryConfidence(new AiSummaryRequest
-        {
-            IssueId = sightingId,
-            Title = titleValue == null || titleValue == DBNull.Value ? string.Empty : titleValue.ToString(),
-            Status = status,
-            Sysdebug = sysdebug
-        });
         string oneLineUpdate = BuildOneLineStatusUpdate(status, sysdebug);
         if (string.IsNullOrWhiteSpace(oneLineUpdate)) oneLineUpdate = BuildFallbackStatusSentence(status);
 
@@ -4224,7 +4470,7 @@ LEFT JOIN " + designTable + @" AS d
             "<div class=\"status-row status-row-primary\">" +
                 "<span class=\"status-label-group\">" +
                 "<span class=\"status-pill\">" + HttpUtility.HtmlEncode(status) + "</span>" +
-                "<span class=\"status-confidence-pill\" data-ai-confidence-issue=\"" + HttpUtility.HtmlAttributeEncode(sightingId) + "\">Confidence: " + confidence.ToString(CultureInfo.InvariantCulture) + "%</span>" +
+                "<span class=\"status-confidence-pill status-confidence-empty\" data-ai-confidence-issue=\"" + HttpUtility.HtmlAttributeEncode(sightingId) + "\">AI not run</span>" +
                 "</span>" +
                 "<button type=\"button\" class=\"ai-summary-btn ai-summary-btn-inline\" onclick='" + onclick + "' title=\"AI Summary\" aria-label=\"AI Summary\">✦</button>" +
             "</div>" +
@@ -4427,7 +4673,8 @@ LEFT JOIN " + designTable + @" AS d
         string submittedDate,
         string status,
         string sysdebug,
-        string platform)
+        string platform,
+        string mode)
     {
         try
         {
@@ -4462,15 +4709,10 @@ LEFT JOIN " + designTable + @" AS d
                 ContextDetails = issueContext
             };
 
-            // TEMPORARY DEBUGGING ONLY
-            string debugPath = HttpContext.Current != null
-                ? HttpContext.Current.Server.MapPath("~/App_Data/ai-summary-context-" + issueId + ".txt")
-                : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "App_Data", "ai-summary-context-" + issueId + ".txt");
-
-            File.WriteAllText(
-                debugPath,
-                request.ContextDetails ?? string.Empty
-            );
+            if (string.Equals(mode, "details", StringComparison.OrdinalIgnoreCase))
+            {
+                return AiSummaryService.GenerateIssueDetails(request);
+            }
 
             return AiSummaryService.GenerateIssueSummary(request);
         }
@@ -4486,7 +4728,7 @@ LEFT JOIN " + designTable + @" AS d
 
     private static string BuildIssueSummaryContext(string platformTable, string issueId)
     {
-        if (string.IsNullOrWhiteSpace(platformTable) || string.IsNullOrWhiteSpace(issueId))
+        if (string.IsNullOrWhiteSpace(issueId))
         {
             return string.Empty;
         }
@@ -4495,7 +4737,23 @@ LEFT JOIN " + designTable + @" AS d
         {
             string connectionString = ConfigurationManager.ConnectionStrings["gfxitt"].ConnectionString;
             using (SqlConnection con = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand(@"
+            {
+                con.Open();
+
+                string effectivePlatformTable = platformTable;
+                if (string.IsNullOrWhiteSpace(effectivePlatformTable)
+                    || !AllowedPlatformTables.Contains(effectivePlatformTable)
+                    || !IssueExistsInPlatform(con, effectivePlatformTable, issueId))
+                {
+                    effectivePlatformTable = FindIssuePlatformTable(con, issueId);
+                }
+
+                if (string.IsNullOrWhiteSpace(effectivePlatformTable))
+                {
+                    return "Context Lookup: Issue " + issueId.Trim() + " was not found in the selected platform or any allowed CMF platform table.";
+                }
+
+                using (SqlCommand cmd = new SqlCommand(@"
 SELECT TOP 1
     main.cp_id,
     main.title,
@@ -4518,9 +4776,9 @@ SELECT TOP 1
     main.fixed_in_version,
     main.cmf_status,
     main.status
-FROM " + platformTable + @" AS main
-WHERE main.cp_id = @issueId", con))
-            {
+FROM " + effectivePlatformTable + @" AS main
+WHERE CAST(main.cp_id AS VARCHAR(50)) = @issueId", con))
+                {
                 cmd.Parameters.AddWithValue("@issueId", issueId.Trim());
                 using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
                 {
@@ -4536,6 +4794,7 @@ WHERE main.cp_id = @issueId", con))
 
                     // ── Section 1: CMF portal database fields ──────────────────
                     builder.AppendLine("--- CMF Portal Database ---");
+                    builder.AppendLine("Context Platform Table: " + effectivePlatformTable);
                     AppendSummaryContextLine(builder, "Sighting ID", row, "cp_id");
                     AppendSummaryContextLine(builder, "Title", row, "title");
                     AppendSummaryContextLine(builder, "Operating System", row, "operating_system", "os");
@@ -4564,7 +4823,8 @@ WHERE main.cp_id = @issueId", con))
                         builder.AppendLine("Promoted ID: " + promotedId);
                         if (!string.Equals(promotedId.Trim(), issueId.Trim(), StringComparison.OrdinalIgnoreCase))
                         {
-                            DataRow promotedRow = LoadIssueRowById(con, platformTable, promotedId.Trim());
+                            DataRow promotedRow = LoadIssueRowById(con, effectivePlatformTable, promotedId.Trim())
+                                ?? LoadIssueRowByIdAcrossPlatforms(con, promotedId.Trim());
                             if (promotedRow != null)
                             {
                                 AppendSummaryContextLine(builder, "Promoted Issue ID", promotedRow, "cp_id");
@@ -4593,40 +4853,6 @@ WHERE main.cp_id = @issueId", con))
                             hsdSighting,
                             "Sighting " + issueId.Trim());
 
-                    // TEMPORARY DEBUGGING
-                    string hsdDebugPath = HttpContext.Current != null
-                        ? HttpContext.Current.Server.MapPath("~/App_Data/hsd-debug-" + issueId.Trim() + ".txt")
-                        : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "App_Data", "hsd-debug-" + issueId.Trim() + ".txt");
-
-                    StringBuilder hsdDebug = new StringBuilder();
-
-                    hsdDebug.AppendLine("========== HSD ARTICLE OBJECT ==========");
-                    hsdDebug.AppendLine("Article ID: " + (hsdSighting != null && hsdSighting.ArticleId != null ? hsdSighting.ArticleId : "NULL"));
-                    hsdDebug.AppendLine("Title: " + (hsdSighting != null && hsdSighting.Title != null ? hsdSighting.Title : "NULL"));
-                    hsdDebug.AppendLine("Description: " + (hsdSighting != null && hsdSighting.Description != null ? hsdSighting.Description : "NULL"));
-                    hsdDebug.AppendLine("Status: " + (hsdSighting != null && hsdSighting.Status != null ? hsdSighting.Status : "NULL"));
-                    hsdDebug.AppendLine("Sysdebug: " + (hsdSighting != null && hsdSighting.Sysdebug != null ? hsdSighting.Sysdebug : "NULL"));
-                    hsdDebug.AppendLine("Fetch Success: " +
-                        (hsdSighting != null ? hsdSighting.FetchSuccess : false));
-
-                    hsdDebug.AppendLine("Fetch Error: " +
-                        (hsdSighting != null && hsdSighting.FetchError != null ? hsdSighting.FetchError : "NULL"));
-
-                    hsdDebug.AppendLine("Comments count: " +
-                        (hsdSighting != null && hsdSighting.Comments != null ? hsdSighting.Comments.Count : 0));
-
-                    hsdDebug.AppendLine("Investigation History Length: " +
-                        (hsdSighting != null && hsdSighting.InvestigationHistory != null ? hsdSighting.InvestigationHistory.Length : 0));
-
-                    hsdDebug.AppendLine();
-                    hsdDebug.AppendLine("========== FORMATTED HSD CONTEXT ==========");
-                    hsdDebug.AppendLine(hsdSightingContext ?? "NULL");
-
-                    File.WriteAllText(
-                        hsdDebugPath,
-                        hsdDebug.ToString()
-                    );
-
                     if (!string.IsNullOrWhiteSpace(hsdSightingContext))
                         builder.AppendLine(hsdSightingContext);
 
@@ -4643,11 +4869,64 @@ WHERE main.cp_id = @issueId", con))
                     return builder.ToString().Trim();
                 }
             }
+            }
         }
         catch
         {
             return string.Empty;
         }
+    }
+
+    private static bool IssueExistsInPlatform(SqlConnection connection, string platformTable, string issueId)
+    {
+        if (connection == null || string.IsNullOrWhiteSpace(platformTable) || string.IsNullOrWhiteSpace(issueId) || !AllowedPlatformTables.Contains(platformTable))
+        {
+            return false;
+        }
+
+        using (SqlCommand cmd = new SqlCommand("SELECT TOP 1 1 FROM " + platformTable + " WHERE CAST(cp_id AS VARCHAR(50)) = @issueId", connection))
+        {
+            cmd.Parameters.AddWithValue("@issueId", issueId.Trim());
+            object result = cmd.ExecuteScalar();
+            return result != null && result != DBNull.Value;
+        }
+    }
+
+    private static string FindIssuePlatformTable(SqlConnection connection, string issueId)
+    {
+        if (connection == null || string.IsNullOrWhiteSpace(issueId))
+        {
+            return string.Empty;
+        }
+
+        foreach (string candidateTable in AllowedPlatformTables)
+        {
+            if (IssueExistsInPlatform(connection, candidateTable, issueId))
+            {
+                return candidateTable;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static DataRow LoadIssueRowByIdAcrossPlatforms(SqlConnection connection, string lookupIssueId)
+    {
+        if (connection == null || string.IsNullOrWhiteSpace(lookupIssueId))
+        {
+            return null;
+        }
+
+        foreach (string candidateTable in AllowedPlatformTables)
+        {
+            DataRow row = LoadIssueRowById(connection, candidateTable, lookupIssueId);
+            if (row != null)
+            {
+                return row;
+            }
+        }
+
+        return null;
     }
 
     private static DataRow LoadIssueRowById(SqlConnection connection, string platformTable, string lookupIssueId)
@@ -4797,7 +5076,8 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
                 Reproducibility = reproducibility,
                 CustomerDetail = customerDetail,
                 CustomerOwner = customerOwner,
-                Rules = CmfRecommendationService.GetActiveRulesText()
+                Rules = CmfRecommendationService.GetActiveRulesText(),
+                HsdContext = BuildPendingRecommendationContext(resolvedPlatform, cpId)
             };
 
             return CmfRecommendationService.GenerateCmfPendingRecommendation(request);
@@ -4810,6 +5090,94 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
                 Message = "Recommendation generation failed: " + ex.Message
             };
         }
+    }
+
+    [WebMethod(EnableSession = true)]
+    public static CmfRecommendationResponse GetCmfPendingDecisionDetails(
+        string cpId,
+        string title,
+        string component,
+        string cmfRequest,
+        string impact,
+        string idst,
+        string reproOnRvp,
+        string reproducibility,
+        string customerDetail,
+        string customerOwner,
+        string platform)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(platform) && !AllowedPlatformTables.Contains(platform))
+            {
+                return new CmfRecommendationResponse
+                {
+                    Success = false,
+                    Message = "Invalid platform input for CMF decision details."
+                };
+            }
+
+            CmfRecommendationRequest request = new CmfRecommendationRequest
+            {
+                CpId = cpId,
+                Title = title,
+                Component = component,
+                CmfRequest = cmfRequest,
+                Impact = impact,
+                Idst = idst,
+                ReproOnRvp = reproOnRvp,
+                Reproducibility = reproducibility,
+                CustomerDetail = customerDetail,
+                CustomerOwner = customerOwner,
+                Rules = CmfRecommendationService.GetActiveRulesText(),
+                HsdContext = BuildPendingRecommendationContext(platform, cpId)
+            };
+
+            return CmfRecommendationService.GenerateCmfPendingDecisionDetails(request);
+        }
+        catch (Exception ex)
+        {
+            return new CmfRecommendationResponse
+            {
+                Success = false,
+                Message = "CMF decision details failed: " + ex.Message
+            };
+        }
+    }
+
+    private static string BuildPendingHsdContext(string cpId)
+    {
+        if (string.IsNullOrWhiteSpace(cpId)) return string.Empty;
+        try
+        {
+            HsdArticleData article = HsdPortalService.FetchArticle(cpId.Trim());
+            return HsdPortalService.FormatForAiContext(article, "Pending Sighting");
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    private static string BuildPendingRecommendationContext(string platformTable, string cpId)
+    {
+        if (string.IsNullOrWhiteSpace(cpId)) return string.Empty;
+
+        StringBuilder builder = new StringBuilder();
+        string dbContext = BuildIssueSummaryContext(platformTable, cpId);
+        if (!string.IsNullOrWhiteSpace(dbContext))
+        {
+            builder.AppendLine(dbContext);
+        }
+
+        string hsdContext = BuildPendingHsdContext(cpId);
+        if (!string.IsNullOrWhiteSpace(hsdContext) && builder.ToString().IndexOf(hsdContext, StringComparison.OrdinalIgnoreCase) < 0)
+        {
+            if (builder.Length > 0) builder.AppendLine();
+            builder.AppendLine(hsdContext);
+        }
+
+        return builder.ToString().Trim();
     }
 
     [WebMethod(EnableSession = true)]
@@ -4844,21 +5212,6 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
     {
         try
         {
-            string resolvedPlatform = platform;
-            if (string.IsNullOrWhiteSpace(resolvedPlatform) && HttpContext.Current != null && HttpContext.Current.Session != null)
-            {
-                resolvedPlatform = HttpContext.Current.Session[IssuePendingPlatformSessionKey] as string;
-                if (string.IsNullOrWhiteSpace(resolvedPlatform))
-                {
-                    resolvedPlatform = HttpContext.Current.Session["selectedPlatform"] as string;
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(resolvedPlatform) || !AllowedPlatformTables.Contains(resolvedPlatform))
-            {
-                return new ReportsAssistantResponse { Success = false, Message = "Invalid platform for template save." };
-            }
-
             string appDataRoot = HostingEnvironment.MapPath("~/App_Data/reports-assistant");
             if (string.IsNullOrWhiteSpace(appDataRoot))
             {
@@ -4875,7 +5228,7 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
                 safeName += ".md";
             }
             string stamp = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
-            string outPath = Path.Combine(templatesDir, resolvedPlatform + "_" + stamp + "_" + safeName);
+            string outPath = Path.Combine(templatesDir, "ALL_CMF_" + stamp + "_" + safeName);
             File.WriteAllText(outPath, template ?? string.Empty, Encoding.UTF8);
 
             return new ReportsAssistantResponse { Success = true, Message = "Template saved." };
@@ -4891,21 +5244,6 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
     {
         try
         {
-            string resolvedPlatform = platform;
-            if (string.IsNullOrWhiteSpace(resolvedPlatform) && HttpContext.Current != null && HttpContext.Current.Session != null)
-            {
-                resolvedPlatform = HttpContext.Current.Session[IssuePendingPlatformSessionKey] as string;
-                if (string.IsNullOrWhiteSpace(resolvedPlatform))
-                {
-                    resolvedPlatform = HttpContext.Current.Session["selectedPlatform"] as string;
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(resolvedPlatform) || !AllowedPlatformTables.Contains(resolvedPlatform))
-            {
-                return new ReportsAssistantResponse { Success = false, Message = "Invalid platform for report generation." };
-            }
-
             string appDataRoot = HostingEnvironment.MapPath("~/App_Data/reports-assistant");
             string templatesDir = Path.Combine(appDataRoot ?? string.Empty, "templates");
             if (!Directory.Exists(templatesDir))
@@ -4913,15 +5251,15 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
                 return new ReportsAssistantResponse { Success = false, Message = "No saved templates found on server." };
             }
 
-            string[] candidates = Directory.GetFiles(templatesDir, resolvedPlatform + "_*.*");
+            string[] candidates = Directory.GetFiles(templatesDir, "ALL_CMF_*.*");
             string templatePath = GetNewestTemplatePath(candidates);
             if (string.IsNullOrWhiteSpace(templatePath) || !File.Exists(templatePath))
             {
-                return new ReportsAssistantResponse { Success = false, Message = "No template found for selected platform." };
+                return new ReportsAssistantResponse { Success = false, Message = "No global report template found." };
             }
 
             string templateContent = File.ReadAllText(templatePath, Encoding.UTF8);
-            return ReportsAssistantService.GenerateFromTemplate(templateContent, resolvedPlatform);
+            return ReportsAssistantService.GenerateFromTemplate(templateContent, string.Empty);
         }
         catch (Exception ex)
         {
@@ -4934,21 +5272,6 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
     {
         try
         {
-            string resolvedPlatform = platform;
-            if (string.IsNullOrWhiteSpace(resolvedPlatform) && HttpContext.Current != null && HttpContext.Current.Session != null)
-            {
-                resolvedPlatform = HttpContext.Current.Session[IssuePendingPlatformSessionKey] as string;
-                if (string.IsNullOrWhiteSpace(resolvedPlatform))
-                {
-                    resolvedPlatform = HttpContext.Current.Session["selectedPlatform"] as string;
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(resolvedPlatform) || !AllowedPlatformTables.Contains(resolvedPlatform))
-            {
-                return new ReportsAssistantResponse { Success = false, Message = "Invalid platform." };
-            }
-
             string appDataRoot = HostingEnvironment.MapPath("~/App_Data/reports-assistant");
             string templatesDir = Path.Combine(appDataRoot ?? string.Empty, "templates");
             if (!Directory.Exists(templatesDir))
@@ -4956,7 +5279,7 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
                 return new ReportsAssistantResponse { Success = false, Message = "" };
             }
 
-            string[] candidates = Directory.GetFiles(templatesDir, resolvedPlatform + "_*.*");
+            string[] candidates = Directory.GetFiles(templatesDir, "ALL_CMF_*.*");
             string templatePath = GetNewestTemplatePath(candidates);
             if (string.IsNullOrWhiteSpace(templatePath) || !File.Exists(templatePath))
             {

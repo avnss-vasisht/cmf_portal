@@ -20,6 +20,19 @@
     <add key="GNAI:Proxy" value="" />
 
     <add key="Python:Executable" value="C:\\Program Files\\Python314\\python.exe" />
+
+    <!-- HSD enrichment for AI summaries. ProviderOrder supports gnai, mcp, rest.
+      Set HSD:McpEndpoint and HSD:McpToolName if running the HSDES MCP server behind an HTTP/streamable endpoint. -->
+    <add key="HSD:Enabled" value="true" />
+    <add key="HSD:ProviderOrder" value="rest,gnai" />
+    <add key="HSD:GnaiEnabled" value="true" />
+    <add key="HSD:McpEndpoint" value="" />
+    <add key="HSD:McpToolName" value="hsdes_get_article" />
+    <add key="HSD:McpAuthorization" value="" />
+    <add key="HSD:ArticleApiBaseUrl" value="https://hsdes-api.intel.com/rest/article" />
+    <add key="HSD:TimeoutSeconds" value="20" />
+    <add key="HSD:UseDefaultCredentials" value="true" />
+    <add key="HSD:Proxy" value="" />
   </appSettings>
 
   <connectionStrings>

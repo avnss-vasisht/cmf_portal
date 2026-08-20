@@ -55,7 +55,7 @@ public static class AiSummaryService
         string contextDetails = SafeText(request.ContextDetails);
 
         int confidence = CalculateSummaryConfidence(status, sysdebug, contextDetails);
-        string hash = ComputeHash("summary-interpretive-template-v5|" + issueId + "|" + title + "|" + submittedDate + "|" + status + "|" + sysdebug + "|" + contextDetails);
+        string hash = ComputeHash("summary-debug-decision-live-v6|" + GetAiProviderCacheSignature() + "|" + issueId + "|" + title + "|" + submittedDate + "|" + status + "|" + sysdebug + "|" + contextDetails);
         string cacheKey = "ai-summary:" + hash;
 
         AiSummaryResponse cached = TryGetCached(cacheKey);
@@ -115,6 +115,67 @@ public static class AiSummaryService
         return result;
     }
 
+    public static AiSummaryResponse GenerateIssueDetails(AiSummaryRequest request)
+    {
+        if (request == null)
+        {
+            return new AiSummaryResponse
+            {
+                Success = false,
+                Message = "Invalid issue details request."
+            };
+        }
+
+        string issueId = SafeText(request.IssueId);
+        string title = SafeText(request.Title);
+        string submittedDate = SafeText(request.SubmittedDate);
+        string status = SafeText(request.Status);
+        string sysdebug = SafeText(request.Sysdebug);
+        string contextDetails = SafeText(request.ContextDetails);
+        int confidence = CalculateSummaryConfidence(status, sysdebug, contextDetails);
+        string hash = ComputeHash("issue-details-context-brief-live-v6|" + GetAiProviderCacheSignature() + "|" + issueId + "|" + title + "|" + submittedDate + "|" + status + "|" + sysdebug + "|" + contextDetails);
+        string cacheKey = "ai-issue-details:" + hash;
+
+        AiSummaryResponse cached = TryGetCached(cacheKey);
+        if (cached != null)
+        {
+            return cached;
+        }
+
+        string modelDetails;
+        string modelError;
+        bool hasModelDetails = TryGenerateWithGitHubModel(
+            issueId,
+            submittedDate,
+            title,
+            status,
+            sysdebug,
+            contextDetails,
+            out modelDetails,
+            out modelError,
+            BuildIssueDetailsPrompt(issueId, submittedDate, title, status, sysdebug, contextDetails),
+            "You write plain-language issue briefs for iDST users. Stay factual, concise, and useful for quickly understanding the issue before opening HSD.");
+
+        string details = hasModelDetails
+            ? CleanupSummarySpacing(modelDetails, 260)
+            : BuildFallbackIssueDetails(issueId, submittedDate, title, status, sysdebug, contextDetails, Math.Max(40, confidence - 8));
+
+        AiSummaryResponse result = new AiSummaryResponse
+        {
+            Success = true,
+            IssueId = issueId,
+            Title = title,
+            SubmittedDate = submittedDate,
+            Summary = details,
+            Confidence = hasModelDetails ? confidence : Math.Max(40, confidence - 8),
+            Message = hasModelDetails ? "AI issue details generated." : BuildFallbackMessage(modelError),
+            UsedFallback = !hasModelDetails
+        };
+
+        SetCached(cacheKey, result, DateTime.UtcNow.AddMinutes(30));
+        return result;
+    }
+
     public static string GenerateOneLineStatus(AiSummaryRequest request)
     {
         if (request == null)
@@ -128,7 +189,7 @@ public static class AiSummaryService
         string sysdebug = SafeText(request.Sysdebug);
         string contextDetails = SafeText(request.ContextDetails);
 
-        string hash = ComputeHash("one-line-status-v2|" + issueId + "|" + title + "|" + status + "|" + sysdebug + "|" + contextDetails);
+        string hash = ComputeHash("one-line-status-v3|" + GetAiProviderCacheSignature() + "|" + issueId + "|" + title + "|" + status + "|" + sysdebug + "|" + contextDetails);
         string cacheKey = "ai-one-line-status:" + hash;
 
         AiSummaryResponse cached = TryGetCached(cacheKey);
@@ -264,7 +325,7 @@ public static class AiSummaryService
         var words = paragraph.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
         if (words.Length <= maxWords) return paragraph;
 
-        return string.Join(" ", words, 0, maxWords) + "...";
+        return TrimToSentenceBoundary(string.Join(" ", words, 0, maxWords));
     }
 
     private static AiSummaryResponse TryGetCached(string cacheKey)
@@ -315,11 +376,12 @@ public static class AiSummaryService
         error = string.Empty;
 
         string gnaiToken = ResolveGnaiToken();
-        string gnaiEndpoint = FirstNonEmpty(System.Environment.GetEnvironmentVariable("GNAI_ENDPOINT"), GetAppSetting("GNAI:Endpoint"));
-        string gnaiModel = FirstNonEmpty(System.Environment.GetEnvironmentVariable("GNAI_MODEL"), GetAppSetting("GNAI:Model"));
+        string gnaiEndpoint = ResolveGnaiEndpoint();
+        string gnaiModel = ResolveGnaiModel();
         bool useGnai = !string.IsNullOrWhiteSpace(gnaiToken)
             && !string.IsNullOrWhiteSpace(gnaiEndpoint)
             && !gnaiEndpoint.StartsWith("REPLACE");
+        string providerName = useGnai ? "GNAI" : "GitHub Models";
 
         string apiKey, endpoint, model;
         if (useGnai)
@@ -370,7 +432,9 @@ public static class AiSummaryService
             request.Accept = "application/json";
             request.Headers["Authorization"] = "Bearer " + apiKey;
             request.UserAgent = "CMF-Portal-AI-Summary/1.0";
-            request.Timeout = 30000;
+            int timeoutMilliseconds = ResolveAiRequestTimeoutMilliseconds();
+            request.Timeout = timeoutMilliseconds;
+            request.ReadWriteTimeout = timeoutMilliseconds;
             ConfigureProxy(request);
 
             using (StreamWriter writer = new StreamWriter(request.GetRequestStream()))
@@ -398,7 +462,7 @@ public static class AiSummaryService
         }
         catch (WebException webEx)
         {
-            error = BuildModelRequestErrorMessage(webEx);
+            error = BuildModelRequestErrorMessage(webEx, providerName);
             return false;
         }
         catch (Exception ex)
@@ -413,7 +477,7 @@ public static class AiSummaryService
         // GNAI is internal, so NO proxy needed for it
         // Only GitHub Models (external) requires the DMZ proxy
         string gnaiToken = ResolveGnaiToken();
-        string gnaiEndpoint = FirstNonEmpty(System.Environment.GetEnvironmentVariable("GNAI_ENDPOINT"), GetAppSetting("GNAI:Endpoint"));
+        string gnaiEndpoint = ResolveGnaiEndpoint();
         bool usingGnai = !string.IsNullOrWhiteSpace(gnaiToken)
             && !string.IsNullOrWhiteSpace(gnaiEndpoint)
             && !gnaiEndpoint.StartsWith("REPLACE");
@@ -453,13 +517,55 @@ public static class AiSummaryService
 
     private static string ResolveGnaiToken()
     {
-        string token = FirstNonEmpty(System.Environment.GetEnvironmentVariable("GNAI_TOKEN"), System.Environment.GetEnvironmentVariable("GNAI_API_KEY"));
+        string token = GetAppSetting("GNAI:ApiKey");
         if (!string.IsNullOrWhiteSpace(token))
         {
             return token;
         }
 
-        return GetAppSetting("GNAI:ApiKey");
+        return FirstNonEmpty(System.Environment.GetEnvironmentVariable("GNAI_TOKEN"), System.Environment.GetEnvironmentVariable("GNAI_API_KEY"));
+    }
+
+    private static string ResolveGnaiEndpoint()
+    {
+        return FirstNonEmpty(GetAppSetting("GNAI:Endpoint"), System.Environment.GetEnvironmentVariable("GNAI_ENDPOINT"));
+    }
+
+    private static string ResolveGnaiModel()
+    {
+        return FirstNonEmpty(GetAppSetting("GNAI:Model"), System.Environment.GetEnvironmentVariable("GNAI_MODEL"));
+    }
+
+    private static int ResolveAiRequestTimeoutMilliseconds()
+    {
+        string configured = FirstNonEmpty(GetAppSetting("AI:RequestTimeoutSeconds"), System.Environment.GetEnvironmentVariable("AI_REQUEST_TIMEOUT_SECONDS"));
+        int seconds;
+        if (int.TryParse(configured, out seconds))
+        {
+            return Math.Max(15, Math.Min(120, seconds)) * 1000;
+        }
+
+        return 60000;
+    }
+
+    private static string GetAiProviderCacheSignature()
+    {
+        string gnaiToken = ResolveGnaiToken();
+        string gnaiEndpoint = ResolveGnaiEndpoint();
+        string gnaiModel = ResolveGnaiModel();
+        bool useGnai = !string.IsNullOrWhiteSpace(gnaiToken)
+            && !string.IsNullOrWhiteSpace(gnaiEndpoint)
+            && !gnaiEndpoint.StartsWith("REPLACE");
+
+        if (useGnai)
+        {
+            return "GNAI|" + gnaiEndpoint + "|" + FirstNonEmpty(gnaiModel, "gpt-5-mini") + "|" + ComputeHash(gnaiToken).Substring(0, 12);
+        }
+
+        string githubEndpoint = FirstNonEmpty(ConfigurationManager.AppSettings["GitHubModels:Endpoint"], "https://models.inference.ai.azure.com/chat/completions");
+        string githubModel = FirstNonEmpty(ConfigurationManager.AppSettings["GitHubModels:Model"], "gpt-4o-mini");
+        string githubKey = ConfigurationManager.AppSettings["GitHubModels:ApiKey"] ?? string.Empty;
+        return "GitHubModels|" + githubEndpoint + "|" + githubModel + "|" + ComputeHash(githubKey).Substring(0, 12);
     }
 
     private static string FirstNonEmpty(params string[] values)
@@ -553,7 +659,7 @@ public static class AiSummaryService
         if (!HasPresentValue(displayStatus)) displayStatus = BuildDisplayValue(status);
 
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine("Review all ticket information from the CMF database, the sighting HSD article, and the promoted HSD article. Write for a busy engineering/program user who needs to understand the issue without opening those links.");
+        builder.AppendLine("Review all ticket information from the CMF database, the sighting HSD article, and the promoted HSD article. Write for an iDST/CCE lead who needs the current debug position and closure/escalation decision without opening those links.");
         builder.AppendLine();
         builder.AppendLine("CRITICAL REQUIREMENTS:");
         builder.AppendLine("- Analyze the complete ticket as an engineering investigation, not as a collection of database fields.");
@@ -570,28 +676,34 @@ public static class AiSummaryService
         builder.AppendLine("- Do not treat a proposed investigation step as a completed finding.");
         builder.AppendLine("- Do not treat a planned fix as an implemented or validated fix.");
         builder.AppendLine("- Do not repeat the issue title verbatim; explain the actual problem in meaningful technical language.");
-        builder.AppendLine("- The summary should allow a Program Manager to understand the issue without opening the HSD ticket.");
-        builder.AppendLine("- Keep the summary concise but sufficiently detailed to preserve the important technical story.");
+        builder.AppendLine("- The summary is primarily a debug-status summary: explain what is known, what is still uncertain, and what evidence controls the next decision.");
+        builder.AppendLine("- The summary should answer: can this issue be closed, escalated, or kept in validation/debug?");
+        builder.AppendLine("- Keep each section to one brief, natural sentence of 12-22 words.");
+        builder.AppendLine("- Use normal grammar and punctuation. Do not pack multiple clauses with semicolons or long comma chains.");
+        builder.AppendLine("- Prefer clear executive language over dense technical tracing. Mention only the strongest evidence.");
+        builder.AppendLine("- Risk Assessment must be meaningful, not generic: state the risk level and cite the strongest debug reason such as missing logs, failed repro, unresolved root cause, customer impact, stale owner activity, or unverified fix.");
+        builder.AppendLine("- Escalation Warning must explicitly say 'None' when no escalation signal is supported by the data.");
+        builder.AppendLine("- Decision Impact must state the practical action: Close, Continue validation, Continue debug, Escalate, or Monitor, and explain why in plain words.");
         builder.AppendLine("- Use exactly the output structure shown below.");
         builder.AppendLine("- Do not include information outside the supplied ticket context.");
         builder.AppendLine();
         builder.AppendLine("Output template:");
         builder.AppendLine("**AI Summary (Confidence: " + confidence.ToString() + "%)**");
         builder.AppendLine();
-        builder.AppendLine("**Issue:**");
-        builder.AppendLine("- [Explain the actual customer/platform problem, affected configuration, and user-visible impact.]");
+        builder.AppendLine("**Issue Summary**");
+        builder.AppendLine("- [Brief sentence summarizing current issue state in plain engineering language.] ");
         builder.AppendLine();
-        builder.AppendLine("**Investigation:**");
-        builder.AppendLine("- [Explain the important investigation steps and what the engineering evidence established or ruled out.]");
+        builder.AppendLine("**Risk Assessment**");
+        builder.AppendLine("- [Brief sentence describing risk level and the main reason.] ");
         builder.AppendLine();
-        builder.AppendLine("**Key Finding:**");
-        builder.AppendLine("- [State the most important technical finding that explains the issue, when supported by evidence.]");
+        builder.AppendLine("**Next Action**");
+        builder.AppendLine("- [Brief sentence describing the next owner, debug, validation, or closure action.] ");
         builder.AppendLine();
-        builder.AppendLine("**Root Cause:**");
-        builder.AppendLine("- [State the established root cause. If not confirmed, explicitly state that it remains unconfirmed.]");
+        builder.AppendLine("**Escalation Warning**");
+        builder.AppendLine("- [Brief sentence describing escalation signal, or exactly 'None.' when no signal exists.] ");
         builder.AppendLine();
-        builder.AppendLine("**Fix & Closure:**");
-        builder.AppendLine("- [Explain the implemented fix, validation/result, and why/how the issue was closed. If unresolved, explain the current disposition.]");
+        builder.AppendLine("**Decision Impact**");
+        builder.AppendLine("- [Brief sentence stating whether to close, escalate, continue validation/debug, or monitor.] ");
         builder.AppendLine();
         builder.AppendLine("Ticket data:");
         builder.AppendLine("Issue ID: " + issueId);
@@ -605,6 +717,112 @@ public static class AiSummaryService
             builder.AppendLine(contextDetails);
         }
         return builder.ToString();
+    }
+
+    private static string BuildIssueDetailsPrompt(string issueId, string submittedDate, string title, string status, string sysdebug, string contextDetails)
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("Write a plain-language issue brief from the CMF database context and HSD context. Imagine an iDST user clicked the button to understand the issue quickly before opening HSD.");
+        builder.AppendLine("Use only supplied data. Do not invent root cause, risk, next action, decision impact, or closure recommendation.");
+        builder.AppendLine("Do not dump raw fields. Convert technical fragments into normal words while preserving the facts.");
+        builder.AppendLine("For Sysdebug / Logs and Latest Activity, explain the strongest signal in one crisp 18-28 word sentence.");
+        builder.AppendLine("Prefer helpful wording such as 'The issue appears during camera plug/unplug with dGPU configuration' instead of repeating the title verbatim.");
+        builder.AppendLine();
+        builder.AppendLine("Output exactly these sections:");
+        builder.AppendLine("**Issue Details**");
+        builder.AppendLine("- What is happening: [one plain-English sentence describing the symptom and scenario]");
+        builder.AppendLine("- Where it shows up: [component, OS/platform, milestone, or N/A]");
+        builder.AppendLine("- Who is affected: [customer/user impact in normal words]");
+        builder.AppendLine("- Current state: [status and whether debug/validation/closure is still active]");
+        builder.AppendLine("- Debug signal: [sysdebug/log/repro signal in one crisp sentence]");
+        builder.AppendLine();
+        builder.AppendLine("**Linked HSD / CMF Data**");
+        builder.AppendLine("- Sighting ID: [id]");
+        builder.AppendLine("- Promoted ID: [id or N/A]");
+        builder.AppendLine("- Owner: [owner or N/A]");
+        builder.AppendLine("- Fixed Version / Closure: [version and closed reason, or N/A]");
+        builder.AppendLine("- Latest Activity: [one crisp sentence or N/A]");
+        builder.AppendLine();
+        builder.AppendLine("Ticket data:");
+        builder.AppendLine("Issue ID: " + issueId);
+        builder.AppendLine("Issue title: " + title);
+        builder.AppendLine("Submitted Date: " + submittedDate);
+        builder.AppendLine("Status: " + status);
+        builder.AppendLine("Sysdebug: " + sysdebug);
+        if (!string.IsNullOrWhiteSpace(contextDetails))
+        {
+            builder.AppendLine();
+            builder.AppendLine("Full Context:");
+            builder.AppendLine(contextDetails);
+        }
+        return builder.ToString();
+    }
+
+    private static string BuildFallbackIssueDetails(string issueId, string submittedDate, string title, string status, string sysdebug, string contextDetails, int confidence)
+    {
+        Dictionary<string, string> contextMap = ParseContextDetails(contextDetails);
+        List<string> activityLines = ExtractActivityLines(contextDetails);
+        string component = FirstContextValue(contextMap, "Component");
+        string operatingSystem = FirstContextValue(contextMap, "Operating System");
+        string currentStatus = FirstNonEmpty(FirstContextValue(contextMap, "Promoted Status", "Status", "Promoted Issue Status"), status);
+        string impact = FirstContextValue(contextMap, "Customer Impact", "Promoted Issue Customer Impact", "Impact", "Promoted Issue Impact");
+        string reproducibility = FirstContextValue(contextMap, "Reproducibility");
+        string closedReason = FirstContextValue(contextMap, "Closed Reason", "Promoted Issue Closed Reason");
+        string fixedVersion = FirstContextValue(contextMap, "Fixed Version", "Promoted Issue Fixed Version");
+        string hsdDescription = FirstContextValue(contextMap, "Description", "Promoted Issue Description");
+        string fixDescription = FirstContextValue(contextMap, "Fix Description", "Promoted Issue Fix Description");
+        string symptom = FirstNonEmpty(
+            BuildCrispDetailValue(hsdDescription, 30),
+            BuildCrispDetailValue(impact, 26),
+            BuildCrispDetailValue(fixDescription, 26),
+            BuildIssueSituationNarrative(title, component, operatingSystem, impact, string.Empty, reproducibility));
+        string stateDetail = FirstNonEmpty(
+            BuildCrispDetailValue(fixDescription, 24),
+            BuildCrispDetailValue(closedReason, 24),
+            BuildDisplayValue(currentStatus));
+        string debugSignal = BuildCrispDetailValue(FirstNonEmpty(sysdebug, FirstContextValue(contextMap, "Sysdebug", "Sysdebug Forum", "Sysdebug Category")), 28);
+
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("**Issue Details**");
+        builder.AppendLine("- What is happening: " + BuildShortPhrase(symptom, 140) + ".");
+        builder.AppendLine("- Where it shows up: " + BuildDisplayValue(component) + " / " + BuildDisplayValue(operatingSystem) + ".");
+        builder.AppendLine("- Who is affected: " + BuildDisplayValue(impact) + ".");
+        builder.AppendLine("- Current state: " + stateDetail);
+        builder.AppendLine("- Debug signal: " + debugSignal);
+        builder.AppendLine();
+        builder.AppendLine("**Linked HSD / CMF Data**");
+        builder.AppendLine("- Sighting ID: " + BuildDisplayValue(issueId));
+        builder.AppendLine("- Promoted ID: " + BuildDisplayValue(FirstContextValue(contextMap, "Promoted ID", "Promoted Issue ID")));
+        builder.AppendLine("- Owner: " + BuildDisplayValue(FirstContextValue(contextMap, "Owner", "Promoted Issue Owner")));
+        builder.AppendLine("- Fixed Version / Closure: " + BuildDisplayValue(FirstNonEmpty(fixedVersion, closedReason)));
+        builder.Append("- Latest Activity: " + BuildCrispDetailValue(activityLines.Count > 0 ? activityLines[0] : string.Empty, 28));
+        return builder.ToString();
+    }
+
+    private static string BuildCrispDetailValue(string value, int maxWords)
+    {
+        if (!HasPresentValue(value)) return "N/A";
+        string cleaned = value.Replace("\r", " ").Replace("\n", " ").Replace("_", " ").Trim();
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s+", " ").Trim();
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\[[^\]]+\]\s*", string.Empty).Trim();
+
+        int sentenceEnd = cleaned.IndexOfAny(new[] { '.', '!', '?' });
+        if (sentenceEnd > 20)
+        {
+            cleaned = cleaned.Substring(0, sentenceEnd + 1).Trim();
+        }
+
+        string[] words = cleaned.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length > maxWords)
+        {
+            cleaned = string.Join(" ", words, 0, maxWords).TrimEnd(',', ';', ':') + ".";
+        }
+        else if (!cleaned.EndsWith(".") && !cleaned.EndsWith("!") && !cleaned.EndsWith("?"))
+        {
+            cleaned += ".";
+        }
+
+        return cleaned;
     }
 
     private static string BuildOneLineStatusPrompt(string title, string status, string sysdebug, string contextDetails)
@@ -683,14 +901,15 @@ public static class AiSummaryService
         return CleanupOneLineStatus("Issue is " + effectiveStatus + " with latest HSD details under review.");
     }
 
-    private static string BuildModelRequestErrorMessage(WebException webEx)
+    private static string BuildModelRequestErrorMessage(WebException webEx, string providerName)
     {
         HttpWebResponse response = webEx.Response as HttpWebResponse;
         string body = ReadResponseBody(response);
+        string providerLabel = string.IsNullOrWhiteSpace(providerName) ? "model provider" : providerName;
 
         if (response == null)
         {
-            return "Model request failed: no response from provider. Check internet/proxy access to models.inference.ai.azure.com.";
+            return providerLabel + " request failed: no response from provider. Check endpoint/proxy/network access.";
         }
 
         int statusCode = (int)response.StatusCode;
@@ -698,30 +917,30 @@ public static class AiSummaryService
 
         if (statusCode == 401)
         {
-            return "Model request failed (401 Unauthorized): GitHub PAT is invalid or expired." + AppendProviderMessage(providerMessage);
+            return providerLabel + " request failed (401 Unauthorized): credential is invalid or expired." + AppendProviderMessage(providerMessage);
         }
 
         if (statusCode == 403)
         {
-            return "Model request failed (403 Forbidden): PAT lacks GitHub Models access for this account/org." + AppendProviderMessage(providerMessage);
+            return providerLabel + " request failed (403 Forbidden): configured account/token lacks access to this model or provider resource." + AppendProviderMessage(providerMessage);
         }
 
         if (statusCode == 404)
         {
-            return "Model request failed (404 Not Found): endpoint or model may be incorrect." + AppendProviderMessage(providerMessage);
+            return providerLabel + " request failed (404 Not Found): endpoint or model may be incorrect." + AppendProviderMessage(providerMessage);
         }
 
         if (statusCode == 429)
         {
-            return "Model request failed (429 Too Many Requests): rate limit reached." + AppendProviderMessage(providerMessage);
+            return providerLabel + " request failed (429 Too Many Requests): rate limit reached." + AppendProviderMessage(providerMessage);
         }
 
         if (statusCode >= 500)
         {
-            return "Model request failed (" + statusCode + "): provider service error." + AppendProviderMessage(providerMessage);
+            return providerLabel + " request failed (" + statusCode + "): provider service error." + AppendProviderMessage(providerMessage);
         }
 
-        return "Model request failed (" + statusCode + ")." + AppendProviderMessage(providerMessage);
+        return providerLabel + " request failed (" + statusCode + ")." + AppendProviderMessage(providerMessage);
     }
 
     private static string ReadResponseBody(HttpWebResponse response)
@@ -918,28 +1137,139 @@ public static class AiSummaryService
             AddUniqueBullet(storyBullets, "Latest ticket context is being reviewed from the available HSD and portal fields.");
         }
 
+        string issueSummary = BuildDecisionIssueSummary(safeStatus, closedReason, fixedVersion, issueSituation, activityLines);
+        string riskAssessment = BuildDecisionRiskAssessment(highRisk, safeStatus, customerImpact, reproducibility, closedReason, fixedVersion, activityLines);
+        string escalationWarning = BuildDecisionEscalationWarning(safeStatus, activityLines, customerImpact, closedReason, fixedVersion);
+        string decisionImpact = BuildDecisionImpact(safeStatus, closedReason, fixedVersion, highRisk, activityLines);
+
         StringBuilder builder = new StringBuilder();
         builder.AppendLine("**AI summary (Confidence: " + confidence.ToString() + "%)**");
         builder.AppendLine();
-        builder.AppendLine("Sighting ID: " + BuildDisplayValue(issueId) + "  CMF Ask date: " + BuildDisplayValue(submittedDate));
+        builder.AppendLine("**Issue Summary**");
+        builder.AppendLine("- " + issueSummary);
         builder.AppendLine();
-        builder.AppendLine("Status: " + BuildDisplayValue(safeStatus));
-        builder.AppendLine("Impact: " + BuildDisplayValue(FirstNonEmpty(customerImpact, impact)));
-        builder.AppendLine("Reproducibility: " + BuildDisplayValue(reproducibility));
-        builder.AppendLine("Logs(sysdebug): " + (HasPresentValue(sysdebug) || HasPresentValue(FirstContextValue(contextMap, "Sysdebug", "Sysdebug Forum")) ? "Yes" : "No"));
-        builder.AppendLine("RVP platform debug details: " + BuildYesNoValue(rvpDebug));
+        builder.AppendLine("**Risk Assessment**");
+        builder.AppendLine("- " + riskAssessment);
         builder.AppendLine();
-        builder.AppendLine("**Summary:**");
-        for (int index = 0; index < 3; index++)
+        builder.AppendLine("**Next Action**");
+        builder.AppendLine("- " + BuildCompactFollowUpAction(nextAction, drivers, fixedVersion, closedReason));
+        builder.AppendLine();
+        builder.AppendLine("**Escalation Warning**");
+        builder.AppendLine("- " + escalationWarning);
+        builder.AppendLine();
+        builder.AppendLine("**Decision Impact**");
+        builder.Append("- " + decisionImpact);
+        return builder.ToString();
+    }
+
+    private static string BuildDecisionIssueSummary(string status, string closedReason, string fixedVersion, string issueSituation, List<string> activityLines)
+    {
+        if (HasPresentValue(fixedVersion) && HasPresentValue(closedReason))
         {
-            string bullet = index < storyBullets.Count ? storyBullets[index] : "Latest available HSD fields do not add more issue activity.";
-            builder.AppendLine((index + 1).ToString() + ") " + bullet.TrimEnd('.'));
+            return "Root cause/fix evidence is recorded, fix version " + fixedVersion + " is available, and closure reason is " + closedReason.Replace("_", " ") + ".";
         }
 
-        builder.AppendLine();
-        builder.AppendLine("**Follow up**");
-        builder.Append("- " + BuildCompactFollowUpAction(nextAction, drivers, fixedVersion, closedReason));
-        return builder.ToString();
+        if (HasPresentValue(fixedVersion))
+        {
+            return "Fix version " + BuildDisplayValue(fixedVersion) + " is recorded; the issue should stay in validation until pass evidence is confirmed.";
+        }
+
+        if (ContainsAnyToken(status, "closed", "complete", "verified", "implemented"))
+        {
+            return "Issue is in " + BuildDisplayValue(status) + " state with closure or validation evidence available in the ticket.";
+        }
+
+        if (activityLines != null && activityLines.Count > 0)
+        {
+            return BuildShortPhrase("Active debug is documented; latest signal is " + activityLines[0], 150) + ".";
+        }
+
+        return BuildShortPhrase(issueSituation, 150) + ".";
+    }
+
+    private static string BuildDecisionRiskAssessment(bool highRisk, string status, string customerImpact, string reproducibility, string closedReason, string fixedVersion, List<string> activityLines)
+    {
+        if (HasPresentValue(closedReason) && HasPresentValue(fixedVersion))
+        {
+            return "Low to medium risk because fix and closure evidence exist, but final customer validation should still be checked.";
+        }
+
+        if (HasPresentValue(fixedVersion))
+        {
+            return "Medium risk because a fix is identified, but validation or customer acceptance is not yet shown as complete.";
+        }
+
+        if (highRisk)
+        {
+            return "High risk due to " + BuildDisplayValue(FirstNonEmpty(customerImpact, "elevated customer impact")) + " and reproducibility " + BuildDisplayValue(reproducibility) + ".";
+        }
+
+        if (activityLines == null || activityLines.Count == 0)
+        {
+            return "Medium risk because recent HSD debug activity is not visible in the available data.";
+        }
+
+        if (ContainsAnyToken(status, "pending", "open", "debug"))
+        {
+            return "Medium risk because the issue remains active and needs continued debug or validation evidence.";
+        }
+
+        return "Medium risk until owner, validation, and closure criteria are confirmed from the latest HSD evidence.";
+    }
+
+    private static string BuildDecisionEscalationWarning(string status, List<string> activityLines, string customerImpact, string closedReason, string fixedVersion)
+    {
+        if (HasPresentValue(closedReason) && HasPresentValue(fixedVersion))
+        {
+            return "None; closure and fix evidence are present, pending only confirmation that customer validation is acceptable.";
+        }
+
+        if (HasPresentValue(fixedVersion))
+        {
+            return "None if validation is actively tracking the recorded fix; escalate only if the fix misses the needed milestone.";
+        }
+
+        if (activityLines == null || activityLines.Count == 0)
+        {
+            return "Escalate if no owner/debug update is available for the current review window.";
+        }
+
+        if (ContainsAnyToken(customerImpact, "high", "critical", "showstopper") && !ContainsAnyToken(status, "closed", "complete", "verified"))
+        {
+            return "Customer-impact signal is elevated; escalate if root cause or validation owner is not clearly assigned.";
+        }
+
+        return "None from the available data.";
+    }
+
+    private static string BuildDecisionImpact(string status, string closedReason, string fixedVersion, bool highRisk, List<string> activityLines)
+    {
+        if (HasPresentValue(closedReason) && HasPresentValue(fixedVersion))
+        {
+            return "Continue validation or close after confirming the fix version and customer acceptance evidence.";
+        }
+
+        if (HasPresentValue(fixedVersion))
+        {
+            return "Continue validation on fix version " + BuildDisplayValue(fixedVersion) + " and close only after pass evidence is recorded.";
+        }
+
+        if (ContainsAnyToken(status, "closed", "complete", "verified"))
+        {
+            return "Close or monitor unless new evidence contradicts the recorded disposition.";
+        }
+
+        if (highRisk)
+        {
+            return "Escalate or continue validation before closure because customer-impact risk remains material.";
+        }
+
+        if (activityLines != null && activityLines.Count > 0)
+        {
+            return "Continue debug/validation using the latest HSD update as the decision driver.";
+        }
+
+        return "Continue triage until current state, owner, and validation evidence are clear.";
     }
 
     private static int CalculateSummaryConfidence(string status, string sysdebug, string contextDetails)
@@ -1078,7 +1408,10 @@ public static class AiSummaryService
         string cleaned = text.Replace("\r", " ").Replace("\n", " ").Trim();
         cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s+", " ");
         if (cleaned.Length <= maxLength) return cleaned.TrimEnd('.', ';', ':');
-        return cleaned.Substring(0, Math.Max(1, maxLength - 3)).TrimEnd('.', ',', ';', ':', ' ') + "...";
+        string clipped = cleaned.Substring(0, Math.Max(1, maxLength)).Trim();
+        int boundary = Math.Max(clipped.LastIndexOf('.'), Math.Max(clipped.LastIndexOf('!'), clipped.LastIndexOf('?')));
+        if (boundary >= 40) return clipped.Substring(0, boundary + 1).Trim();
+        return System.Text.RegularExpressions.Regex.Replace(clipped, @"\s+\S*$", string.Empty).TrimEnd('.', ',', ';', ':', '-', ' ') + ".";
     }
 
     private static string JoinReadableList(List<string> values)
@@ -1352,7 +1685,7 @@ public static class AiSummaryService
         const int maxLength = 180;
         if (normalized.Length > maxLength)
         {
-            normalized = normalized.Substring(0, maxLength) + "...";
+            normalized = TrimToCleanSnippet(normalized, maxLength);
         }
 
         return normalized;
@@ -1374,10 +1707,22 @@ public static class AiSummaryService
         const int maxLength = 140;
         if (normalized.Length > maxLength)
         {
-            normalized = normalized.Substring(0, maxLength) + "...";
+            normalized = TrimToCleanSnippet(normalized, maxLength);
         }
 
         return normalized;
+    }
+
+    private static string TrimToCleanSnippet(string text, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        string cleaned = text.Replace("\r", " ").Replace("\n", " ").Trim();
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s+", " ");
+        if (cleaned.Length <= maxLength) return cleaned.TrimEnd('.', ';', ':');
+        string clipped = cleaned.Substring(0, Math.Max(1, maxLength)).Trim();
+        int boundary = Math.Max(clipped.LastIndexOf('.'), Math.Max(clipped.LastIndexOf('!'), clipped.LastIndexOf('?')));
+        if (boundary >= 40) return clipped.Substring(0, boundary + 1).Trim();
+        return System.Text.RegularExpressions.Regex.Replace(clipped, @"\s+\S*$", string.Empty).TrimEnd('.', ',', ';', ':', '-', ' ') + ".";
     }
 
     private static string BuildSysdebugInterpretation(string debugSnippet, string component, string operatingSystem, string reproducibility, string impact, string customerImpact)

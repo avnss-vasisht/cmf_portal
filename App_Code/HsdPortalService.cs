@@ -38,6 +38,7 @@ public class HsdArticleData
     public string ClosedDate { get; set; }
     public string CmfJustification { get; set; }
     public string InvestigationHistory { get; set; }
+    public string FetchSource { get; set; }
 }
 
 public static class HsdPortalService
@@ -47,15 +48,10 @@ public static class HsdPortalService
     private const int CommentMaxChars = 600;
     private const int MaxComments = 5;
 
-    // Fetches article fields + recent comments from the HSD portal using Windows NTLM auth.
+    // Fetches article fields + recent comments using configured providers.
     public static HsdArticleData FetchArticle(string articleId)
     {
-        var result = new HsdArticleData
-        {
-            ArticleId = articleId,
-            Comments = new List<string>(),
-            FetchSuccess = false
-        };
+        var result = CreateEmptyArticleData(articleId);
 
         string enabledStr = ConfigurationManager.AppSettings["HSD:Enabled"];
         if (string.Equals(enabledStr, "false", StringComparison.OrdinalIgnoreCase))
@@ -70,52 +66,65 @@ public static class HsdPortalService
             return result;
         }
 
-        string baseUrl = (ConfigurationManager.AppSettings["HSD:ApiBaseUrl"] ?? DefaultBaseUrl).TrimEnd('/');
-        string articleUrl = baseUrl + "/" + Uri.EscapeUriString(articleId.Trim());
+        string normalizedArticleId = articleId.Trim();
+        List<string> providerErrors = new List<string>();
+        string[] providerOrder = ResolveProviderOrder();
 
-        try
+        for (int providerIndex = 0; providerIndex < providerOrder.Length; providerIndex++)
         {
-            string json = HttpGetSspi(articleUrl);
-            if (string.IsNullOrWhiteSpace(json))
+            string provider = providerOrder[providerIndex];
+            if (string.IsNullOrWhiteSpace(provider))
             {
-                result.FetchError = "Empty response from HSD API.";
-                return result;
+                continue;
             }
 
-            ParseArticleJson(json, result);
+            HsdArticleData candidate = CreateEmptyArticleData(normalizedArticleId);
 
-            if (!string.IsNullOrWhiteSpace(result.Title) ||
-                !string.IsNullOrWhiteSpace(result.Description) ||
-                !string.IsNullOrWhiteSpace(result.Status) ||
-                !string.IsNullOrWhiteSpace(result.Sysdebug))
+            try
             {
-                result.FetchSuccess = true;
-            }
-            else
-            {
-                result.FetchSuccess = false;
+                bool fetched = false;
+                string normalizedProvider = provider.Trim().ToLowerInvariant();
 
-                if (string.IsNullOrWhiteSpace(result.FetchError))
+                if (normalizedProvider == "gnai" || normalizedProvider == "gnai-plugin" || normalizedProvider == "gnaiplugin")
                 {
-                    result.FetchError =
-                        "HSD response received, but no recognizable article fields were parsed.";
+                    fetched = TryFetchWithGnaiPlugin(normalizedArticleId, candidate);
+                }
+                else if (normalizedProvider == "mcp")
+                {
+                    fetched = TryFetchWithMcp(normalizedArticleId, candidate);
+                }
+                else if (normalizedProvider == "rest" || normalizedProvider == "hsd" || normalizedProvider == "sspi")
+                {
+                    fetched = TryFetchWithRest(normalizedArticleId, candidate);
+                }
+                else
+                {
+                    candidate.FetchError = "Unknown HSD provider '" + provider + "'.";
+                }
+
+                if (fetched && HasRecognizableArticleFields(candidate))
+                {
+                    candidate.FetchSuccess = true;
+                    candidate.FetchSource = provider.Trim();
+                    return candidate;
+                }
+
+                if (string.IsNullOrWhiteSpace(candidate.FetchError))
+                {
+                    candidate.FetchError = "No recognizable HSD article fields returned.";
                 }
             }
+            catch (Exception ex)
+            {
+                candidate.FetchError = ex.Message;
+            }
 
-            // Try to fetch discussion comments; ignore errors since comments are optional.
-            TryFetchComments(articleUrl, result);
+            providerErrors.Add(provider.Trim() + ": " + candidate.FetchError);
         }
-        catch (WebException webEx)
-        {
-            HttpWebResponse resp = webEx.Response as HttpWebResponse;
-            result.FetchError = resp != null
-                ? "HSD API HTTP " + (int)resp.StatusCode
-                : "HSD API unreachable: " + webEx.Message;
-        }
-        catch (Exception ex)
-        {
-            result.FetchError = ex.Message;
-        }
+
+        result.FetchError = providerErrors.Count > 0
+            ? string.Join(" | ", providerErrors.ToArray())
+            : "No HSD providers are configured.";
 
         return result;
     }
@@ -127,11 +136,14 @@ public static class HsdPortalService
 
         var sb = new StringBuilder();
         sb.AppendLine("--- " + sectionLabel + " (HSD Portal) ---");
+        AppendIfSet(sb, "HSD Fetch Source", data.FetchSource);
         AppendIfSet(sb, "Description", Truncate(data.Description, DescriptionMaxChars));
         AppendIfSet(sb, "Family", data.Family);
         AppendIfSet(sb, "Component", data.Component);
         AppendIfSet(sb, "Status", data.Status);
         AppendIfSet(sb, "Priority", data.Priority);
+        AppendIfSet(sb, "Customer Impact", Truncate(data.CustomerImpact, 1000));
+        AppendIfSet(sb, "Reproducibility", data.Reproducibility);
         AppendIfSet(sb, "Sysdebug Category", data.Sysdebug);
         AppendIfSet(sb, "Sysdebug Forum", Truncate(data.SysdebugForum, 1000));
         AppendIfSet(sb, "Submitter", data.Submitter);
@@ -139,6 +151,13 @@ public static class HsdPortalService
         AppendIfSet(sb, "Steps to Reproduce", Truncate(data.StepsToReproduce, 800));
         AppendIfSet(sb, "Expected Behavior", Truncate(data.ExpectedBehavior, 500));
         AppendIfSet(sb, "Actual Behavior", Truncate(data.ActualBehavior, 500));
+        AppendIfSet(sb, "CMF Justification", Truncate(data.CmfJustification, 1000));
+        AppendIfSet(sb, "Fix Description", Truncate(data.FixDescription, 1000));
+        AppendIfSet(sb, "Fixed Version", data.FixedVersion);
+        AppendIfSet(sb, "Closed Reason", data.ClosedReason);
+        AppendIfSet(sb, "Implemented Date", data.ImplementedDate);
+        AppendIfSet(sb, "Verified Date", data.VerifiedDate);
+        AppendIfSet(sb, "Closed Date", data.ClosedDate);
 
         if (data.Comments != null && data.Comments.Count > 0)
         {
@@ -155,6 +174,517 @@ public static class HsdPortalService
         }
 
         return sb.ToString().Trim();
+    }
+
+    private static HsdArticleData CreateEmptyArticleData(string articleId)
+    {
+        return new HsdArticleData
+        {
+            ArticleId = articleId,
+            Comments = new List<string>(),
+            FetchSuccess = false
+        };
+    }
+
+    private static string[] ResolveProviderOrder()
+    {
+        string configured = ConfigurationManager.AppSettings["HSD:ProviderOrder"];
+        if (string.IsNullOrWhiteSpace(configured))
+        {
+            configured = string.IsNullOrWhiteSpace(ConfigurationManager.AppSettings["HSD:McpEndpoint"])
+                ? "gnai,rest"
+                : "gnai,mcp,rest";
+        }
+
+        return configured.Split(new[] { ',', ';', '|' }, StringSplitOptions.RemoveEmptyEntries);
+    }
+
+    private static bool HasRecognizableArticleFields(HsdArticleData data)
+    {
+        if (data == null) return false;
+        return !string.IsNullOrWhiteSpace(data.Title)
+            || !string.IsNullOrWhiteSpace(data.Description)
+            || !string.IsNullOrWhiteSpace(data.Status)
+            || !string.IsNullOrWhiteSpace(data.Sysdebug)
+            || !string.IsNullOrWhiteSpace(data.InvestigationHistory)
+            || (data.Comments != null && data.Comments.Count > 0)
+            || !string.IsNullOrWhiteSpace(data.FixDescription)
+            || !string.IsNullOrWhiteSpace(data.ClosedReason)
+            || !string.IsNullOrWhiteSpace(data.FixedVersion);
+    }
+
+    private static bool TryFetchWithRest(string articleId, HsdArticleData result)
+    {
+        string baseUrl = FirstNonEmpty(
+            ConfigurationManager.AppSettings["HSD:ArticleApiBaseUrl"],
+            ConfigurationManager.AppSettings["HSD:ApiBaseUrl"],
+            DefaultBaseUrl).TrimEnd('/');
+
+        string articleUrl = baseUrl + "/" + Uri.EscapeUriString(articleId.Trim());
+
+        try
+        {
+            string json = HttpGetSspi(articleUrl);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                result.FetchError = "Empty response from HSD API.";
+                return false;
+            }
+
+            MergeArticleJsonIntoResult(json, result);
+
+            // Try to fetch discussion comments; ignore errors since comments are optional.
+            TryFetchComments(articleUrl, result);
+            return HasRecognizableArticleFields(result);
+        }
+        catch (WebException webEx)
+        {
+            HttpWebResponse resp = webEx.Response as HttpWebResponse;
+            result.FetchError = resp != null
+                ? "HSD API HTTP " + (int)resp.StatusCode + AppendProviderBody(resp)
+                : "HSD API unreachable: " + webEx.Message;
+            return false;
+        }
+    }
+
+    private static bool TryFetchWithGnaiPlugin(string articleId, HsdArticleData result)
+    {
+        string enabled = ConfigurationManager.AppSettings["HSD:GnaiEnabled"];
+        if (string.Equals(enabled, "false", StringComparison.OrdinalIgnoreCase))
+        {
+            result.FetchError = "GNAI HSD provider disabled (HSD:GnaiEnabled=false).";
+            return false;
+        }
+
+        string token = ResolveGnaiToken();
+        string endpoint = FirstNonEmpty(
+            Environment.GetEnvironmentVariable("GNAI_ENDPOINT"),
+            ConfigurationManager.AppSettings["GNAI:Endpoint"]);
+        string model = FirstNonEmpty(
+            Environment.GetEnvironmentVariable("GNAI_MODEL"),
+            ConfigurationManager.AppSettings["GNAI:Model"],
+            "gpt-5-mini");
+
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(endpoint) || endpoint.StartsWith("REPLACE", StringComparison.OrdinalIgnoreCase))
+        {
+            result.FetchError = "GNAI endpoint/token not configured.";
+            return false;
+        }
+
+        JavaScriptSerializer serializer = new JavaScriptSerializer();
+        serializer.MaxJsonLength = int.MaxValue;
+
+        Hashtable payload = new Hashtable();
+        payload["model"] = model;
+        payload["temperature"] = 0;
+
+        ArrayList messages = new ArrayList();
+        Hashtable systemMessage = new Hashtable();
+        systemMessage["role"] = "system";
+        systemMessage["content"] = "You retrieve HSDES bugs/articles using available HSDES search or retrieval plugins/tools. Return only strict JSON. If the HSDES plugin/tool cannot access the requested article, return {\"fetch_success\":false,\"fetch_error\":\"reason\"}. Do not invent ticket facts.";
+        messages.Add(systemMessage);
+
+        Hashtable userMessage = new Hashtable();
+        userMessage["role"] = "user";
+        userMessage["content"] = BuildGnaiHsdPrompt(articleId);
+        messages.Add(userMessage);
+        payload["messages"] = messages;
+
+        try
+        {
+            string responseBody = PostJson(endpoint, serializer.Serialize(payload), token, BuildGnaiProxy(), "CMF-Portal-HSD-GNAI/1.0");
+            string content = ExtractModelContent(responseBody);
+            string articleJson = ExtractJsonObject(FirstNonEmpty(content, responseBody));
+
+            if (string.IsNullOrWhiteSpace(articleJson))
+            {
+                result.FetchError = "GNAI HSD provider did not return JSON article data.";
+                return false;
+            }
+
+            MergeArticleJsonIntoResult(articleJson, result);
+            return HasRecognizableArticleFields(result);
+        }
+        catch (WebException webEx)
+        {
+            result.FetchError = "GNAI HSD provider failed: " + BuildWebExceptionMessage(webEx);
+            return false;
+        }
+    }
+
+    private static bool TryFetchWithMcp(string articleId, HsdArticleData result)
+    {
+        string endpoint = ConfigurationManager.AppSettings["HSD:McpEndpoint"];
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            result.FetchError = "MCP endpoint not configured (HSD:McpEndpoint).";
+            return false;
+        }
+
+        string toolName = FirstNonEmpty(ConfigurationManager.AppSettings["HSD:McpToolName"], "hsdes_get_article");
+        string authorization = ConfigurationManager.AppSettings["HSD:McpAuthorization"];
+
+        JavaScriptSerializer serializer = new JavaScriptSerializer();
+        serializer.MaxJsonLength = int.MaxValue;
+
+        Hashtable arguments = new Hashtable();
+        arguments["id"] = articleId;
+        arguments["article_id"] = articleId;
+        arguments["bug_id"] = articleId;
+
+        Hashtable parameters = new Hashtable();
+        parameters["name"] = toolName;
+        parameters["arguments"] = arguments;
+
+        Hashtable payload = new Hashtable();
+        payload["jsonrpc"] = "2.0";
+        payload["id"] = 1;
+        payload["method"] = "tools/call";
+        payload["params"] = parameters;
+
+        try
+        {
+            string responseBody = PostJson(endpoint, serializer.Serialize(payload), authorization, BuildHsdProxy(), "CMF-Portal-HSD-MCP/1.0");
+            string articleJson = ExtractMcpArticleJson(responseBody);
+            if (string.IsNullOrWhiteSpace(articleJson))
+            {
+                articleJson = ExtractJsonObject(responseBody);
+            }
+
+            if (string.IsNullOrWhiteSpace(articleJson))
+            {
+                result.FetchError = "MCP provider did not return JSON article data.";
+                return false;
+            }
+
+            MergeArticleJsonIntoResult(articleJson, result);
+            return HasRecognizableArticleFields(result);
+        }
+        catch (WebException webEx)
+        {
+            result.FetchError = "MCP provider failed: " + BuildWebExceptionMessage(webEx);
+            return false;
+        }
+    }
+
+    private static string BuildGnaiHsdPrompt(string articleId)
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("Retrieve HSDES bug/article " + articleId + " using the available HSDES plugin/tool.");
+        builder.AppendLine("Return only a JSON object with these keys when available:");
+        builder.AppendLine("fetch_success, fetch_error, article_id, title, description, family, component, status, sysdebug, sysdebug_forum, priority, submitter, owner, steps_to_reproduce, expected_behavior, actual_behavior, customer_impact, reproducibility, cmf_justification, fix_description, fixed_version, closed_reason, implemented_date, verified_date, closed_date, investigation_history, comments.");
+        builder.AppendLine("comments must be an array of concise recent discussion/update strings. investigation_history should include relevant engineering updates, debug findings, root-cause/fix/closure notes, and customer/external history when present.");
+        builder.AppendLine("If the plugin/tool cannot retrieve this article, return fetch_success=false and a short fetch_error. Do not use prior knowledge or guess.");
+        return builder.ToString();
+    }
+
+    private static void MergeArticleJsonIntoResult(string json, HsdArticleData result)
+    {
+        if (string.IsNullOrWhiteSpace(json) || result == null) return;
+
+        ParseArticleJson(json, result);
+
+        JavaScriptSerializer serializer = new JavaScriptSerializer();
+        serializer.MaxJsonLength = int.MaxValue;
+        object raw = serializer.DeserializeObject(json);
+        IDictionary root = raw as IDictionary;
+        if (root == null) return;
+
+        IDictionary fields = FindArticleFieldDictionary(root);
+        if (fields == null) fields = root;
+
+        ApplyCanonicalFields(fields, result);
+        ParseInlineComments(fields, result);
+
+        object fetchSuccess = fields["fetch_success"];
+        if (fetchSuccess != null && string.Equals(fetchSuccess.ToString(), "false", StringComparison.OrdinalIgnoreCase))
+        {
+            result.FetchError = FirstNonEmpty(Pick(fields, "fetch_error", "error", "message"), "Provider reported fetch_success=false.");
+        }
+    }
+
+    private static IDictionary FindArticleFieldDictionary(IDictionary root)
+    {
+        if (root == null) return null;
+
+        IDictionary article = root["article"] as IDictionary;
+        if (article != null) return article;
+
+        IDictionary bug = root["bug"] as IDictionary;
+        if (bug != null) return bug;
+
+        IDictionary fields = root["fields"] as IDictionary;
+        if (fields != null) return fields;
+
+        IDictionary dataObject = root["data"] as IDictionary;
+        if (dataObject != null) return dataObject;
+
+        IList dataArray = root["data"] as IList;
+        if (dataArray != null && dataArray.Count > 0)
+        {
+            IDictionary firstData = dataArray[0] as IDictionary;
+            if (firstData != null) return firstData;
+        }
+
+        IList articlesArray = root["articles"] as IList;
+        if (articlesArray != null && articlesArray.Count > 0)
+        {
+            IDictionary firstArticle = articlesArray[0] as IDictionary;
+            if (firstArticle != null) return firstArticle;
+        }
+
+        IList bugsArray = root["bugs"] as IList;
+        if (bugsArray != null && bugsArray.Count > 0)
+        {
+            IDictionary firstBug = bugsArray[0] as IDictionary;
+            if (firstBug != null) return firstBug;
+        }
+
+        return null;
+    }
+
+    private static void ApplyCanonicalFields(IDictionary fields, HsdArticleData result)
+    {
+        if (fields == null || result == null) return;
+
+        result.ArticleId = FirstNonEmpty(Pick(fields, "article_id", "articleId", "id", "bug_id", "hsdes_id"), result.ArticleId);
+        result.InvestigationHistory = FirstNonEmpty(
+            Pick(fields, "investigation_history", "investigationHistory", "engineering_updates", "debug_history", "history"),
+            result.InvestigationHistory);
+        result.FetchError = FirstNonEmpty(Pick(fields, "fetch_error", "fetchError"), result.FetchError);
+    }
+
+    private static void ParseInlineComments(IDictionary fields, HsdArticleData result)
+    {
+        if (fields == null || result == null) return;
+        IList comments = fields["comments"] as IList;
+        if (comments == null) comments = fields["discussion_comments"] as IList;
+        if (comments == null) return;
+
+        for (int index = 0; index < comments.Count && result.Comments.Count < MaxComments; index++)
+        {
+            object item = comments[index];
+            if (item == null) continue;
+
+            IDictionary comment = item as IDictionary;
+            string text = comment == null
+                ? item.ToString()
+                : FirstNonEmpty(Pick(comment, "text", "body", "description", "content", "comment"), item.ToString());
+
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                result.Comments.Add(Truncate(text.Trim(), CommentMaxChars));
+            }
+        }
+    }
+
+    private static string PostJson(string endpoint, string payloadJson, string authorization, IWebProxy proxy, string userAgent)
+    {
+        HttpWebRequest request = (HttpWebRequest)WebRequest.Create(endpoint);
+        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+        request.Method = "POST";
+        request.ContentType = "application/json";
+        request.Accept = "application/json";
+        request.UserAgent = userAgent;
+        request.Timeout = ResolveTimeoutMs();
+        request.ReadWriteTimeout = ResolveTimeoutMs();
+        request.Proxy = proxy;
+
+        if (!string.IsNullOrWhiteSpace(authorization))
+        {
+            request.Headers["Authorization"] = authorization.Trim().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                ? authorization.Trim()
+                : "Bearer " + authorization.Trim();
+        }
+
+        using (StreamWriter writer = new StreamWriter(request.GetRequestStream()))
+        {
+            writer.Write(payloadJson);
+        }
+
+        using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+        using (StreamReader reader = new StreamReader(response.GetResponseStream(), Encoding.UTF8))
+        {
+            return reader.ReadToEnd();
+        }
+    }
+
+    private static int ResolveTimeoutMs()
+    {
+        int timeoutMs = 10000;
+        string timeoutStr = ConfigurationManager.AppSettings["HSD:TimeoutSeconds"];
+        int secs;
+        if (!string.IsNullOrWhiteSpace(timeoutStr) && int.TryParse(timeoutStr, out secs) && secs > 0)
+        {
+            timeoutMs = secs * 1000;
+        }
+
+        return timeoutMs;
+    }
+
+    private static IWebProxy BuildGnaiProxy()
+    {
+        string explicitProxy = FirstNonEmpty(
+            Environment.GetEnvironmentVariable("GNAI_PROXY"),
+            ConfigurationManager.AppSettings["GNAI:Proxy"],
+            ConfigurationManager.AppSettings["HSD:GnaiProxy"]);
+        if (!string.IsNullOrWhiteSpace(explicitProxy))
+        {
+            WebProxy proxy = new WebProxy(explicitProxy.Trim(), true);
+            proxy.Credentials = CredentialCache.DefaultCredentials;
+            return proxy;
+        }
+
+        return null;
+    }
+
+    private static string ResolveGnaiToken()
+    {
+        return FirstNonEmpty(
+            Environment.GetEnvironmentVariable("GNAI_TOKEN"),
+            Environment.GetEnvironmentVariable("GNAI_API_KEY"),
+            ConfigurationManager.AppSettings["GNAI:ApiKey"]);
+    }
+
+    private static string ExtractModelContent(string responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody)) return string.Empty;
+
+        try
+        {
+            JavaScriptSerializer serializer = new JavaScriptSerializer();
+            object raw = serializer.DeserializeObject(responseBody);
+            IDictionary root = raw as IDictionary;
+            if (root == null) return string.Empty;
+
+            IList choices = root["choices"] as IList;
+            if (choices != null && choices.Count > 0)
+            {
+                IDictionary choice = choices[0] as IDictionary;
+                if (choice != null)
+                {
+                    IDictionary message = choice["message"] as IDictionary;
+                    if (message != null && message["content"] != null)
+                    {
+                        return message["content"].ToString();
+                    }
+                }
+            }
+
+            if (root["content"] != null) return root["content"].ToString();
+            if (root["text"] != null) return root["text"].ToString();
+        }
+        catch
+        {
+        }
+
+        return string.Empty;
+    }
+
+    private static string ExtractMcpArticleJson(string responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody)) return string.Empty;
+
+        try
+        {
+            JavaScriptSerializer serializer = new JavaScriptSerializer();
+            serializer.MaxJsonLength = int.MaxValue;
+            object raw = serializer.DeserializeObject(responseBody);
+            IDictionary root = raw as IDictionary;
+            if (root == null) return string.Empty;
+
+            IDictionary result = root["result"] as IDictionary;
+            if (result == null) return string.Empty;
+
+            IDictionary structuredContent = result["structuredContent"] as IDictionary;
+            if (structuredContent != null)
+            {
+                return serializer.Serialize(structuredContent);
+            }
+
+            IList content = result["content"] as IList;
+            if (content != null)
+            {
+                for (int index = 0; index < content.Count; index++)
+                {
+                    IDictionary item = content[index] as IDictionary;
+                    if (item != null && item["text"] != null)
+                    {
+                        string json = ExtractJsonObject(item["text"].ToString());
+                        if (!string.IsNullOrWhiteSpace(json)) return json;
+                    }
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return string.Empty;
+    }
+
+    private static string ExtractJsonObject(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+        string trimmed = text.Trim();
+        if (trimmed.StartsWith("{", StringComparison.Ordinal) && trimmed.EndsWith("}", StringComparison.Ordinal))
+        {
+            return trimmed;
+        }
+
+        int start = trimmed.IndexOf('{');
+        int end = trimmed.LastIndexOf('}');
+        if (start >= 0 && end > start)
+        {
+            return trimmed.Substring(start, end - start + 1);
+        }
+
+        return string.Empty;
+    }
+
+    private static string BuildWebExceptionMessage(WebException webEx)
+    {
+        HttpWebResponse response = webEx.Response as HttpWebResponse;
+        if (response == null) return webEx.Message;
+        return "HTTP " + (int)response.StatusCode + AppendProviderBody(response);
+    }
+
+    private static string AppendProviderBody(HttpWebResponse response)
+    {
+        if (response == null) return string.Empty;
+
+        try
+        {
+            using (Stream stream = response.GetResponseStream())
+            {
+                if (stream == null) return string.Empty;
+                using (StreamReader reader = new StreamReader(stream))
+                {
+                    string body = reader.ReadToEnd();
+                    if (string.IsNullOrWhiteSpace(body)) return string.Empty;
+                    body = SanitizeProviderMessage(body.Trim());
+                    if (body.Length > 220) body = body.Substring(0, 220) + "...";
+                    return ": " + body;
+                }
+            }
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    private static string SanitizeProviderMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message)) return string.Empty;
+
+        if (message.IndexOf("You do not belong to any of the group", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return "permission denied because the account is not in an allowed access group for this HSD/GNAI resource";
+        }
+
+        return message;
     }
 
     private static void TryFetchComments(string articleUrl, HsdArticleData result)
@@ -280,36 +810,8 @@ public static class HsdPortalService
             return;
         }
 
-        // TEMPORARY DIAGNOSTIC
-        string debugPath = null;
-
-        try
-        {
-            debugPath = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory,
-                "App_Data",
-                "hsd-raw-response-" + result.ArticleId + ".json"
-            );
-
-            File.WriteAllText(debugPath, json);
-        }
-        catch
-        {
-            // Do not allow debugging output to affect HSD processing.
-        }
-
-        IList dataArray = root["data"] as IList;
-
-        IDictionary fields = null;
-
-        if (dataArray != null && dataArray.Count > 0)
-        {
-            fields = dataArray[0] as IDictionary;
-        }
-        else
-        {
-            fields = root;
-        }
+        IDictionary fields = FindArticleFieldDictionary(root);
+        if (fields == null) fields = root;
 
         if (fields == null)
         {
@@ -322,70 +824,103 @@ public static class HsdPortalService
 
     private static void MapArticleFields(IDictionary fields, HsdArticleData result)
     {
-        result.Title = Pick(fields, "title", "subject", "name");
-        result.Description = Pick(fields, "description", "sighting.description", "body", "text");
-        result.Family = Pick(fields, "family", "product_family", "sighting.family", "cpu_family");
-        result.Component = Pick(fields, "component", "sighting.component", "component_name");
-        result.Status = Pick(fields, "status", "sighting.status", "state");
-        result.Sysdebug = Pick(fields, "sysdebug", "sighting.sysdebug", "debug_category", "sysdebug_category");
-        result.SysdebugForum = Pick(fields, "sysdebug_forum", "sighting.sysdebug_forum", "debug_forum");
-        result.Priority = Pick(fields, "priority", "sighting.priority", "severity");
-        result.Submitter = Pick(fields, "submitter", "reporter", "created_by", "author");
-        result.Owner = Pick(fields, "owner", "assigned_to", "assignee");
-        result.StepsToReproduce = Pick(fields, "steps_to_reproduce", "repro_steps", "sighting.steps_to_reproduce", "repro");
-        result.ExpectedBehavior = Pick(fields, "expected_behavior", "expected", "sighting.expected_behavior");
-        result.ActualBehavior = Pick(fields, "actual_behavior", "actual", "sighting.actual_behavior");
-        result.FixDescription = Pick(
+        result.Title = FirstNonEmpty(Pick(fields, "title", "subject", "name"), result.Title);
+        result.Description = FirstNonEmpty(Pick(fields, "description", "sighting.description", "body", "text", "summary", "client_platf.bug.root_cause_description"), result.Description);
+        result.Family = FirstNonEmpty(Pick(fields, "family", "product_family", "sighting.family", "cpu_family"), result.Family);
+        result.Component = FirstNonEmpty(Pick(fields, "component", "sighting.component", "component_name"), result.Component);
+        result.Status = FirstNonEmpty(Pick(fields, "status", "sighting.status", "state"), result.Status);
+        result.Sysdebug = FirstNonEmpty(Pick(fields, "sysdebug", "sighting.sysdebug", "debug_category", "sysdebug_category", "client_platf.bug.sysdebug"), result.Sysdebug);
+        result.SysdebugForum = FirstNonEmpty(Pick(fields, "sysdebug_forum", "sighting.sysdebug_forum", "debug_forum", "client_platf.bug.sysdebug_forum"), result.SysdebugForum);
+        result.Priority = FirstNonEmpty(Pick(fields, "priority", "sighting.priority", "severity"), result.Priority);
+        result.Submitter = FirstNonEmpty(Pick(fields, "submitter", "reporter", "created_by", "author"), result.Submitter);
+        result.Owner = FirstNonEmpty(Pick(fields, "owner", "assigned_to", "assignee"), result.Owner);
+        result.StepsToReproduce = FirstNonEmpty(Pick(fields, "steps_to_reproduce", "repro_steps", "sighting.steps_to_reproduce", "repro"), result.StepsToReproduce);
+        result.ExpectedBehavior = FirstNonEmpty(Pick(fields, "expected_behavior", "expected", "sighting.expected_behavior"), result.ExpectedBehavior);
+        result.ActualBehavior = FirstNonEmpty(Pick(fields, "actual_behavior", "actual", "sighting.actual_behavior"), result.ActualBehavior);
+        result.FixDescription = FirstNonEmpty(Pick(
             fields,
+            "fix_description",
             "bugfixdescription",
+            "bug.fix_description",
+            "client_platf.bug.corrective_action_description",
             "fixdescription",
-            "fix_description");
+            "resolution"), result.FixDescription);
 
-        result.ClosedReason = Pick(
+        result.ClosedReason = FirstNonEmpty(Pick(
             fields,
+            "closed_reason",
             "bugclosedreason",
+            "bug.closed_reason",
             "closedreason",
-            "closed_reason");
+            "closure_reason"), result.ClosedReason);
 
-        result.FixedVersion = Pick(
+        result.FixedVersion = FirstNonEmpty(Pick(
             fields,
+            "fixed_version",
             "clientplatfbugfixedinversion",
+            "client_platf.bug.fixed_in_version",
+            "bug.fixed_in",
             "fixedinversion",
-            "fixed_version");
+            "fixed_in_version"), result.FixedVersion);
 
-        result.CustomerImpact = Pick(
+        result.CustomerImpact = FirstNonEmpty(Pick(
             fields,
+            "customer_impact",
+            "bug.customer_impact",
+            "client_platf.bug.impact",
+            "client_platf.bug.ext_cust_impact",
             "clientplatfbugimpact",
             "bugcustomerimpact",
-            "customerimpact");
+            "customerimpact",
+            "impact"), result.CustomerImpact);
 
-        result.Reproducibility = Pick(
+        result.Reproducibility = FirstNonEmpty(Pick(
             fields,
+            "reproducibility",
+            "bug.reproducibility",
+            "client_platf.bug.can_reproduce",
+            "client_platf.bug.score_to_reproduce",
             "bugreproducibility",
-            "reproducibility");
+            "repro"), result.Reproducibility);
 
-        result.ImplementedDate = Pick(
+        result.ImplementedDate = FirstNonEmpty(Pick(
             fields,
+            "implemented_date",
+            "bug.implemented_date",
+            "client_platf.bug.date_implemented",
             "bugimplementeddate",
-            "dateimplemented");
+            "dateimplemented"), result.ImplementedDate);
 
-        result.VerifiedDate = Pick(
+        result.VerifiedDate = FirstNonEmpty(Pick(
             fields,
+            "verified_date",
+            "bug.verified_date",
             "bugverifieddate",
-            "dateverified");
+            "dateverified"), result.VerifiedDate);
 
-        result.ClosedDate = Pick(
+        result.ClosedDate = FirstNonEmpty(Pick(
             fields,
+            "closed_date",
+            "closed_date",
             "closeddate",
-            "dateclosed");
+            "dateclosed"), result.ClosedDate);
 
-        result.CmfJustification = Pick(
+        result.CmfJustification = FirstNonEmpty(Pick(
             fields,
+            "cmf_justification",
+            "client_platf.bug.why_cmf_change",
             "clientplatfbugwhycmfchange",
-            "whycmfchange");
+            "whycmfchange"), result.CmfJustification);
 
         string commentsHistory = Pick(
             fields,
+            "investigation_history",
+            "investigationHistory",
+            "engineering_updates",
+            "debug_history",
+            "client_platf.bug.root_cause_description",
+            "client_platf.bug.score_comments",
+            "client_platf.bug.ext_agent_comments",
             "comments",
             "discussion_comments",
             "discussioncomments");
@@ -459,6 +994,20 @@ public static class HsdPortalService
                 return s;
         }
         return null;
+    }
+
+    private static string FirstNonEmpty(params string[] values)
+    {
+        if (values == null) return string.Empty;
+        for (int index = 0; index < values.Length; index++)
+        {
+            if (!string.IsNullOrWhiteSpace(values[index]))
+            {
+                return values[index];
+            }
+        }
+
+        return string.Empty;
     }
 
     private static string Truncate(string value, int maxLen)

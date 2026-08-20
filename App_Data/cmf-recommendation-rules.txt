@@ -19,4 +19,4 @@
         name: Not obviously low signal
         condition: impact is not empty and does not indicate no customer/user impact
         weight: medium
-threshold_for_cmf_tag: 0.7
+threshold_for_cmf_tag: 0.70

@@ -22,6 +22,7 @@ public class CmfRecommendationRequest
     public string CustomerDetail { get; set; }
     public string CustomerOwner { get; set; }
     public string Rules { get; set; }
+    public string HsdContext { get; set; }
 }
 
 public class CmfRecommendationRuleScore
@@ -112,7 +113,8 @@ threshold_for_cmf_tag: 0.70";
             rules = GetActiveRulesText();
         }
 
-        string hash = ComputeHash("cmf-recommendation-reasoning-v5|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + rules);
+        string hsdContext = SafeText(request.HsdContext);
+        string hash = ComputeHash("cmf-recommendation-live-context-v9|" + GetAiProviderCacheSignature() + "|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + rules + "|" + hsdContext);
         string cacheKey = "cmf-recommendation:" + hash;
 
         CmfRecommendationResponse cached = TryGetCached(cacheKey);
@@ -124,11 +126,11 @@ threshold_for_cmf_tag: 0.70";
         string modelRecommendation;
         string modelError;
         string deterministicRecommendation = BuildFallbackRecommendation(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules);
-        bool hasModelRecommendation = TryGenerateWithGitHubModel(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, deterministicRecommendation, out modelRecommendation, out modelError);
+        bool hasModelRecommendation = TryGenerateWithGitHubModel(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, deterministicRecommendation, out modelRecommendation, out modelError, BuildCmfRecommendationPrompt(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, deterministicRecommendation, hsdContext));
 
         if (!hasModelRecommendation)
         {
-            CmfRecommendationResponse fallbackResult = BuildFallbackRecommendationResponse(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, modelError);
+            CmfRecommendationResponse fallbackResult = BuildFallbackRecommendationResponse(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, hsdContext, modelError);
             SetCached(cacheKey, fallbackResult, DateTime.UtcNow.AddMinutes(30));
             return fallbackResult;
         }
@@ -144,20 +146,58 @@ threshold_for_cmf_tag: 0.70";
         }
         int parsedThresholdScore = GetThresholdScore(rules);
         result.ThresholdScore = parsedThresholdScore;
-        if (result.OverallQualityScore < parsedThresholdScore || HasBlockingRuleFailure(result.RuleScores))
+        result.Recommendation = ResolveCmfDisposition(result.Recommendation, result.OverallQualityScore, parsedThresholdScore, result.RuleScores);
+        if (string.IsNullOrWhiteSpace(result.Evidence))
         {
-            result.Recommendation = "Do not tag as CMF";
+            result.Evidence = BuildReasoningFromScores(result.Recommendation, result.OverallQualityScore, parsedThresholdScore, result.RuleScores);
         }
-        else
-        {
-            result.Recommendation = "Tag as CMF";
-        }
-        result.Evidence = BuildReasoningFromScores(result.Recommendation, result.OverallQualityScore, parsedThresholdScore, result.RuleScores);
         result.NextSteps = BuildNextSteps(result.Recommendation, result.RuleScores);
         result.Message = "AI recommendation generated.";
 
         SetCached(cacheKey, result, DateTime.UtcNow.AddMinutes(30));
         return result;
+    }
+
+    public static CmfRecommendationResponse GenerateCmfPendingDecisionDetails(CmfRecommendationRequest request)
+    {
+        if (request == null)
+        {
+            return new CmfRecommendationResponse { Success = false, Message = "Invalid CMF details request." };
+        }
+
+        string cpId = SafeText(request.CpId);
+        string title = SafeText(request.Title);
+        string component = SafeText(request.Component);
+        string cmfRequest = SafeText(request.CmfRequest);
+        string impact = SafeText(request.Impact);
+        string idst = SafeText(request.Idst);
+        string reproOnRvp = SafeText(request.ReproOnRvp);
+        string reproducibility = SafeText(request.Reproducibility);
+        string customerDetail = SafeText(request.CustomerDetail);
+        string customerOwner = SafeText(request.CustomerOwner);
+        string hsdContext = SafeText(request.HsdContext);
+        string rules = string.IsNullOrWhiteSpace(request.Rules) ? GetActiveRulesText() : SafeText(request.Rules);
+        string cacheKey = "cmf-decision-details:" + ComputeHash("cmf-decision-details-live-context-v4|" + GetAiProviderCacheSignature() + "|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + hsdContext);
+
+        CmfRecommendationResponse cached = TryGetCached(cacheKey);
+        if (cached != null) return cached;
+
+        string details;
+        string modelError;
+        bool hasModelDetails = TryGenerateWithGitHubModel(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, string.Empty, out details, out modelError, BuildCmfDecisionDetailsPrompt(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, hsdContext), "You explain CMF pending issue details for reviewers. Be concise, grammatical, evidence-grounded, and decision-focused.");
+
+        CmfRecommendationResponse response = new CmfRecommendationResponse
+        {
+            Success = true,
+            CpId = cpId,
+            Title = title,
+            Recommendation = "CMF Decision Details",
+            Evidence = hasModelDetails ? details.Trim() : BuildFallbackCmfDecisionDetails(title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, hsdContext),
+            Message = hasModelDetails ? "AI CMF decision details generated." : BuildFallbackMessage(modelError)
+        };
+
+        SetCached(cacheKey, response, DateTime.UtcNow.AddMinutes(30));
+        return response;
     }
 
     public static string GetDefaultRulesText()
@@ -253,14 +293,14 @@ threshold_for_cmf_tag: 0.70";
 
     private static bool TryGenerateWithGitHubModel(
         string cpId, string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string rules, string deterministicRecommendation,
-        out string recommendation, out string error)
+        out string recommendation, out string error, string promptOverride = null, string systemOverride = null)
     {
         recommendation = string.Empty;
         error = string.Empty;
 
         string gnaiToken = ResolveGnaiToken();
-        string gnaiEndpoint = FirstNonEmpty(System.Environment.GetEnvironmentVariable("GNAI_ENDPOINT"), GetAppSetting("GNAI:Endpoint"));
-        string gnaiModel = FirstNonEmpty(System.Environment.GetEnvironmentVariable("GNAI_MODEL"), GetAppSetting("GNAI:Model"));
+        string gnaiEndpoint = ResolveGnaiEndpoint();
+        string gnaiModel = ResolveGnaiModel();
         bool useGnai = !string.IsNullOrWhiteSpace(gnaiToken)
             && !string.IsNullOrWhiteSpace(gnaiEndpoint)
             && !gnaiEndpoint.StartsWith("REPLACE");
@@ -288,7 +328,7 @@ threshold_for_cmf_tag: 0.70";
                 model = "gpt-4o-mini";
         }
 
-        string prompt = BuildCmfRecommendationPrompt(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, deterministicRecommendation);
+        string prompt = string.IsNullOrWhiteSpace(promptOverride) ? BuildCmfRecommendationPrompt(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, deterministicRecommendation, string.Empty) : promptOverride;
 
         try
         {
@@ -300,7 +340,7 @@ threshold_for_cmf_tag: 0.70";
                 model = model,
                 messages = new object[]
                 {
-                    new { role = "system", content = "You are an AI assistant specialized in CMF (Component Management Framework) pending issues. Use the admin-defined CMF rules as the decision policy. The recommendation must be binary: either Tag as CMF or Do not tag as CMF. If evidence is missing, partial, or contradictory, recommend Do not tag as CMF and cite the blocking rule IDs." },
+                    new { role = "system", content = string.IsNullOrWhiteSpace(systemOverride) ? "You are an AI assistant specialized in CMF pending decisions. Use the admin-defined CMF rules as policy. Recommend CMF_OK, CMF_REJECT, or CMF_INCOMPLETE with concise reasoning and missing-information guidance." : systemOverride },
                     new { role = "user", content = prompt }
                 }
             };
@@ -314,7 +354,9 @@ threshold_for_cmf_tag: 0.70";
             request.Accept = "application/json";
             request.Headers["Authorization"] = "Bearer " + apiKey;
             request.UserAgent = "CMF-Portal-AI-Recommendation/1.0";
-            request.Timeout = 30000;
+            int timeoutMilliseconds = ResolveAiRequestTimeoutMilliseconds();
+            request.Timeout = timeoutMilliseconds;
+            request.ReadWriteTimeout = timeoutMilliseconds;
             ConfigureProxy(request);
 
             using (StreamWriter writer = new StreamWriter(request.GetRequestStream()))
@@ -605,7 +647,7 @@ threshold_for_cmf_tag: 0.70";
         return builder.ToString();
     }
 
-    private static CmfRecommendationResponse BuildFallbackRecommendationResponse(string cpId, string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string rules, string modelError)
+    private static CmfRecommendationResponse BuildFallbackRecommendationResponse(string cpId, string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string rules, string hsdContext, string modelError)
     {
         bool hasContext = !string.IsNullOrWhiteSpace(title) && !string.IsNullOrWhiteSpace(component) && !string.IsNullOrWhiteSpace(impact);
         bool hasRequestIntent = ContainsAny(cmfRequest, new string[] { "cmf_ok", "cmf ask", "cmf_ask", "request", "pending", "review" });
@@ -633,7 +675,7 @@ threshold_for_cmf_tag: 0.70";
         string decision = overallQualityScore >= thresholdScore && !hasHighWeightFailure && hasContext && hasRequestIntent && !lowImpact
             ? "Tag as CMF"
             : "Do not tag as CMF";
-        string evidence = BuildReasoningFromScores(decision, overallQualityScore, thresholdScore, ruleScores);
+        string evidence = BuildContextGroundedReasoning(decision, overallQualityScore, thresholdScore, ruleScores, title, component, impact, reproducibility, reproOnRvp, hsdContext);
 
         return new CmfRecommendationResponse
         {
@@ -914,20 +956,21 @@ threshold_for_cmf_tag: 0.70";
 
     private static string BuildNextSteps(string recommendation, List<CmfRecommendationRuleScore> ruleScores)
     {
-        bool shouldTag = string.Equals(recommendation, "Tag as CMF", StringComparison.OrdinalIgnoreCase);
+        bool shouldTag = string.Equals(recommendation, "CMF_OK", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(recommendation, "Tag as CMF", StringComparison.OrdinalIgnoreCase);
         List<string> steps = new List<string>();
 
         if (shouldTag)
         {
-            steps.Add("Tag the issue as CMF and capture the owner, ETA, and validation evidence in the tracking notes.");
-            steps.Add("Notify the affected customer or program contact with the reason for CMF acceptance and expected follow-up path.");
-            steps.Add("Monitor for duplicate sightings so related issues can be merged or linked cleanly.");
+            steps.Add("Approve CMF only after the rule evidence and HSD details stay consistent with the current data.");
+            steps.Add("Capture the customer/launch impact and validation proof in the CMF notes.");
+            steps.Add("Link similar sightings if the same component or failure mode is repeated.");
         }
         else
         {
-            steps.Add("Keep the item out of CMF tagging until the blocking evidence is resolved.");
-            steps.Add("Ask the owner to add the missing reproducibility, SysScope/iDST, or impact justification called out by the rule evaluation.");
-            steps.Add("Re-run the recommendation after the missing data is updated, especially if customer impact or repro evidence changes.");
+            steps.Add("Hold CMF approval until the missing rule evidence is updated.");
+            steps.Add("Add clear repro proof, customer/launch impact, or recovery status before re-running the assessment.");
+            steps.Add("Reject only when the issue remains low-impact or unsupported after review.");
         }
 
         return string.Join("\n", steps.ToArray());
@@ -993,10 +1036,26 @@ threshold_for_cmf_tag: 0.70";
         const int maxLength = 140;
         if (normalized.Length > maxLength)
         {
-            normalized = normalized.Substring(0, maxLength) + "...";
+            normalized = TrimToCleanSentence(normalized, maxLength);
         }
 
         return normalized;
+    }
+
+    private static string TrimToCleanSentence(string text, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        string cleaned = text.Replace("\r", " ").Replace("\n", " ").Trim();
+        while (cleaned.IndexOf("  ", StringComparison.Ordinal) >= 0)
+        {
+            cleaned = cleaned.Replace("  ", " ");
+        }
+
+        if (cleaned.Length <= maxLength) return cleaned.TrimEnd('.', ';', ':');
+        string clipped = cleaned.Substring(0, Math.Max(1, maxLength)).Trim();
+        int boundary = Math.Max(clipped.LastIndexOf('.'), Math.Max(clipped.LastIndexOf('!'), clipped.LastIndexOf('?')));
+        if (boundary >= 50) return clipped.Substring(0, boundary + 1).Trim();
+        return System.Text.RegularExpressions.Regex.Replace(clipped, @"\s+\S*$", string.Empty).TrimEnd(',', ';', ':', '-', ' ') + ".";
     }
 
     private static CmfRecommendationResponse ParseStructuredRecommendation(string rawResponse)
@@ -1089,7 +1148,7 @@ threshold_for_cmf_tag: 0.70";
         // Fallback if parsing failed
         if (string.IsNullOrWhiteSpace(response.Recommendation))
         {
-            response.Recommendation = rawResponse.Length > 200 ? rawResponse.Substring(0, 200) + "..." : rawResponse;
+            response.Recommendation = rawResponse.Length > 200 ? TrimToCleanSentence(rawResponse, 200) : rawResponse;
         }
 
         return response;
@@ -1111,10 +1170,12 @@ threshold_for_cmf_tag: 0.70";
         return "0";
     }
 
-    private static string BuildCmfRecommendationPrompt(string cpId, string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string rules, string deterministicRecommendation)
+    private static string BuildCmfRecommendationPrompt(string cpId, string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string rules, string deterministicRecommendation, string hsdContext)
     {
         StringBuilder prompt = new StringBuilder();
-        prompt.AppendLine("Analyze the following CMF (Component Management Framework) pending issue against the admin-defined CMF rules.");
+        prompt.AppendLine("Analyze this CMF pending issue from a Customer Must Fix reviewer point of view.");
+        prompt.AppendLine("Goal: provide a strong, meaningful, user-understandable recommendation using BOTH the admin-defined backend rules and your understanding of the issue context collected so far.");
+        prompt.AppendLine("The admin rules are policy gates, not decoration. Apply them first, then use AI judgment to interpret the HSD/row details, contradictions, missing evidence, duplicate/similar issue risk, recovery status, replication strength, and customer or launch-gating consequence.");
         prompt.AppendLine();
         prompt.AppendLine("Admin-defined CMF rules:");
         prompt.AppendLine(string.IsNullOrWhiteSpace(rules) ? DefaultRulesText : rules);
@@ -1125,21 +1186,27 @@ threshold_for_cmf_tag: 0.70";
         prompt.AppendLine("Component: " + (string.IsNullOrWhiteSpace(component) ? "N/A" : component));
         prompt.AppendLine("CMF Request Status: " + (string.IsNullOrWhiteSpace(cmfRequest) ? "N/A" : cmfRequest));
         prompt.AppendLine("Impact/Justification: " + (string.IsNullOrWhiteSpace(impact) ? "N/A" : impact));
-        prompt.AppendLine("iDST/SysScope Evidence: " + (string.IsNullOrWhiteSpace(idst) ? "N/A" : idst));
+        prompt.AppendLine("Debug/Evidence Reference: " + (string.IsNullOrWhiteSpace(idst) ? "N/A" : idst));
         prompt.AppendLine("RVP Repro: " + (string.IsNullOrWhiteSpace(reproOnRvp) ? "N/A" : reproOnRvp));
         prompt.AppendLine("Reproducibility: " + (string.IsNullOrWhiteSpace(reproducibility) ? "N/A" : reproducibility));
         prompt.AppendLine("Customer Detail: " + (string.IsNullOrWhiteSpace(customerDetail) ? "N/A" : customerDetail));
         prompt.AppendLine("Customer Owner: " + (string.IsNullOrWhiteSpace(customerOwner) ? "N/A" : customerOwner));
+        if (!string.IsNullOrWhiteSpace(hsdContext))
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("HSD context:");
+            prompt.AppendLine(hsdContext);
+        }
         prompt.AppendLine();
         prompt.AppendLine("Provide your response in this exact format:");
         prompt.AppendLine("Use threshold_for_cmf_tag from the rules as the minimum overall quality score for tagging. Treat high-weight rules as blocking gates: if a high-weight rule fails, recommend Do not tag as CMF even when the rollup score is near the threshold. The overall quality score should be weighted by rule weight, not a plain average.");
         prompt.AppendLine();
-        prompt.AppendLine("RECOMMENDATION: [One line only: exactly \"Tag as CMF\" or exactly \"Do not tag as CMF\"]");
+        prompt.AppendLine("RECOMMENDATION: [One line only: exactly \"CMF_OK\", \"CMF_REJECT\", or \"CMF_INCOMPLETE\"]");
         prompt.AppendLine();
         prompt.AppendLine("OVERALL QUALITY SCORE: [0-100 integer rollup based on the rule scores]");
         prompt.AppendLine();
         prompt.AppendLine("AI REASONING:");
-        prompt.AppendLine("[2-3 polished, issue-specific sentences that explain why the recommendation is justified. Use natural grammar. Connect the decision to the strongest supporting or blocking rules, and do not copy raw field values as the reasoning.] ");
+        prompt.AppendLine("[4-5 crisp, polished, issue-specific sentences. Start with the actual situation, then explain how the admin rules and HSD/row evidence support or block the recommendation. Mention the strongest evidence, the most important missing/incomplete detail, and the practical review risk. Avoid generic wording such as 'evidence is insufficient' unless you name what evidence is missing and why it matters.]");
         prompt.AppendLine();
         prompt.AppendLine("RULE SCORES:");
         prompt.AppendLine("For each rule defined above, provide:");
@@ -1147,9 +1214,179 @@ threshold_for_cmf_tag: 0.70";
         prompt.AppendLine("[Example: R1 | Minimum replication evidence | 100 | PASS - Reproducibility is documented]");
         prompt.AppendLine("[Example: R2 | User impact severity | 0 | FAIL - Impact level is not critical]");
         prompt.AppendLine();
-        prompt.AppendLine("Use numeric scores only in the Score column: 100 for PASS, 50-70 for PARTIAL, and 0 for FAIL. Put PASS, FAIL, or PARTIAL at the start of the Evaluation text. Be specific and concise. If any important rule is FAIL or PARTIAL, the recommendation should be Do not tag as CMF.");
+        prompt.AppendLine("Use numeric scores only in the Score column: 100 for PASS, 50-70 for PARTIAL, and 0 for FAIL. Put PASS, FAIL, or PARTIAL at the start of the Evaluation text. If evidence is missing but the issue may be CMF-worthy, use CMF_INCOMPLETE rather than CMF_REJECT. Keep reasoning understandable for a reviewer who already knows the portal fields; do not explain field names.");
 
         return prompt.ToString();
+    }
+
+    private static string BuildCmfDecisionDetailsPrompt(string cpId, string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string hsdContext)
+    {
+        StringBuilder prompt = new StringBuilder();
+        prompt.AppendLine("Provide CMF decision details for a reviewer. This is not a final recommendation; it is the issue brief used before the CMF decision.");
+        prompt.AppendLine("Write brief, crisp, user-facing content. Do not mention owner names, owner fields, iDST labels, or portal-internal field names. Highlight HSD information quality, missing fields, recovery/workaround signal, replication strength, duplicate/similar-issue clues, qualification gaps, and customer/launch-gating relevance when supported by data.");
+        prompt.AppendLine("Use exactly these sections. Keep each section to one short paragraph or two short bullets:");
+        prompt.AppendLine("## Context");
+        prompt.AppendLine("## HSD Information Quality");
+        prompt.AppendLine("Quality Score: [0-100 integer]");
+        prompt.AppendLine("Missing/Incomplete Details: [short phrase list, or None found]");
+        prompt.AppendLine("Key Strengths: [short phrase list, or Limited strengths]");
+        prompt.AppendLine("## Evidence Signals");
+        prompt.AppendLine("## Reviewer Attention");
+        prompt.AppendLine();
+        prompt.AppendLine("Row data:");
+        prompt.AppendLine("CP ID: " + SafeDisplay(cpId));
+        prompt.AppendLine("Title: " + SafeDisplay(title));
+        prompt.AppendLine("Component: " + SafeDisplay(component));
+        prompt.AppendLine("CMF Request: " + SafeDisplay(cmfRequest));
+        prompt.AppendLine("Impact: " + SafeDisplay(impact));
+        prompt.AppendLine("Debug/Evidence Reference: " + SafeDisplay(idst));
+        prompt.AppendLine("RVP Repro: " + SafeDisplay(reproOnRvp));
+        prompt.AppendLine("Reproducibility: " + SafeDisplay(reproducibility));
+        prompt.AppendLine("Customer Detail: " + SafeDisplay(customerDetail));
+        if (!string.IsNullOrWhiteSpace(hsdContext))
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("HSD context:");
+            prompt.AppendLine(hsdContext);
+        }
+        return prompt.ToString();
+    }
+
+    private static string BuildFallbackCmfDecisionDetails(string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string hsdContext)
+    {
+        string contextSignal = ExtractContextSignal(hsdContext, "Description", "Impact", "Customer Impact", "Sysdebug Forum", "Fix Description", "Closed Reason");
+        string activitySignal = ExtractLatestInvestigationSignal(hsdContext);
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("## Context");
+        builder.AppendLine("- " + SafeDisplay(title) + " is pending CMF review for " + SafeDisplay(component) + ".");
+        builder.AppendLine("- " + (string.IsNullOrWhiteSpace(contextSignal) ? "Customer signal: " + SafeDisplay(customerDetail) : contextSignal) + ".");
+        builder.AppendLine();
+        builder.AppendLine("## HSD Information Quality");
+        builder.AppendLine("Quality Score: " + EstimateHsdQualityScore(title, component, impact, reproOnRvp, reproducibility, customerDetail).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        builder.AppendLine("Missing/Incomplete Details: " + BuildMissingCmfDetails(impact, idst, reproOnRvp, reproducibility, hsdContext) + ".");
+        builder.AppendLine("Key Strengths: " + BuildFallbackQualityStrengths(impact, reproOnRvp, reproducibility, customerDetail) + ".");
+        builder.AppendLine();
+        builder.AppendLine("## Evidence Signals");
+        builder.AppendLine("- Repro signal: " + SafeDisplay(reproOnRvp) + "; replication detail: " + SafeDisplay(reproducibility) + ".");
+        if (!string.IsNullOrWhiteSpace(activitySignal)) builder.AppendLine("- Latest HSD signal: " + activitySignal + ".");
+        builder.AppendLine();
+        builder.AppendLine("## Reviewer Attention");
+        builder.Append("- Confirm customer blocking status, similar CMFs, and whether the supplied evidence justifies " + SafeDisplay(cmfRequest) + ".");
+        return builder.ToString();
+    }
+
+    private static string BuildContextGroundedReasoning(string recommendation, int overallQualityScore, int thresholdScore, List<CmfRecommendationRuleScore> ruleScores, string title, string component, string impact, string reproducibility, string reproOnRvp, string hsdContext)
+    {
+        string baseReasoning = BuildReasoningFromScores(recommendation, overallQualityScore, thresholdScore, ruleScores);
+        string contextSignal = ExtractContextSignal(hsdContext, "Fix Description", "Closed Reason", "Customer Impact", "Impact", "Description", "Sysdebug Forum");
+        string activitySignal = ExtractLatestInvestigationSignal(hsdContext);
+        StringBuilder builder = new StringBuilder();
+        builder.Append(SafeDisplay(title)).Append(" is under CMF review for ").Append(SafeDisplay(component)).Append(" with impact signal: ").Append(SafeDisplay(impact)).Append(". ");
+        if (!string.IsNullOrWhiteSpace(contextSignal)) builder.Append(contextSignal).Append(". ");
+        if (!string.IsNullOrWhiteSpace(activitySignal)) builder.Append("Latest HSD signal: ").Append(activitySignal).Append(". ");
+        builder.Append("Repro signal is ").Append(SafeDisplay(reproducibility)).Append(" and RVP repro is ").Append(SafeDisplay(reproOnRvp)).Append(". ");
+        builder.Append(baseReasoning);
+        return builder.ToString();
+    }
+
+    private static string ExtractContextSignal(string context, params string[] labels)
+    {
+        if (string.IsNullOrWhiteSpace(context) || labels == null) return string.Empty;
+        string[] lines = context.Replace("\r", string.Empty).Split('\n');
+        foreach (string label in labels)
+        {
+            foreach (string rawLine in lines)
+            {
+                string line = rawLine == null ? string.Empty : rawLine.Trim();
+                if (line.StartsWith(label + ":", StringComparison.OrdinalIgnoreCase))
+                {
+                    string value = line.Substring(label.Length + 1).Trim();
+                    if (!string.IsNullOrWhiteSpace(value) && !value.Equals("N/A", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return BuildImpactSnippet(value).TrimEnd('.');
+                    }
+                }
+            }
+        }
+        return string.Empty;
+    }
+
+    private static string ExtractLatestInvestigationSignal(string context)
+    {
+        if (string.IsNullOrWhiteSpace(context)) return string.Empty;
+        string[] lines = context.Replace("\r", string.Empty).Split('\n');
+        for (int index = lines.Length - 1; index >= 0; index--)
+        {
+            string line = lines[index] == null ? string.Empty : lines[index].Trim();
+            if (line.Length < 24 || line.StartsWith("++++", StringComparison.Ordinal)) continue;
+            if (line.IndexOf("update", StringComparison.OrdinalIgnoreCase) >= 0
+                || line.IndexOf("fix", StringComparison.OrdinalIgnoreCase) >= 0
+                || line.IndexOf("validate", StringComparison.OrdinalIgnoreCase) >= 0
+                || line.IndexOf("repro", StringComparison.OrdinalIgnoreCase) >= 0
+                || line.IndexOf("root cause", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return BuildImpactSnippet(line).TrimEnd('.');
+            }
+        }
+        return string.Empty;
+    }
+
+    private static string BuildMissingCmfDetails(string impact, string idst, string reproOnRvp, string reproducibility, string hsdContext)
+    {
+        List<string> missing = new List<string>();
+        if (string.IsNullOrWhiteSpace(impact)) missing.Add("customer impact");
+        if (string.IsNullOrWhiteSpace(idst)) missing.Add("iDST/debug reference");
+        if (string.IsNullOrWhiteSpace(reproOnRvp) && string.IsNullOrWhiteSpace(reproducibility)) missing.Add("repro evidence");
+        if (string.IsNullOrWhiteSpace(ExtractContextSignal(hsdContext, "Fix Description", "Closed Reason"))) missing.Add("recovery or closure evidence");
+        return missing.Count == 0 ? "None found from the available context" : JoinReadableList(missing);
+    }
+
+    private static int EstimateHsdQualityScore(string title, string component, string impact, string reproOnRvp, string reproducibility, string customerDetail)
+    {
+        int score = 25;
+        if (!string.IsNullOrWhiteSpace(title)) score += 10;
+        if (!string.IsNullOrWhiteSpace(component)) score += 10;
+        if (!string.IsNullOrWhiteSpace(impact)) score += 20;
+        if (!string.IsNullOrWhiteSpace(reproOnRvp)) score += 15;
+        if (!string.IsNullOrWhiteSpace(reproducibility)) score += 10;
+        if (!string.IsNullOrWhiteSpace(customerDetail)) score += 10;
+        return Math.Min(100, score);
+    }
+
+    private static string BuildFallbackQualityStrengths(string impact, string reproOnRvp, string reproducibility, string customerDetail)
+    {
+        List<string> strengths = new List<string>();
+        if (!string.IsNullOrWhiteSpace(impact)) strengths.Add("impact is described");
+        if (!string.IsNullOrWhiteSpace(reproOnRvp) || !string.IsNullOrWhiteSpace(reproducibility)) strengths.Add("repro signal is present");
+        if (!string.IsNullOrWhiteSpace(customerDetail)) strengths.Add("customer context is present");
+        return strengths.Count == 0 ? "limited strengths" : JoinReadableList(strengths);
+    }
+
+    private static string ResolveCmfDisposition(string modelRecommendation, int overallQualityScore, int thresholdScore, List<CmfRecommendationRuleScore> ruleScores)
+    {
+        string normalized = SafeText(modelRecommendation).ToUpperInvariant();
+        if (overallQualityScore >= thresholdScore && !HasBlockingRuleFailure(ruleScores)) return "CMF_OK";
+        if (normalized.Contains("CMF_REJECT") && !HasAnyPartialRule(ruleScores) && overallQualityScore <= 0) return "CMF_REJECT";
+        if (normalized.Contains("CMF_INCOMPLETE") || HasAnyPartialRule(ruleScores) || overallQualityScore > 0) return "CMF_INCOMPLETE";
+        if (normalized.Contains("CMF_OK")) return "CMF_INCOMPLETE";
+        return "CMF_REJECT";
+    }
+
+    private static string ResolveCmfDisposition(int overallQualityScore, int thresholdScore, List<CmfRecommendationRuleScore> ruleScores)
+    {
+        if (overallQualityScore >= thresholdScore && !HasBlockingRuleFailure(ruleScores)) return "CMF_OK";
+        if (HasAnyPartialRule(ruleScores) || overallQualityScore > 0) return "CMF_INCOMPLETE";
+        return "CMF_REJECT";
+    }
+
+    private static bool HasAnyPartialRule(List<CmfRecommendationRuleScore> ruleScores)
+    {
+        if (ruleScores == null) return false;
+        foreach (CmfRecommendationRuleScore rule in ruleScores)
+        {
+            if (rule != null && SafeText(rule.Evaluation).StartsWith("PARTIAL", StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
     }
 
     private static string SafeText(string input)
@@ -1162,7 +1399,7 @@ threshold_for_cmf_tag: 0.70";
         // GNAI is internal, so NO proxy needed for it
         // Only GitHub Models (external) requires the DMZ proxy
         string gnaiToken = ResolveGnaiToken();
-        string gnaiEndpoint = FirstNonEmpty(System.Environment.GetEnvironmentVariable("GNAI_ENDPOINT"), GetAppSetting("GNAI:Endpoint"));
+        string gnaiEndpoint = ResolveGnaiEndpoint();
         bool usingGnai = !string.IsNullOrWhiteSpace(gnaiToken)
             && !string.IsNullOrWhiteSpace(gnaiEndpoint)
             && !gnaiEndpoint.StartsWith("REPLACE");
@@ -1202,13 +1439,55 @@ threshold_for_cmf_tag: 0.70";
 
     private static string ResolveGnaiToken()
     {
-        string token = FirstNonEmpty(System.Environment.GetEnvironmentVariable("GNAI_TOKEN"), System.Environment.GetEnvironmentVariable("GNAI_API_KEY"));
+        string token = GetAppSetting("GNAI:ApiKey");
         if (!string.IsNullOrWhiteSpace(token))
         {
             return token;
         }
 
-        return GetAppSetting("GNAI:ApiKey");
+        return FirstNonEmpty(System.Environment.GetEnvironmentVariable("GNAI_TOKEN"), System.Environment.GetEnvironmentVariable("GNAI_API_KEY"));
+    }
+
+    private static string ResolveGnaiEndpoint()
+    {
+        return FirstNonEmpty(GetAppSetting("GNAI:Endpoint"), System.Environment.GetEnvironmentVariable("GNAI_ENDPOINT"));
+    }
+
+    private static string ResolveGnaiModel()
+    {
+        return FirstNonEmpty(GetAppSetting("GNAI:Model"), System.Environment.GetEnvironmentVariable("GNAI_MODEL"));
+    }
+
+    private static int ResolveAiRequestTimeoutMilliseconds()
+    {
+        string configured = FirstNonEmpty(GetAppSetting("AI:RequestTimeoutSeconds"), System.Environment.GetEnvironmentVariable("AI_REQUEST_TIMEOUT_SECONDS"));
+        int seconds;
+        if (int.TryParse(configured, out seconds))
+        {
+            return Math.Max(15, Math.Min(120, seconds)) * 1000;
+        }
+
+        return 60000;
+    }
+
+    private static string GetAiProviderCacheSignature()
+    {
+        string gnaiToken = ResolveGnaiToken();
+        string gnaiEndpoint = ResolveGnaiEndpoint();
+        string gnaiModel = ResolveGnaiModel();
+        bool useGnai = !string.IsNullOrWhiteSpace(gnaiToken)
+            && !string.IsNullOrWhiteSpace(gnaiEndpoint)
+            && !gnaiEndpoint.StartsWith("REPLACE");
+
+        if (useGnai)
+        {
+            return "GNAI|" + gnaiEndpoint + "|" + FirstNonEmpty(gnaiModel, "gpt-5-mini") + "|" + ComputeHash(gnaiToken).Substring(0, 12);
+        }
+
+        string githubEndpoint = FirstNonEmpty(GetAppSetting("GitHubModels:Endpoint"), "https://models.inference.ai.azure.com/chat/completions");
+        string githubModel = FirstNonEmpty(GetAppSetting("GitHubModels:Model"), "gpt-4o-mini");
+        string githubKey = GetAppSetting("GitHubModels:ApiKey");
+        return "GitHubModels|" + githubEndpoint + "|" + githubModel + "|" + ComputeHash(githubKey).Substring(0, 12);
     }
 
     private static string FirstNonEmpty(params string[] values)
