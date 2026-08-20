@@ -105,6 +105,7 @@ public class PageGroupInfo
 public class HomeDashboardTrendPoint
 {
     public string WeekLabel { get; set; }
+    public DateTime WeekStart { get; set; }
     public int NewIssues { get; set; }
     public int ResolvedIssues { get; set; }
     public int NeedsAttention { get; set; }
@@ -164,6 +165,7 @@ public partial class CMF_Web_portal : System.Web.UI.Page
     private const string IssueGridCacheKeySessionKey = "issueGridCacheKey";
     private const string IssueGridCacheDataSessionKey = "issueGridCacheData";
     private const string IssueGlobalSearchSessionKey = "issueGlobalSearch";
+    private const string DefaultPlatformTable = "CMF_NVL_H_ALL_COMPONENTS_TABLE";
 
     private static readonly HashSet<string> AllowedPlatformTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -647,6 +649,7 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         btnShowGridView8.CssClass = baseClass;
         btnShowGridView9.CssClass = baseClass;
         lnkNavHome.CssClass = navBaseClass;
+        lnkNavCmfSummary.CssClass = navBaseClass;
         lnkNavIssueList.CssClass = navBaseClass;
         lnkNavPendingList.CssClass = navBaseClass;
         lnkNavReports.CssClass = navBaseClass;
@@ -659,6 +662,11 @@ public partial class CMF_Web_portal : System.Web.UI.Page
             btnShowGridView1.CssClass = baseClass + " is-active";
             lnkNavIssueList.CssClass = navBaseClass + " is-active";
             lblActiveViewTitle.Text = "Issue List";
+        }
+        else if (tabKey == "cmf")
+        {
+            lnkNavCmfSummary.CssClass = navBaseClass + " is-active";
+            lblActiveViewTitle.Text = "CMF Summary";
         }
         else if (tabKey == "pending")
         {
@@ -739,6 +747,12 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         if (string.Equals(activeTab, "home", StringComparison.OrdinalIgnoreCase))
         {
             ShowWelcomeHome();
+            return;
+        }
+
+        if (string.Equals(activeTab, "cmf", StringComparison.OrdinalIgnoreCase))
+        {
+            ShowModernCmfSummary();
             return;
         }
 
@@ -844,6 +858,11 @@ public partial class CMF_Web_portal : System.Web.UI.Page
             homeWelcomePanel.Visible = true;
         }
 
+        if (homeCmfSummaryPanel != null)
+        {
+            homeCmfSummaryPanel.Visible = false;
+        }
+
         if (lblWelcomeMode != null && ddlUserMode != null && ddlUserMode.SelectedItem != null)
         {
             lblWelcomeMode.Text = ddlUserMode.SelectedItem.Text;
@@ -869,6 +888,7 @@ public partial class CMF_Web_portal : System.Web.UI.Page
 
         pane3.Visible = false;
         pane4.Visible = false;
+        pane1.Visible = false;
         pane8.Visible = false;
         pane9.Visible = false;
 
@@ -876,11 +896,73 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         btnExportToExcel_cmf_pending.Visible = false;
     }
 
+    private void ShowModernCmfSummary()
+    {
+        LoadCmfRulesEditor();
+
+        if (homeWelcomePanel != null)
+        {
+            homeWelcomePanel.Visible = false;
+        }
+
+        if (homeCmfSummaryPanel != null)
+        {
+            homeCmfSummaryPanel.Visible = true;
+        }
+
+        BindHomeDashboard();
+
+        overall_request_details.Visible = false;
+        GridView_design_open.Visible = false;
+        GridView_cmf_summary.Visible = false;
+        GridView_cmf_summary1.Visible = false;
+        GridView_milestone_map.Visible = false;
+        GridView_notes.Visible = false;
+        GridView_comp.Visible = false;
+        tptdefdiv.Visible = false;
+        GridView_cmf_pending.Visible = false;
+        GridView_design_summary.Visible = false;
+        GridView_component_summary.Visible = false;
+        GridView_oem_summary.Visible = false;
+        analyticsPanel.Visible = false;
+        SetMainDataWrapperVisible(false);
+        issueListHeaderPanel.Visible = false;
+        sharedFilterPanel.Visible = false;
+        fieldSelectorPanel.Visible = false;
+        cmf_pending_header_panel.Visible = false;
+        SetIssuePagerVisible(false);
+        configRulesPanel.Visible = false;
+        reportsPlaceholderPanel.Visible = false;
+
+        pane1.Visible = false;
+        pane2.Visible = false;
+        pane3.Visible = false;
+        pane4.Visible = false;
+        pane5.Visible = false;
+        pane6.Visible = false;
+        pane7.Visible = false;
+        pane8.Visible = false;
+        pane9.Visible = false;
+
+        btnExportToExcel.Visible = false;
+        btnExportToExcel_ig.Visible = false;
+        btnExportToExcel_des.Visible = false;
+        btnExportToExcel_des_summary.Visible = false;
+        btnExportToExcel_cmf_pending.Visible = false;
+        btnExportToExcel_oem.Visible = false;
+
+    }
+
     private void EnsureIssueTabVisibleForPostback()
     {
         if (homeWelcomePanel != null)
         {
             homeWelcomePanel.Visible = false;
+        }
+
+        if (homeCmfSummaryPanel != null)
+        {
+            homeCmfSummaryPanel.Visible = false;
         }
 
         SetMainDataWrapperVisible(true);
@@ -912,6 +994,11 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         if (homeWelcomePanel != null)
         {
             homeWelcomePanel.Visible = false;
+        }
+
+        if (homeCmfSummaryPanel != null)
+        {
+            homeCmfSummaryPanel.Visible = false;
         }
 
         SetMainDataWrapperVisible(true);
@@ -998,6 +1085,11 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         if (lblHomeDashboardGeneratedAt != null)
         {
             lblHomeDashboardGeneratedAt.Text = snapshot.GeneratedAt;
+        }
+
+        if (lblCmfSummaryGeneratedAt != null)
+        {
+            lblCmfSummaryGeneratedAt.Text = snapshot.GeneratedAt;
         }
 
         if (lnkPlatformDashboard != null)
@@ -1121,7 +1213,8 @@ ORDER BY week_date", con))
                 {
                     DateTime weekDate = reader.IsDBNull(0) ? DateTime.Now.Date : reader.GetDateTime(0);
                     HomeDashboardTrendPoint point = new HomeDashboardTrendPoint();
-                    point.WeekLabel = "Wk of " + weekDate.ToString("dd MMM", CultureInfo.InvariantCulture);
+                    point.WeekStart = weekDate;
+                    point.WeekLabel = FormatWorkWeekLabel(weekDate);
                     point.NewIssues = reader.IsDBNull(1) ? 0 : reader.GetInt32(1);
                     point.ResolvedIssues = reader.IsDBNull(2) ? 0 : reader.GetInt32(2);
                     point.NeedsAttention = reader.IsDBNull(3) ? 0 : reader.GetInt32(3);
@@ -1182,10 +1275,16 @@ ORDER BY issue_count DESC", con))
 
         if (snapshot.Trend.Count > 1)
         {
-            snapshot.Trend = snapshot.Trend.OrderBy(point => point.WeekLabel, StringComparer.Ordinal).ToList();
+            snapshot.Trend = snapshot.Trend.OrderBy(point => point.WeekStart).ToList();
         }
 
         return snapshot;
+    }
+
+    private static string FormatWorkWeekLabel(DateTime date)
+    {
+        int weekNumber = CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(date, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+        return string.Format(CultureInfo.InvariantCulture, "WW'{0:D2}", weekNumber);
     }
 
     private static HomeDashboardTable NewDashboardTable(params string[] columns)
@@ -1437,6 +1536,11 @@ ORDER BY component_group", con))
             homeWelcomePanel.Visible = false;
         }
 
+        if (homeCmfSummaryPanel != null)
+        {
+            homeCmfSummaryPanel.Visible = false;
+        }
+
         searchfilters.Visible = false;
         analyticsPanel.Visible = false;
         SetMainDataWrapperVisible(true);
@@ -1529,43 +1633,8 @@ ORDER BY component_group", con))
 
     protected void btnShowGridView3_Click(object sender, EventArgs e)
     {
-        searchfilters.Visible = false;
-        analyticsPanel.Visible = false;
-        // Show GridView2 and hide GridView1
-        btnExportToExcel.Visible = false;
-
-        btnExportToExcel_ig.Visible = false;
-        btnExportToExcel_des.Visible = false;
-        btnExportToExcel_des_summary.Visible = false;
-        btnExportToExcel_cmf_pending.Visible = false;
-        btnExportToExcel_oem.Visible = false;
-        overall_request_details.Visible = false;
-        GridView_design_open.Visible = false;
-        GridView_cmf_summary.Visible = true;
-        GridView_cmf_summary1.Visible = true;
-        GridView_milestone_map.Visible = true;
-        GridView_notes.Visible = true;
-        GridView_comp.Visible = true;
-        tptdefdiv.Visible = true;
-        GridView_comp.Visible = true;
-        //tptdefdiv.Visible = false;
-        GridView_cmf_pending.Visible = false;
-        GridView_design_summary.Visible = false;
-        GridView_component_summary.Visible = false;
-        GridView_oem_summary.Visible = false;
-        btnImportPopup.Visible = false;
-        pane1.Visible = true;
-        pane2.Visible = false;
-        pane3.Visible = false;
-        pane4.Visible = false;
-        pane5.Visible = false;
-        pane6.Visible = false;
-        pane7.Visible = false;
-        pane9.Visible = false;
-        fieldSelectorPanel.Visible = false;
-        issueListHeaderPanel.Visible = false;
-        cmf_pending_header_panel.Visible = false;
-        SetIssuePagerVisible(false);
+        ShowModernCmfSummary();
+        SetActiveFocusedTab("cmf");
     }
 
     protected void btnShowGridView4_Click(object sender, EventArgs e)
@@ -1575,6 +1644,11 @@ ORDER BY component_group", con))
         if (homeWelcomePanel != null)
         {
             homeWelcomePanel.Visible = false;
+        }
+
+        if (homeCmfSummaryPanel != null)
+        {
+            homeCmfSummaryPanel.Visible = false;
         }
 
         searchfilters.Visible = false;
@@ -1843,6 +1917,11 @@ ORDER BY component_group", con))
             homeWelcomePanel.Visible = false;
         }
 
+        if (homeCmfSummaryPanel != null)
+        {
+            homeCmfSummaryPanel.Visible = false;
+        }
+
         fieldSelectorPanel.Visible = false;
         issueListHeaderPanel.Visible = false;
         cmf_pending_header_panel.Visible = false;
@@ -1898,6 +1977,12 @@ ORDER BY component_group", con))
         if (string.Equals(selectedView, "home", StringComparison.OrdinalIgnoreCase))
         {
             btnShowHomeDashboard_Click(sender, e);
+            return;
+        }
+
+        if (string.Equals(selectedView, "cmf", StringComparison.OrdinalIgnoreCase))
+        {
+            btnShowGridView3_Click(sender, e);
             return;
         }
 
@@ -2982,6 +3067,13 @@ ORDER BY component_group", con))
             WorkWeek = string.Format("WW'{0:D2}", workWeekNumber);
 
             // Set initial platform correctly
+            ListItem defaultPlatformItem = ddlTables.Items.FindByValue(DefaultPlatformTable);
+            if (defaultPlatformItem != null)
+            {
+                ddlTables.ClearSelection();
+                defaultPlatformItem.Selected = true;
+            }
+
             selectedPlatform = ResolvePlatformTable(ddlTables.SelectedValue);
             Session["selectedPlatform"] = selectedPlatform;
             Session[IssuePendingPlatformSessionKey] = selectedPlatform;
@@ -11420,8 +11512,10 @@ ORDER BY cp_id";
                     ddlSharedPlatform.Items[0].Selected = false;
 
                 // List of available platforms
-                string[] platforms = { "PTL", "LNL", "ARL-S", "ARL-H", "ARL-U", "ARL-Hx", "ARL-Refresh", "GNR", "WCL", "NVL-S", "NVL-H" };
+                string[] platforms = { "NVL-H", "NVL-S", "PTL", "LNL", "ARL-S", "ARL-H", "ARL-U", "ARL-Hx", "ARL-Refresh", "GNR", "WCL" };
                 string[] platformTables = {
+                    "CMF_NVL_H_ALL_COMPONENTS_TABLE",
+                    "CMF_NVL_S_ALL_COMPONENTS_TABLE",
                     "CMF_PTL_ALL_COMPONENTS_TABLE",
                     "CMF_LNL_ALL_COMPONENTS_TABLE",
                     "CMF_ARL_S_ALL_COMPONENTS_TABLE",
@@ -11430,9 +11524,7 @@ ORDER BY cp_id";
                     "CMF_ARL_HX_ALL_COMPONENTS_TABLE",
                     "CMF_ARL_Refresh_ALL_COMPONENTS_TABLE",
                     "CMF_GNR_ALL_COMPONENTS_TABLE",
-                    "CMF_WCL_ALL_COMPONENTS_TABLE",
-                    "CMF_NVL_S_ALL_COMPONENTS_TABLE",
-                    "CMF_NVL_H_ALL_COMPONENTS_TABLE"
+                    "CMF_WCL_ALL_COMPONENTS_TABLE"
                 };
 
                 // Add platforms to dropdown only once

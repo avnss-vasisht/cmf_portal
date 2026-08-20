@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="CMF_Web_portal.aspx.cs" Inherits="CMF_Web_portal" EnableEventValidation="false" %>
+
 
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -207,13 +207,13 @@
         .portal-layout-shell {
             display: flex;
             align-items: flex-start;
-            gap: 14px;
+            gap: 10px;
             margin-top: 0;
             min-height: calc(100vh - 150px);
         }
 
         .portal-layout-shell.main-menu-collapsed {
-            gap: 14px;
+            gap: 8px;
         }
 
         .portal-left-nav {
@@ -424,15 +424,6 @@
         .portal-main-workspace {
             flex: 1;
             min-width: 0;
-        }
-
-        .portal-layout-shell.main-menu-collapsed {
-            gap: 14px;
-        }
-
-        .portal-layout-shell.main-menu-collapsed .portal-main-workspace {
-            margin-left: 0;
-            padding-left: 0;
         }
 
         .portal-menu-reopen {
@@ -2759,16 +2750,15 @@ body {
 
 .ccip-main-grid {
     display: grid;
-    grid-template-columns: minmax(560px, 1.55fr) minmax(320px, 0.9fr);
+    grid-template-columns: minmax(300px, 1fr) minmax(520px, 1.85fr) minmax(300px, 1fr);
     gap: 12px;
-    align-items: start;
 }
 
 .ccip-dashboard-overview {
     display: grid;
     grid-template-columns: minmax(0, 1.45fr) minmax(360px, 0.95fr);
     gap: 12px;
-    align-items: start;
+    align-items: stretch;
 }
 
 .ccip-dashboard-left {
@@ -2777,6 +2767,7 @@ body {
 
 .dashboard-kpis-left {
     grid-template-columns: repeat(5, minmax(128px, 1fr));
+    height: 100%;
 }
 
 .dashboard-kpis-left .ccip-kpi {
@@ -2910,28 +2901,6 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.ccip-executive-summary-card {
-    margin-top: 12px;
-}
-
-.ccip-executive-summary-body {
-    color: #344054;
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1.55;
-}
-
-.ccip-executive-summary-body strong {
-    color: #111827;
-    font-weight: 900;
-}
-
-.ccip-cmf-summary-workspace {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
 }
 
 .ccip-summary-fact-label {
@@ -3363,17 +3332,18 @@ body {
 
 @media (max-width: 1500px) {
     .ccip-main-grid {
-        grid-template-columns: minmax(520px, 1.4fr) minmax(300px, 0.9fr);
+        grid-template-columns: minmax(280px, 1fr) minmax(500px, 1.8fr);
     }
 
     .ccip-main-grid .ccip-col-right {
-        grid-column: auto;
-        display: flex;
-        flex-direction: column;
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(260px, 1fr));
+        gap: 12px;
     }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1180px) {
     .ccip-kpi-row {
         grid-template-columns: repeat(2, minmax(170px, 1fr));
     }
@@ -4272,33 +4242,33 @@ td:nth-child(odd), th:nth-child(odd) {
     /* Field visibility controls */
 
     /* COMPLETE HIDING OF TABLE STRUCTURE FOR UNSELECTED FIELDS */
-    #<%= overall_request_details.ClientID %> .field-sno.hidden,
-    #<%= overall_request_details.ClientID %> .field-progress.hidden,
-    #<%= overall_request_details.ClientID %> .field-sightingid.hidden,
-    #<%= overall_request_details.ClientID %> .field-issue_details.hidden,
-    #<%= overall_request_details.ClientID %> .field-promotedid.hidden,
-    #<%= overall_request_details.ClientID %> .field-title.hidden,
-    #<%= overall_request_details.ClientID %> .field-component.hidden,
-    #<%= overall_request_details.ClientID %> .field-owner.hidden,
-    #<%= overall_request_details.ClientID %> .field-promoted_owner.hidden,
-    #<%= overall_request_details.ClientID %> .field-rvp_repro.hidden,
-    #<%= overall_request_details.ClientID %> .field-processor.hidden,
-    #<%= overall_request_details.ClientID %> .field-status.hidden,
-    #<%= overall_request_details.ClientID %> .field-idst.hidden,
-    #<%= overall_request_details.ClientID %> .field-los.hidden,
-    #<%= overall_request_details.ClientID %> .field-customer_company.hidden,
-    #<%= overall_request_details.ClientID %> .field-customer_detail.hidden,
-    #<%= overall_request_details.ClientID %> .field-imagefreeze.hidden,
-    #<%= overall_request_details.ClientID %> .field-component_group.hidden,
-    #<%= overall_request_details.ClientID %> .field-duplicatedetails.hidden,
-    #<%= overall_request_details.ClientID %> .field-impact.hidden,
-    #<%= overall_request_details.ClientID %> .field-impact_processor.hidden,
-    #<%= overall_request_details.ClientID %> .field-milestone.hidden,
-    #<%= overall_request_details.ClientID %> .field-days_open.hidden,
-    #<%= overall_request_details.ClientID %> .field-cmf_request.hidden,
-    #<%= overall_request_details.ClientID %> .field-cmf_status.hidden,
-    #<%= overall_request_details.ClientID %> .field-closed_reason.hidden,
-    #<%= overall_request_details.ClientID %> .field-edit_column.hidden {
+    #overall_request_details .field-sno.hidden,
+    #overall_request_details .field-progress.hidden,
+    #overall_request_details .field-sightingid.hidden,
+    #overall_request_details .field-issue_details.hidden,
+    #overall_request_details .field-promotedid.hidden,
+    #overall_request_details .field-title.hidden,
+    #overall_request_details .field-component.hidden,
+    #overall_request_details .field-owner.hidden,
+    #overall_request_details .field-promoted_owner.hidden,
+    #overall_request_details .field-rvp_repro.hidden,
+    #overall_request_details .field-processor.hidden,
+    #overall_request_details .field-status.hidden,
+    #overall_request_details .field-idst.hidden,
+    #overall_request_details .field-los.hidden,
+    #overall_request_details .field-customer_company.hidden,
+    #overall_request_details .field-customer_detail.hidden,
+    #overall_request_details .field-imagefreeze.hidden,
+    #overall_request_details .field-component_group.hidden,
+    #overall_request_details .field-duplicatedetails.hidden,
+    #overall_request_details .field-impact.hidden,
+    #overall_request_details .field-impact_processor.hidden,
+    #overall_request_details .field-milestone.hidden,
+    #overall_request_details .field-days_open.hidden,
+    #overall_request_details .field-cmf_request.hidden,
+    #overall_request_details .field-cmf_status.hidden,
+    #overall_request_details .field-closed_reason.hidden,
+    #overall_request_details .field-edit_column.hidden {
         display: none !important;
         visibility: hidden !important;
         width: 0 !important;
@@ -4312,32 +4282,32 @@ td:nth-child(odd), th:nth-child(odd) {
     }
 
     /* Hide empty data template columns as well */
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-sno.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-progress.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-sightingid.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-issue_details.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-promotedid.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-title.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-component.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-owner.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-promoted_owner.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-rvp_repro.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-processor.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-status.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-idst.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-los.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-customer_company.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-customer_detail.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-duplicatedetails.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-component_group.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-imagefreeze.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-impact.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-impact_processor.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-milestone.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-days_open.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-cmf_request.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-closed_reason.hidden,
-    #<%= overall_request_details.ClientID %> .empty-data-container .field-edit_column.hidden {
+    #overall_request_details .empty-data-container .field-sno.hidden,
+    #overall_request_details .empty-data-container .field-progress.hidden,
+    #overall_request_details .empty-data-container .field-sightingid.hidden,
+    #overall_request_details .empty-data-container .field-issue_details.hidden,
+    #overall_request_details .empty-data-container .field-promotedid.hidden,
+    #overall_request_details .empty-data-container .field-title.hidden,
+    #overall_request_details .empty-data-container .field-component.hidden,
+    #overall_request_details .empty-data-container .field-owner.hidden,
+    #overall_request_details .empty-data-container .field-promoted_owner.hidden,
+    #overall_request_details .empty-data-container .field-rvp_repro.hidden,
+    #overall_request_details .empty-data-container .field-processor.hidden,
+    #overall_request_details .empty-data-container .field-status.hidden,
+    #overall_request_details .empty-data-container .field-idst.hidden,
+    #overall_request_details .empty-data-container .field-los.hidden,
+    #overall_request_details .empty-data-container .field-customer_company.hidden,
+    #overall_request_details .empty-data-container .field-customer_detail.hidden,
+    #overall_request_details .empty-data-container .field-duplicatedetails.hidden,
+    #overall_request_details .empty-data-container .field-component_group.hidden,
+    #overall_request_details .empty-data-container .field-imagefreeze.hidden,
+    #overall_request_details .empty-data-container .field-impact.hidden,
+    #overall_request_details .empty-data-container .field-impact_processor.hidden,
+    #overall_request_details .empty-data-container .field-milestone.hidden,
+    #overall_request_details .empty-data-container .field-days_open.hidden,
+    #overall_request_details .empty-data-container .field-cmf_request.hidden,
+    #overall_request_details .empty-data-container .field-closed_reason.hidden,
+    #overall_request_details .empty-data-container .field-edit_column.hidden {
         display: none !important;
         visibility: hidden !important;
         width: 0 !important;
@@ -4351,11 +4321,11 @@ td:nth-child(odd), th:nth-child(odd) {
     }
 
     /* Force table layout to recalculate when columns are hidden */
-    #<%= overall_request_details.ClientID %> {
+    #overall_request_details {
         table-layout: auto !important;
     }
 
-    #<%= overall_request_details.ClientID %> table {
+    #overall_request_details table {
         table-layout: auto !important;
         width: 100% !important;
     }
@@ -6182,7 +6152,7 @@ td:nth-child(odd), th:nth-child(odd) {
         word-break: break-word !important;
     }
 
-    .issue-grid-inner #<%= overall_request_details.ClientID %>,
+    .issue-grid-inner #overall_request_details,
     .issue-grid-inner > table,
     .issue-grid-inner > .table-primary,
     .issue-grid-inner .table-primary {
@@ -7773,16 +7743,7 @@ td:nth-child(odd), th:nth-child(odd) {
     }
 
     .portal-layout-shell.main-menu-collapsed .content-wrapper {
-        padding-left: 28px !important;
-    }
-
-    #mainDataWrapper.content-wrapper {
-        padding-left: 0 !important;
-    }
-
-    #mainDataWrapper > .modal-body.popup {
-        padding-left: 0 !important;
-        padding-right: 0 !important;
+        padding-left: 22px !important;
     }
 
     .issue-page-hd,
@@ -8001,9 +7962,8 @@ td:nth-child(odd), th:nth-child(odd) {
         font-size: 16px !important;
     }
 
-    .portal-layout-shell,
     .portal-layout-shell.main-menu-collapsed {
-        gap: 14px !important;
+        gap: 0 !important;
     }
 
     .issue-grid-scroll {
@@ -8213,39 +8173,38 @@ td:nth-child(odd), th:nth-child(odd) {
     <script type="text/javascript">
         window.CMF_PORTAL = window.CMF_PORTAL || {};
         window.CMF_PORTAL.ids = window.CMF_PORTAL.ids || {};
-        window.CMF_PORTAL.ids.hfSelectedValues = '<%= hfSelectedValues.ClientID %>';
-        window.CMF_PORTAL.ids.exportBtn = '<%= exportBtn.ClientID %>';
-        window.CMF_PORTAL.ids.driverCollectorhf = '<%= driverCollectorhf.ClientID %>';
-        window.CMF_PORTAL.ids.hiddenComponentName = '<%= HiddenComponentName.ClientID %>';
-        window.CMF_PORTAL.ids.hiddenDriverName = '<%= HiddenDriverName.ClientID %>';
-        window.CMF_PORTAL.ids.hiddenIssueType = '<%= HiddenIssueType.ClientID %>';
-        window.CMF_PORTAL.ids.hiddenModalDesign = '<%= HiddenModalDesign.ClientID %>';
-        window.CMF_PORTAL.ids.hiddenModalDriver = '<%= HiddenModalDriver.ClientID %>';
-        window.CMF_PORTAL.ids.ddlTables = '<%= ddlTables.ClientID %>';
-        window.CMF_PORTAL.ids.ddlSharedPlatform = '<%= ddlSharedPlatform.ClientID %>';
-        window.CMF_PORTAL.ids.hfQuickPlatform = '<%= hfQuickPlatform.ClientID %>';
-        window.CMF_PORTAL.ids.btnQuickPlatformApply = '<%= btnQuickPlatformApply.UniqueID %>';
-        window.CMF_PORTAL.ids.overallRequestDetails = '<%= overall_request_details.ClientID %>';
-        window.CMF_PORTAL.ids.gridViewDesignSummary = '<%= GridView_design_summary.ClientID %>';
-        window.CMF_PORTAL.ids.gridViewComponentSummary = '<%= GridView_component_summary.ClientID %>';
-        window.CMF_PORTAL.ids.gridViewCmfSummary = '<%= GridView_cmf_summary.ClientID %>';
-        window.CMF_PORTAL.ids.gridViewComp = '<%= GridView_comp.ClientID %>';
-        window.CMF_PORTAL.ids.gridViewCmfPending = '<%= GridView_cmf_pending.ClientID %>';
-        window.CMF_PORTAL.ids.homeWelcomePanel = '<%= homeWelcomePanel.ClientID %>';
-        window.CMF_PORTAL.ids.homeCmfSummaryPanel = '<%= homeCmfSummaryPanel.ClientID %>';
-        window.CMF_PORTAL.ids.paneIssueList = '<%= pane3.ClientID %>';
-        window.CMF_PORTAL.ids.paneCmfPending = '<%= pane4.ClientID %>';
-        window.CMF_PORTAL.ids.activeViewTitle = '<%= lblActiveViewTitle.ClientID %>';
-        window.CMF_PORTAL.ids.issueListHeaderPanel = '<%= issueListHeaderPanel.ClientID %>';
-        window.CMF_PORTAL.ids.cmfPendingHeaderPanel = '<%= cmf_pending_header_panel.ClientID %>';
-        window.CMF_PORTAL.ids.lblIssueTotal = '<%= lblIssueTotal.ClientID %>';
-        window.CMF_PORTAL.ids.lblIssueInProgress = '<%= lblIssueInProgress.ClientID %>';
-        window.CMF_PORTAL.ids.lblIssueStale = '<%= lblIssueStale.ClientID %>';
-        window.CMF_PORTAL.ids.lblPendingSightings = '<%= lblPendingSightings.ClientID %>';
-        window.CMF_PORTAL.ids.lblQualifyForCmf = '<%= lblQualifyForCmf.ClientID %>';
-        window.CMF_PORTAL.ids.lblLikelyDuplicate = '<%= lblLikelyDuplicate.ClientID %>';
-        window.CMF_PORTAL.ids.lblIncompleteSysScope = '<%= lblIncompleteSysScope.ClientID %>';
-        window.CMF_PORTAL.currentPlatform = '<%= ResolvePlatformTable(Session["selectedPlatform"] as string ?? ddlTables.SelectedValue) %>';
+        window.CMF_PORTAL.ids.hfSelectedValues = 'hfSelectedValues';
+        window.CMF_PORTAL.ids.exportBtn = 'exportBtn';
+        window.CMF_PORTAL.ids.driverCollectorhf = 'driverCollectorhf';
+        window.CMF_PORTAL.ids.hiddenComponentName = 'HiddenComponentName';
+        window.CMF_PORTAL.ids.hiddenDriverName = 'HiddenDriverName';
+        window.CMF_PORTAL.ids.hiddenIssueType = 'HiddenIssueType';
+        window.CMF_PORTAL.ids.hiddenModalDesign = 'HiddenModalDesign';
+        window.CMF_PORTAL.ids.hiddenModalDriver = 'HiddenModalDriver';
+        window.CMF_PORTAL.ids.ddlTables = 'ddlTables';
+        window.CMF_PORTAL.ids.ddlSharedPlatform = 'ddlSharedPlatform';
+        window.CMF_PORTAL.ids.hfQuickPlatform = 'hfQuickPlatform';
+        window.CMF_PORTAL.ids.btnQuickPlatformApply = 'btnQuickPlatformApply';
+        window.CMF_PORTAL.ids.overallRequestDetails = 'overall_request_details';
+        window.CMF_PORTAL.ids.gridViewDesignSummary = 'GridView_design_summary';
+        window.CMF_PORTAL.ids.gridViewComponentSummary = 'GridView_component_summary';
+        window.CMF_PORTAL.ids.gridViewCmfSummary = 'GridView_cmf_summary';
+        window.CMF_PORTAL.ids.gridViewComp = 'GridView_comp';
+        window.CMF_PORTAL.ids.gridViewCmfPending = 'GridView_cmf_pending';
+        window.CMF_PORTAL.ids.homeWelcomePanel = 'homeWelcomePanel';
+        window.CMF_PORTAL.ids.paneIssueList = 'pane3';
+        window.CMF_PORTAL.ids.paneCmfPending = 'pane4';
+        window.CMF_PORTAL.ids.activeViewTitle = 'lblActiveViewTitle';
+        window.CMF_PORTAL.ids.issueListHeaderPanel = 'issueListHeaderPanel';
+        window.CMF_PORTAL.ids.cmfPendingHeaderPanel = 'cmf_pending_header_panel';
+        window.CMF_PORTAL.ids.lblIssueTotal = 'lblIssueTotal';
+        window.CMF_PORTAL.ids.lblIssueInProgress = 'lblIssueInProgress';
+        window.CMF_PORTAL.ids.lblIssueStale = 'lblIssueStale';
+        window.CMF_PORTAL.ids.lblPendingSightings = 'lblPendingSightings';
+        window.CMF_PORTAL.ids.lblQualifyForCmf = 'lblQualifyForCmf';
+        window.CMF_PORTAL.ids.lblLikelyDuplicate = 'lblLikelyDuplicate';
+        window.CMF_PORTAL.ids.lblIncompleteSysScope = 'lblIncompleteSysScope';
+        window.CMF_PORTAL.currentPlatform = 'CMF_PTL_ALL_COMPONENTS_TABLE';
 
         window.CMF_PORTAL.defaults = {
             componentName: '',
@@ -8253,9 +8212,9 @@ td:nth-child(odd), th:nth-child(odd) {
             driverName: ''
         };
 
-        window.CMF_PORTAL.driversJson = <%= DriversJson %>;
-        window.CMF_PORTAL.isInitialLoad = <%= IsPostBack ? "false" : "true" %>;
-        window.CMF_PORTAL.activeFocusedTab = '<%= GetActiveFocusedTab() %>';
+        window.CMF_PORTAL.driversJson = [];
+        window.CMF_PORTAL.isInitialLoad = true;
+        window.CMF_PORTAL.activeFocusedTab = 'home';
 
         window.CMF_PORTAL.platformAliasMap = {
             "PTL": "CMF_PTL_ALL_COMPONENTS_TABLE",
@@ -9528,29 +9487,19 @@ td:nth-child(odd), th:nth-child(odd) {
 
         function renderHomeDashboard() {
             var homePanel = document.getElementById(window.CMF_PORTAL.ids.homeWelcomePanel);
-            var cmfPanel = document.getElementById(window.CMF_PORTAL.ids.homeCmfSummaryPanel);
-            var homeVisible = homePanel && isElementVisible(homePanel);
-            var cmfVisible = cmfPanel && isElementVisible(cmfPanel);
-            if (!homeVisible && !cmfVisible) {
+            if (homePanel && !isElementVisible(homePanel)) {
                 return;
             }
-
-            var snapshot = window.CMF_PORTAL.homeDashboardSnapshot;
-            if (!snapshot) {
-                return;
-            }
-
-            renderHomePortalHealth(snapshot);
-            renderHomeExecutiveSummary(snapshot);
-            renderHomeSummaryFacts(snapshot);
-            renderDashboardLiveTable('homeMilestoneSummaryTable', snapshot.MilestoneSummary);
-            renderDashboardLiveTable('homeComponentSummaryTable', snapshot.ComponentSummary);
-            renderDashboardLiveTable('homePendingSummaryTable', snapshot.PendingSummary);
 
             var trendHost = document.getElementById('homeTrendChart');
             var statusHost = document.getElementById('homeStatusChart');
             var listHost = document.getElementById('homeTopComponentsList');
             if (!trendHost || !statusHost || !listHost || typeof echarts === 'undefined') {
+                return;
+            }
+
+            var snapshot = window.CMF_PORTAL.homeDashboardSnapshot;
+            if (!snapshot) {
                 return;
             }
 
@@ -9690,24 +9639,15 @@ td:nth-child(odd), th:nth-child(odd) {
                 listHost.appendChild(listItem);
             }
 
+            renderHomePortalHealth(snapshot);
+            renderHomeSummaryFacts(snapshot);
+            renderDashboardLiveTable('homeMilestoneSummaryTable', snapshot.MilestoneSummary);
+            renderDashboardLiveTable('homeComponentSummaryTable', snapshot.ComponentSummary);
+            renderDashboardLiveTable('homePendingSummaryTable', snapshot.PendingSummary);
+
             window.CMF_PORTAL.lastHomeDashboardKey = snapshotKey;
             window.CMF_PORTAL.homeTrendChart.resize();
             window.CMF_PORTAL.homeStatusChart.resize();
-        }
-
-        function renderHomeExecutiveSummary(snapshot) {
-            var host = document.getElementById('homeExecutiveSummary');
-            if (!host) return;
-            var platform = snapshot.PlatformLabel || 'selected platform';
-            var active = Number(snapshot.ActiveIssues || 0);
-            var attention = Number(snapshot.NeedsAttention || 0);
-            var resolved = Number(snapshot.ResolvedThisWeek || 0);
-            var readiness = Number(snapshot.ProgramReadinessScore || 0);
-            var riskLevel = snapshot.ProgramRiskLevel || 'No risk data';
-            var topRisk = snapshot.TopRisk || 'no concentrated component risk';
-            var blockers = snapshot.PredictedBlockers || [];
-            var blockerText = blockers.length > 0 ? blockers.slice(0, 2).join(' and ') : 'no major blocker concentration';
-            host.innerHTML = '<strong>' + escapeHtml(platform) + '</strong> currently has <strong>' + escapeHtml(String(active)) + '</strong> active CMF issue signals, with <strong>' + escapeHtml(String(attention)) + '</strong> needing attention and <strong>' + escapeHtml(String(resolved)) + '</strong> resolved in the last 7 days. Program readiness is <strong>' + escapeHtml(String(readiness)) + '</strong> with <strong>' + escapeHtml(riskLevel) + '</strong>; the main risk area is <strong>' + escapeHtml(topRisk) + '</strong>, and the leading blocker signal is <strong>' + escapeHtml(blockerText) + '</strong>.';
         }
 
         function renderHomePortalHealth(snapshot) {
@@ -9943,7 +9883,7 @@ td:nth-child(odd), th:nth-child(odd) {
 
         document.addEventListener('DOMContentLoaded', function () {
             window.CMF_PORTAL.currentPlatform = getCurrentPlatformValue();
-            window.CMF_PORTAL.homeDashboardSnapshot = <%= string.IsNullOrWhiteSpace(HomeDashboardSnapshotJson) ? "null" : HomeDashboardSnapshotJson %>;
+            window.CMF_PORTAL.homeDashboardSnapshot = {"PlatformLabel":"PTL Dashboard","GeneratedAt":"20 Aug 2026 18:41","ActiveIssues":2,"NeedsAttention":2,"ResolvedThisWeek":0,"AverageResolutionDays":19.885057,"CustomersAffected":2,"NewToday":1,"ResolvedToday":0,"AiWatchlist":2,"ProgramReadinessScore":85,"ProgramRiskLevel":"Low Risk","TopRisk":"TBT","RiskConcentration":"50%","PredictedBlockers":["TBT (1)","iGFX (1)"],"SummaryFacts":[{"Label":"Total CMFs","Value":"257","Note":"58 duplicates"},{"Label":"Closed","Value":"257","Note":"58 duplicates"},{"Label":"Implemented","Value":"0","Note":"0 duplicates"},{"Label":"Pending","Value":"0","Note":"open CMFs"}],"TptFacts":[{"Label":"CMF Disposition TPT","Value":"1","Note":"days"},{"Label":"CMF Resolution TPT","Value":"18","Note":"days"},{"Label":"CMF Overall TPT","Value":"36","Note":"days"}],"MilestoneSummary":{"Columns":["Milestone","Unique CMF Count"],"Rows":[["PR6_HF","1"],["PTL_BE_BETA","4"],["PTL_BE_PV","19"],["PTL_BE_QS","2"],["PTL_EE_BETA","1"],["PTL_EE_PR1","15"],["PTL_EE_PV","27"],["PTL_EE_QS","36"],["PTL_WW1_24H2PV","23"],["PTL_WW12_BEPR3","9"],["PTL_WW15_BEPR4","10"],["PTL_WW19_BEPR5","5"],["PTL_WW23_BEPR6","2"],["PTL_WW4_23H2PV","9"],["PTL_WW52_BKC","10"],["PTL_WW6_BEPR1","19"],["PTL_WW8_BEPR2","5"],["PTL_WW8_BEPR2HF","2"]]},"ComponentSummary":{"Columns":["Component","Open (LOS)","Impl/Verified"],"Rows":[["Total (LOS) + Duplicates + Implemented","0(0) + 0 Dups","0"]]},"PendingSummary":{"Columns":["Component","CMF Pending Count"],"Rows":[["Total","0"]]},"Trend":[{"WeekLabel":"Wk of 06 Aug","NewIssues":0,"ResolvedIssues":0,"NeedsAttention":0},{"WeekLabel":"Wk of 13 Aug","NewIssues":0,"ResolvedIssues":0,"NeedsAttention":0},{"WeekLabel":"Wk of 16 Jul","NewIssues":1,"ResolvedIssues":0,"NeedsAttention":1},{"WeekLabel":"Wk of 20 Aug","NewIssues":1,"ResolvedIssues":0,"NeedsAttention":1},{"WeekLabel":"Wk of 23 Jul","NewIssues":0,"ResolvedIssues":2,"NeedsAttention":0},{"WeekLabel":"Wk of 30 Jul","NewIssues":0,"ResolvedIssues":0,"NeedsAttention":0}],"StatusDistribution":[{"Name":"Closed","Value":458},{"Name":"open","Value":2}],"TopComponents":[{"Name":"TBT","Value":1},{"Name":"iGFX","Value":1}]};
             syncActivePlatformChip();
             var issueGrid = document.getElementById(window.CMF_PORTAL.ids.overallRequestDetails);
             if (isElementVisible(issueGrid)) {
@@ -9968,7 +9908,7 @@ td:nth-child(odd), th:nth-child(odd) {
         if (window.Sys && Sys.WebForms && Sys.WebForms.PageRequestManager) {
             Sys.WebForms.PageRequestManager.getInstance().add_endRequest(function () {
                 window.CMF_PORTAL.currentPlatform = getCurrentPlatformValue();
-                window.CMF_PORTAL.homeDashboardSnapshot = <%= string.IsNullOrWhiteSpace(HomeDashboardSnapshotJson) ? "null" : HomeDashboardSnapshotJson %>;
+                window.CMF_PORTAL.homeDashboardSnapshot = {"PlatformLabel":"PTL Dashboard","GeneratedAt":"20 Aug 2026 18:41","ActiveIssues":2,"NeedsAttention":2,"ResolvedThisWeek":0,"AverageResolutionDays":19.885057,"CustomersAffected":2,"NewToday":1,"ResolvedToday":0,"AiWatchlist":2,"ProgramReadinessScore":85,"ProgramRiskLevel":"Low Risk","TopRisk":"TBT","RiskConcentration":"50%","PredictedBlockers":["TBT (1)","iGFX (1)"],"SummaryFacts":[{"Label":"Total CMFs","Value":"257","Note":"58 duplicates"},{"Label":"Closed","Value":"257","Note":"58 duplicates"},{"Label":"Implemented","Value":"0","Note":"0 duplicates"},{"Label":"Pending","Value":"0","Note":"open CMFs"}],"TptFacts":[{"Label":"CMF Disposition TPT","Value":"1","Note":"days"},{"Label":"CMF Resolution TPT","Value":"18","Note":"days"},{"Label":"CMF Overall TPT","Value":"36","Note":"days"}],"MilestoneSummary":{"Columns":["Milestone","Unique CMF Count"],"Rows":[["PR6_HF","1"],["PTL_BE_BETA","4"],["PTL_BE_PV","19"],["PTL_BE_QS","2"],["PTL_EE_BETA","1"],["PTL_EE_PR1","15"],["PTL_EE_PV","27"],["PTL_EE_QS","36"],["PTL_WW1_24H2PV","23"],["PTL_WW12_BEPR3","9"],["PTL_WW15_BEPR4","10"],["PTL_WW19_BEPR5","5"],["PTL_WW23_BEPR6","2"],["PTL_WW4_23H2PV","9"],["PTL_WW52_BKC","10"],["PTL_WW6_BEPR1","19"],["PTL_WW8_BEPR2","5"],["PTL_WW8_BEPR2HF","2"]]},"ComponentSummary":{"Columns":["Component","Open (LOS)","Impl/Verified"],"Rows":[["Total (LOS) + Duplicates + Implemented","0(0) + 0 Dups","0"]]},"PendingSummary":{"Columns":["Component","CMF Pending Count"],"Rows":[["Total","0"]]},"Trend":[{"WeekLabel":"Wk of 06 Aug","NewIssues":0,"ResolvedIssues":0,"NeedsAttention":0},{"WeekLabel":"Wk of 13 Aug","NewIssues":0,"ResolvedIssues":0,"NeedsAttention":0},{"WeekLabel":"Wk of 16 Jul","NewIssues":1,"ResolvedIssues":0,"NeedsAttention":1},{"WeekLabel":"Wk of 20 Aug","NewIssues":1,"ResolvedIssues":0,"NeedsAttention":1},{"WeekLabel":"Wk of 23 Jul","NewIssues":0,"ResolvedIssues":2,"NeedsAttention":0},{"WeekLabel":"Wk of 30 Jul","NewIssues":0,"ResolvedIssues":0,"NeedsAttention":0}],"StatusDistribution":[{"Name":"Closed","Value":458},{"Name":"open","Value":2}],"TopComponents":[{"Name":"TBT","Value":1},{"Name":"iGFX","Value":1}]};
                 syncActivePlatformChip();
                 var issueGrid = document.getElementById(window.CMF_PORTAL.ids.overallRequestDetails);
                 if (isElementVisible(issueGrid)) {
@@ -10006,7 +9946,7 @@ td:nth-child(odd), th:nth-child(odd) {
         }
 
         function initColumnHideButtons() {
-            var grid = document.getElementById('<%= overall_request_details.ClientID %>');
+            var grid = document.getElementById('overall_request_details');
             if (!grid) return;
             if (!isElementVisible(grid)) return;
             // Select every header cell that carries a field-* class, regardless of thead/tbody structure
@@ -10122,11 +10062,11 @@ td:nth-child(odd), th:nth-child(odd) {
             }
 
             issueGlobalSearchTimer = setTimeout(function () {
-                var hidden = document.getElementById('<%= hfIssueGlobalSearch.ClientID %>');
+                var hidden = document.getElementById('hfIssueGlobalSearch');
                 if (hidden) {
                     hidden.value = query;
                 }
-                __doPostBack('<%= btnIssueGlobalSearchApply.UniqueID %>', '');
+                __doPostBack('btnIssueGlobalSearchApply', '');
             }, 450);
         }
 
@@ -10228,43 +10168,56 @@ td:nth-child(odd), th:nth-child(odd) {
 </head>
 
 <body>
-    <form id="form1" runat="server">
-    <asp:HiddenField ID="HiddenModalDesign" runat="server" />
-    <asp:HiddenField ID="HiddenDriverName" runat="server" />
-    <asp:HiddenField ID="HiddenComponentName" runat="server" />
-    <asp:HiddenField ID="HiddenIssueType" runat="server" />
-    <asp:HiddenField ID="hfIssueGlobalSearch" runat="server" />
-    <asp:LinkButton ID="btnIssueGlobalSearchApply" runat="server" OnClick="btnIssueGlobalSearchApply_Click" Style="display:none;" />
+    <form method="post" action="./CMF_Web_portal.aspx" id="form1" enctype="multipart/form-data">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="pd4EC5VjYFqPxiQ7LPSpnzuHxspMa1cj0IjwjW3IWFHfrRAj6WrhYvvXWQPCnka6erwwFspKE/rz6/tcXP70GSDdkUEmS9hGVhqRwiACKlsjU89mD2Ypme5hXOe48fJ08VtJBnLte0qUIpkOdgly1WyBsycD/cDKb0rgKpKh6DkJS17PvV6PkwYFo+e0yb8RS8y7oxmJV+gdmwk8m0KHzG66ZIUuqI3agq8zmlu5sldh8Zys1Rco6umcrpNq0Qm7hgmdfIDJ7oHF33zRCmFFKDGUc1PybDotQpm/h6qT8dYEmn8FzYw7mUBv0fspgeBow4711qBpw8rgAZcuFXz/kXw1gAw9M4xURlBfJEjzTW9l+ENO2tL+AimH8DW037r30WvM1/g+gjMZTJEKpMkhQYH6E91Ed1lI8E4v2at0FffSNbGAaiXmGSZ13rC4lW0I2MIaujxJyWdzTgv4/FvX6E3059VDzBaqVIAPRrUCjqRDtXLJnQu60tEhfdylXHTmPaTIBYHGkSb1PvKwLSkjmxsiQpomQl+akJKI8IJHL4sYOdx2xZuXkRwPNgjZfdKbY9PSzYX1q+9NyGrYVDaMoRa+fg/BaJboKFCbw3C538byZm0gWf5hKJ5U6bmT6GxxuPOCk/gdRuw7I2qj1l0hXC73YsCgqv3hoT6sTzadg6R6hTO9jt1evOV96XgXZ6bH99DRlSGhbBv8wf0nMfmfWhyiwDWn+8PBKuCx90V4qbfC9Vr3bWIFdT4w1vUsVeaua75Cbzr6BvEgzuYHh+n3fskLo0Yc9vAkrxc7pY9m77uh3a83Ll2NpY4Pk7zfo+7s6nt9ZjORD1InHIRQ9b8ykbHdAkE93NYxPW2qSwlLU6FEXYuvnh4OEhoZ8UFgRRVj9wDeFMruJIgSFGToHWFL6eD+Kf9W3ce/qa/Fwv2QxByuzL9B++U4DUJea34BQoAatQFDx6UyBMkmbHi+uaTxznFJRB3BIg+oAN3mQ7rE+mak9T6jwD8LZL17OpId0ubGRDfpJ8IMFBADxccHPkXl8kEgJXNn8ulXFLXCwDx8oVY6svPDGMKnFr0OxzBzYbbt29rcpxVRZguucIO9eDxwR94cII/+D/Kff9ewuv+rGG/b2xUMsJyjEFwovNoFkrPOptjIUimB3BrenuNa79oPEeXXvObruuSh3slhHeL/eXWrHZ4oDmE4yrhqiJ+wBF/4Mwiu37iqYUJr24h0w4oCwuCzKBV/3jTvgRqS4b5O4Xpgwf61nK+uBVLoc8oCiVXzszuXOPQsI68sgfT3+1KfMP/f1zPiXiX4greqW2jflI03quqINyZJo1AyhXz1nOVZtzXDuDMu5+1WKkrKYC9AlYDOWCsmO7fS7/fnCJEg5AL3GTp7ehEsBKJXcCIuA3uhwdU6IOTfVtCgkLDLqyalz49KvTN3eS8h3+W5pO+1S7MTxcx7HOCKaIb2OlMaW+ii7PIzvxFr0oXkaiKwndqMHlm17+mtsxsLvZJAZXNAdabeRCTwmaVGaG4ZkEccw3v3OLAQfs9G6SZRKEf5ao3zNNPwKMisoWakyAjKarbhzrzr26WwfoUqHc2t/vLL46TsG8VSlpjMjcO45fjZZt/I8y0yKRB808AHYpcUa92wr03pqljiTUvOpzczuTHsbn0eTsBLI29ygh0ujGkFBMVR6Kz6Ucm0VQXI2X0XolVf1FXQf5O9Et3yTwfnmylqt5YJTKSD+PpsvFP1Oq4V1TH2Gxctgrwqy5EB3v7mX3/xeOx167RV5eIisSLgVv0nBk1okzQ1Rdqf6Q37hfzJYwvTvZB6ozdQRAJOZqeEc5Wg/RZ1NfiujSaH9XUIu3jSSrD1gK7VUeU9ogHlnZtEIpYnwtMugqXUk/1vwiUAgtgHp5cpq7cUA12/KnLS0/Z9ucIRbP86icPX1cV8J/h6X16qlO59Dap3nmnC5DBCGEuamKO9QVAg7QRM74VoKvdxnEN69pai5HciiEXrxY0BD/2ONNy87iwy0XyFYCUYMKy+f7jDM2tQr6ZAlu/JuGlXWIL+YewNbEq7QQJcDoyGK+8wPubGQV6loBa/FWmKHdg7WAv0CcRxZqFInAIEyJb+Ef+5G9Yjn0eg0W7ogOCyATlUFfgJUCc7HtsvAZTV3qojSF9xPPGriWOE5MVTCpOTANF0fUV5wCx1KwahAVUmjMWhDYIJYvGEV9pSDGLLxxiTMGnIbrl5zYvzdUlpDchh42VkL6HTuqJtBRbT3OBRgIxInYytNPzirRLAv/KDIB1N2q3lwS6icGG0MjpIK5JO+MkvihduyED7xtLp9xL1mQPt8jkp+KxFHiTEF4rKIbahdqUdQt+cbvLhitTt1TDptOuPR7+AkSCw4Y4rZgHZhrAI2yEpw93vFX2kRS3ds039+WjZWE3whbD4eGXcMsG+3G7Iu28/h/DUpjPEv3zWX/VRFMJisf9AOgtEhseghnoQAC5aPURefNPIHxMpB2ulN6QIKajPFvm3PWs1pDwwRcdLb7kgTJ+BhD8CSDlz7+U1a4nT2I2G5V34/RIyMbTrBJ80/AGW+fxlehVk5kYGULVNOPjNxb6DRBU0EzT03tuSSfmzSLjBT6DOjidQxTuInLiTMIBgSqptFcrcISSzzjMSjOh2SIyS+vp29Rivp4oFOJX7A4mp4hv63q5g2G9VGN+Itn2UqJAZakxw/9jjYzNCCvc3krorK7/y3Bz6fqHnUWteSc7B4NGlP4Ulf2wMOLolegf9Pt0cRSNgVad56AS/g6ChQaCORRDJj1PNofR9R/wtsKIjYMuD0Lo7qKNpGRF6Dagw70EGQqLD9brVlXuwlbKR3LmIWB4NHsC03ceQkrnBHDatmS7tMR7N7/hicKGiT8byMMqf5g3HzFZ9PbqplJQYaXFOv3oKP3RdKYOeRkNXB0BZgED6bOdfPHxsgMiY2JKLLnob8ZTj8SadOkrkSSxGntl7LdkOLpQkUpTUoLzR7ImsKQZDe0dk83jrqRNYQNXvll6EUPt6WDBP5Tad+tsEE4VJXiT5BANbX7hzUqGhjTwK1SBk5BrCme5hJ4S9eFU+xOk4fJSlHPaqswqenpSgRURhUa9FefpffZK65HTWt3b9EO0Dt0KHuLLYUxEimw1W+qSBlu1iNroK3pCbWbx16wZDwLizSEMs4ky1YJGOI1fGuuBwu6XgweFuwmJEA3eYiDxu6R/wlIWyKsVnde4jjvu3KzIQS6xiRa8fhmyA5sEQLMRHgkmBELCeIwa0fsdNA/QSGV9okOSzFX6LvN7PFi97n2sryCVBPZ7PbhNvRGA9oFg0sR10RtnwtjjnmxFPgmzbUllFj8ngoe9qYYlCJknCoKdCiRZwH/8ubisao+x5WaXVXhaqUQvyLR1YNG2HFPY2WWtRG4+FAQfgnhdLn2fFAHF2xSnGVpvIHpzPDwAxMQcCrpg+aFGsN6yB7QsCtLBVgERw8eZEAGWREhHa3Jv7sKa1jAE69mv8SG8SSq/CZVoRE2RN0Cu2j31AFBcfPvPJfdSzkhz6AlD4qk3e0HChhGrku62l3gTrDyxSO9HmxZAWQHLQK85HFunMjUzF1rMX76+eYXgAPZXVD4PqvvsUDVFDZeY1eHJ3Stm0AClWb3sQfPfOPeFyZFUTJg7gzrXqofodK75nGmwewJDVfQnKrrwDKoZeGeMRfSuZudtTqgIAVi+hvNkU73hYEikZ2d2DhiUBwrUM7s9ZRCwEtZQ8iMCYyVHhTz0rmbzGBQSPPCVyxX6ZT15bFNGl17gxzVGLEGcLHDrJnAA6gl/V3+nIEIF+H220M/P2swk2f8swHeambgrFAHLiRcHePeuRnZXwixL2JR/WNYG+EIp8TOKVeXQw9OoNEeyCPUTxLcnSArVtf+0RkC/tjfLz2KaV1KbaIfShJNTVEZ71AlOKFZcQyzqCn0syKCeor/vrT7LQO3KYNGAicY1CStHpXgbS/BNPDpAdq5Y1s35pXDGEVc2gy4J72UzTdI9HyKmEfRmbNRpbnaRU8GOhVP/ggkVMrPGy8gfGZ0LyVwM5xrESzxLmdDltoVuja6dzV1N1S6XD9O7K7B13YzoUckZ82MthcAFACvcdVIdDZCZOig==" />
+
+
+<script src="/ScriptResource.axd?d=nnHyWnZ5bTPuYszCeiYmK-cgxDvIdusmhjW1RbuWYy6YOA9HE0jPcfJ912ysJycPEgZrAUCLUp-GxNZeKQ1AxIZTj8xpQq0ikylQLo4wby5-FPwwoM0qMrqFL8u1ZvsdpRZdeATcR6GpDzVW18dEqFJURsX0AoCA7O0lIJzgH6c1&amp;t=ffffffffa1bf0f7b" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+if (typeof(Sys) === 'undefined') throw new Error('ASP.NET Ajax client-side framework failed to load.');
+//]]>
+</script>
+
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="46598DED" />
+<input type="hidden" name="__VIEWSTATEENCRYPTED" id="__VIEWSTATEENCRYPTED" value="" />
+    <input type="hidden" name="HiddenModalDesign" id="HiddenModalDesign" />
+    <input type="hidden" name="HiddenDriverName" id="HiddenDriverName" />
+    <input type="hidden" name="HiddenComponentName" id="HiddenComponentName" />
+    <input type="hidden" name="HiddenIssueType" id="HiddenIssueType" />
+    <input type="hidden" name="hfIssueGlobalSearch" id="hfIssueGlobalSearch" />
+    <a id="btnIssueGlobalSearchApply" href="javascript:__doPostBack(&#39;btnIssueGlobalSearchApply&#39;,&#39;&#39;)" style="display:none;"></a>
 <!-- You already have HiddenDriverName -->
-    <asp:HiddenField ID="dw_trigger" runat="server" />
+    <input type="hidden" name="dw_trigger" id="dw_trigger" />
 
     <!-- Header -->
     <header>
         <!-- Convert to ASP.NET DropDownList -->
 
 
-        <div class="header-title" runat="server" id="headerTitle">CMF Live Dashboard</div>
+        <div id="headerTitle" class="header-title">WW&#39;34 | CMF Live Dashboard - All Milestones</div>
         <div class="global-search-shell" role="search">
             <i class="fas fa-search" aria-hidden="true"></i>
-            <input type="text" id="globalPortalSearch" placeholder="Search issues, customers, components..." autocomplete="off" value="<%= HttpUtility.HtmlAttributeEncode(GetIssueGlobalSearchQuery()) %>" oninput="scheduleIssueGlobalSearch()" />
+            <input type="text" id="globalPortalSearch" placeholder="Search issues, customers, components..." autocomplete="off" value="" oninput="scheduleIssueGlobalSearch()" />
             <button type="button" id="globalSearchClear" class="global-search-clear" onclick="clearGlobalPortalSearch()" aria-label="Clear search">&times;</button>
             <span class="global-search-shortcut">Ctrl + K</span>
         </div>
         <div class="header-user-mode">
             <label for="ddlUserMode">Mode</label>
-            <asp:DropDownList ID="ddlUserMode" runat="server" CssClass="header-mode-dropdown" AutoPostBack="true" OnSelectedIndexChanged="ddlUserMode_SelectedIndexChanged">
-                <asp:ListItem Text="Program Manager" Value="program_manager" />
-                <asp:ListItem Text="Admin" Value="admin" />
-            </asp:DropDownList>
+            <select name="ddlUserMode" id="ddlUserMode" class="header-mode-dropdown">
+	<option selected="selected" value="program_manager">Program Manager</option>
+	<option value="admin">Admin</option>
+
+</select>
         </div>
         <div class="sidebar-toggle-div">
             <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
         </div>
 
-              <div id="updateinfo" runat="server">
+              <div id="updateinfo">
   <div id="last-update">Last Updated: </div>
   <div id="next-update">Next Update: </div>
-   <asp:Label ID="session_count" runat="server" Text="Total Visits: " />
+   <span id="session_count">Total Visits: 52706</span>
 </div>
     </header>
     <div class="container-scroller">
@@ -10275,44 +10228,35 @@ td:nth-child(odd), th:nth-child(odd) {
     <button class="close-btn" onclick="closeSidebar()">X</button>
     <!-- Hardcoded 'All Drivers' link -->
     <div style="margin-left: 20px">
-        <asp:LinkButton ID="lnkAllDrivers" runat="server" CommandArgument="AllDrivers" OnCommand="lnkValue_Command">
+        <a id="lnkAllDrivers" href="javascript:__doPostBack(&#39;lnkAllDrivers&#39;,&#39;&#39;)">
     All Milestones
-        </asp:LinkButton><br />
+        </a><br />
     </div>
 
     <!-- Select All Checkbox - Updated onclick -->
-    <div id="selectallcheckbox" style="margin-left: 20px" runat="server">
+    <div id="selectallcheckbox" style="margin-left: 20px">
         <input type="checkbox" id="chkSelectAll" class="milestone-checkbox" onclick="toggleSelectAll()"/>
         <label style="color: white; font-family: 'Arial', sans-serif;" for="chkSelectAll">Select All</label><br />
     </div>
 
     <!-- List of distinct values as checkboxes - Updated onclick -->
     <div style="margin-left: 20px">
-        <asp:Repeater ID="rptDistinctValues" runat="server">
-            <ItemTemplate>
-                <input type="checkbox" class="chkValue milestone-checkbox"
-                    id="chkValue_<%# Eval("drivers") %>"
-                    value='<%# Eval("drivers") %>'
-                    onclick="toggleIndividualCheckbox()" />
-                <label style="color: white; font-family: 'Arial', sans-serif;"><%# Eval("drivers") %></label><br />
-            </ItemTemplate>
-        </asp:Repeater>
+        
     </div>
-    <asp:LinkButton ID="submitdrivers" runat="server" CommandArgument="" OnCommand="lnkValue_Command">
+    <a id="submitdrivers" href="javascript:__doPostBack(&#39;submitdrivers&#39;,&#39;&#39;)">
 Submit
-    </asp:LinkButton>
+    </a>
 </div>
 
 
 
         <!-- Main Content -->
         <div class="container-fluid page-body-wrapper">
-                <asp:HiddenField ID="HiddenField1" runat="server" />
-                <asp:HiddenField ID="HiddenModalDriver" runat="server" />
-                <asp:HiddenField ID="HiddenField2" runat="server" />
+                <input type="hidden" name="HiddenField1" id="HiddenField1" />
+                <input type="hidden" name="HiddenModalDriver" id="HiddenModalDriver" />
+                <input type="hidden" name="HiddenField2" id="HiddenField2" />
 
-                <asp:ScriptManager ID="ScriptManager1" runat="server">
-                </asp:ScriptManager>
+                
 
                 <div class="portal-layout-shell" id="portalLayoutShell">
                     <aside class="portal-left-nav" id="mainMenuSidebar">
@@ -10322,15 +10266,14 @@ Submit
                             </button>
                         </div>
                         <div class="portal-nav-active-title" aria-live="polite">
-                            <asp:Label ID="lblActiveViewTitle" runat="server" Text="Issue List" />
+                            <span id="lblActiveViewTitle">Dashboard</span>
                         </div>
                         <div id="mainMenuSectionBody" class="collapsible-body">
-                            <asp:LinkButton ID="lnkNavHome" runat="server" CssClass="portal-nav-link" OnClick="btnShowHomeDashboard_Click"><i class="fas fa-chart-pie" aria-hidden="true"></i><span>Dashboard</span></asp:LinkButton>
-                            <asp:LinkButton ID="lnkNavCmfSummary" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView3_Click"><i class="fas fa-table-list" aria-hidden="true"></i><span>CMF Summary</span></asp:LinkButton>
-                            <asp:LinkButton ID="lnkNavIssueList" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView1_Click"><i class="fas fa-fire" aria-hidden="true"></i><span>Issue List</span></asp:LinkButton>
-                            <asp:LinkButton ID="lnkNavPendingList" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView4_Click"><i class="fas fa-clipboard-check" aria-hidden="true"></i><span>CMF Pending</span></asp:LinkButton>
-                            <asp:LinkButton ID="lnkNavReports" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView8_Click"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Reports &amp; Analytics</span></asp:LinkButton>
-                            <asp:LinkButton ID="lnkNavConfigRules" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView9_Click" Visible="false"><i class="fas fa-sliders-h" aria-hidden="true"></i><span>Rules</span></asp:LinkButton>
+                            <a id="lnkNavHome" class="portal-nav-link is-active" href="javascript:__doPostBack(&#39;lnkNavHome&#39;,&#39;&#39;)"><i class="fas fa-chart-pie" aria-hidden="true"></i><span>Dashboard</span></a>
+                            <a id="lnkNavIssueList" class="portal-nav-link" href="javascript:__doPostBack(&#39;lnkNavIssueList&#39;,&#39;&#39;)"><i class="fas fa-fire" aria-hidden="true"></i><span>Issue List</span></a>
+                            <a id="lnkNavPendingList" class="portal-nav-link" href="javascript:__doPostBack(&#39;lnkNavPendingList&#39;,&#39;&#39;)"><i class="fas fa-clipboard-check" aria-hidden="true"></i><span>CMF Pending</span></a>
+                            <a id="lnkNavReports" class="portal-nav-link" href="javascript:__doPostBack(&#39;lnkNavReports&#39;,&#39;&#39;)"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Reports &amp; Analytics</span></a>
+                            
                         </div>
                     </aside>
 
@@ -10339,22 +10282,21 @@ Submit
                     </button>
 
                     <div class="portal-main-workspace">
-                        <asp:Panel ID="homeWelcomePanel" runat="server" Visible="false" CssClass="ccip-dashboard-host">
+                        <div id="homeWelcomePanel" class="ccip-dashboard-host">
+	
                             <div class="ccip-dashboard">
                                 <div class="ccip-dash-top">
                                     <div>
-                                        <asp:Label ID="lblHomeGreeting" runat="server" CssClass="ccip-dash-greeting" Text="Good Morning" />
-                                        <p class="ccip-dash-sub">Here is what is happening with your critical issues today on <%: HomeDashboardPlatformLabel %> in <asp:Label ID="lblWelcomeMode" runat="server" /> mode.</p>
+                                        <span id="lblHomeGreeting" class="ccip-dash-greeting">Good Evening</span>
+                                        <p class="ccip-dash-sub">Here is what is happening with your critical issues today on PTL Dashboard in <span id="lblWelcomeMode">Program Manager</span> mode.</p>
                                     </div>
                                     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                                        <div class="ccip-dash-updated">Updated <asp:Label ID="lblHomeDashboardGeneratedAt" runat="server" /></div>
-                                        <asp:HyperLink ID="lnkPlatformDashboardHome" runat="server" Target="_blank" CssClass="ccip-link-btn" Visible="false">Open platform dashboard</asp:HyperLink>
+                                        <div class="ccip-dash-updated">Updated <span id="lblHomeDashboardGeneratedAt">20 Aug 2026 18:41</span></div>
+                                        
                                     </div>
                                 </div>
 
                                 <div class="platform-chip-rail" role="tablist" aria-label="Dashboard platform switch" style="margin-bottom:14px;">
-                                    <button type="button" class="platform-chip" data-platform="CMF_NVL_H_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_NVL_H_ALL_COMPONENTS_TABLE')">NVL-H</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_NVL_S_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_NVL_S_ALL_COMPONENTS_TABLE')">NVL-S</button>
                                     <button type="button" class="platform-chip" data-platform="CMF_PTL_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_PTL_ALL_COMPONENTS_TABLE')">PTL</button>
                                     <button type="button" class="platform-chip" data-platform="CMF_LNL_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_LNL_ALL_COMPONENTS_TABLE')">LNL</button>
                                     <button type="button" class="platform-chip" data-platform="CMF_ARL_S_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_ARL_S_ALL_COMPONENTS_TABLE')">ARL-S</button>
@@ -10364,37 +10306,39 @@ Submit
                                     <button type="button" class="platform-chip" data-platform="CMF_ARL_Refresh_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_ARL_Refresh_ALL_COMPONENTS_TABLE')">ARL-Refresh</button>
                                     <button type="button" class="platform-chip" data-platform="CMF_GNR_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_GNR_ALL_COMPONENTS_TABLE')">GNR</button>
                                     <button type="button" class="platform-chip" data-platform="CMF_WCL_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_WCL_ALL_COMPONENTS_TABLE')">WCL</button>
+                                    <button type="button" class="platform-chip" data-platform="CMF_NVL_S_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_NVL_S_ALL_COMPONENTS_TABLE')">NVL-S</button>
+                                    <button type="button" class="platform-chip" data-platform="CMF_NVL_H_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_NVL_H_ALL_COMPONENTS_TABLE')">NVL-H</button>
                                 </div>
 
-                                <asp:Label ID="lblHomeAiNewTodayValue" runat="server" style="display:none;" />
-                                <asp:Label ID="lblHomeAiClosedTodayValue" runat="server" style="display:none;" />
+                                <span id="lblHomeAiNewTodayValue" style="display:none;">1</span>
+                                <span id="lblHomeAiClosedTodayValue" style="display:none;">0</span>
 
                                 <div class="ccip-dashboard-overview">
                                     <div class="ccip-dashboard-left">
                                         <div class="ccip-kpi-row dashboard-kpis-left">
                                             <div class="ccip-kpi kpi-red">
                                                 <div class="ccip-kpi-head"><div class="ccip-kpi-title">Open Critical Issues</div><div class="ccip-kpi-icon"><i class="fas fa-circle-exclamation" aria-hidden="true"></i></div></div>
-                                                <div class="ccip-kpi-value"><asp:Label ID="lblHomeActiveIssuesValue" runat="server" /></div>
+                                                <div class="ccip-kpi-value"><span id="lblHomeActiveIssuesValue">2</span></div>
                                                 <div class="ccip-kpi-note">Platform-specific open high-priority CMFs</div>
                                             </div>
                                             <div class="ccip-kpi kpi-orange">
                                                 <div class="ccip-kpi-head"><div class="ccip-kpi-title">Need Attention</div><div class="ccip-kpi-icon"><i class="fas fa-bell" aria-hidden="true"></i></div></div>
-                                                <div class="ccip-kpi-value"><asp:Label ID="lblHomeNeedsAttentionValue" runat="server" /></div>
+                                                <div class="ccip-kpi-value"><span id="lblHomeNeedsAttentionValue">2</span></div>
                                                 <div class="ccip-kpi-note">Critical or high customer impact</div>
                                             </div>
                                             <div class="ccip-kpi kpi-green">
                                                 <div class="ccip-kpi-head"><div class="ccip-kpi-title">Resolved This Week</div><div class="ccip-kpi-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></div></div>
-                                                <div class="ccip-kpi-value"><asp:Label ID="lblHomeResolvedThisWeekValue" runat="server" /></div>
+                                                <div class="ccip-kpi-value"><span id="lblHomeResolvedThisWeekValue">0</span></div>
                                                 <div class="ccip-kpi-note">Implemented in last 7 days</div>
                                             </div>
                                             <div class="ccip-kpi kpi-blue">
                                                 <div class="ccip-kpi-head"><div class="ccip-kpi-title">Avg. Resolution Time</div><div class="ccip-kpi-icon"><i class="fas fa-clock" aria-hidden="true"></i></div></div>
-                                                <div class="ccip-kpi-value"><asp:Label ID="lblHomeResolutionDaysValue" runat="server" /></div>
+                                                <div class="ccip-kpi-value"><span id="lblHomeResolutionDaysValue">19.9</span></div>
                                                 <div class="ccip-kpi-note">Days from CMF decision to implementation</div>
                                             </div>
                                             <div class="ccip-kpi kpi-purple">
                                                 <div class="ccip-kpi-head"><div class="ccip-kpi-title">Customers Affected</div><div class="ccip-kpi-icon"><i class="fas fa-users" aria-hidden="true"></i></div></div>
-                                                <div class="ccip-kpi-value"><asp:Label ID="lblHomeCustomersAffectedValue" runat="server" /></div>
+                                                <div class="ccip-kpi-value"><span id="lblHomeCustomersAffectedValue">2</span></div>
                                                 <div class="ccip-kpi-note">Medium-to-critical active rows</div>
                                             </div>
                                         </div>
@@ -10411,79 +10355,19 @@ Submit
                                 </div>
 
                                 <section class="ccip-cmf-summary-section" aria-label="CMF Summary">
-                                    <h3 class="ccip-cmf-summary-title"><i class="fas fa-file-lines" aria-hidden="true"></i> AI Executive Summary</h3>
-                                    <div id="homeExecutiveSummary" class="ccip-executive-summary-body">Building executive summary...</div>
-                                </section>
-
-                                <div class="ccip-main-grid">
-                                    <div class="ccip-col ccip-col-center">
-                                        <section class="ccip-card">
-                                            <div class="ccip-card-head">
-                                                <h3 class="ccip-card-mini-title"><i class="fas fa-chart-line" aria-hidden="true" style="color:#3b82f6; margin-right:6px;"></i>Issue Trend by Work Week</h3>
-                                            </div>
-                                            <div id="homeTrendChart" class="ccip-trend-chart"></div>
-                                        </section>
-
-                                    </div>
-
-                                    <div class="ccip-col ccip-col-right">
-                                        <section class="ccip-card">
-                                            <div class="ccip-card-head">
-                                                <h3 class="ccip-card-mini-title"><i class="fas fa-chart-pie" aria-hidden="true" style="color:#3b82f6; margin-right:6px;"></i>Issues by Product</h3>
-                                            </div>
-                                            <div class="ccip-product-wrap">
-                                                <div id="homeStatusChart" class="ccip-product-chart"></div>
-                                                <ul id="homeTopComponentsList" class="ccip-product-list"></ul>
-                                            </div>
-                                        </section>
-
-                                        <section class="ccip-card">
-                                            <div class="ccip-card-head"><h3 class="ccip-card-mini-title"><i class="fas fa-bolt" aria-hidden="true" style="color:#f59e0b; margin-right:6px;"></i>Quick Actions</h3></div>
-                                            <div class="ccip-quick-grid">
-                                                <button type="button" class="ccip-quick-btn" onclick="focusFirstRowAiSummary(); return false;">AI Debug Summary</button>
-                                                <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Analyze debug logs and stale issue signals across all CMF data'); return false;">Analyze Logs</button>
-                                                <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Generate RCA-style report for current CMF issues'); return false;">Generate RCA</button>
-                                                <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Draft a customer update for active high-risk CMF issues'); return false;">Customer Update</button>
-                                                <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Find similar issue clusters by component, customer, and debug signal'); return false;">Search Similar Cases</button>
-                                                <button type="button" class="ccip-quick-btn" onclick="focusFirstPendingRecommendation(); return false;">AI Recommendation</button>
-                                            </div>
-                                        </section>
-                                    </div>
-                                </div>
-                            </div>
-                        </asp:Panel>
-
-                        <asp:Panel ID="homeCmfSummaryPanel" runat="server" Visible="false" CssClass="ccip-dashboard-host ccip-cmf-summary-workspace">
-                            <div class="ccip-dashboard">
-                                <div class="ccip-dash-top">
-                                    <div>
-                                        <h2 class="ccip-dash-greeting" style="margin:0;">CMF Summary</h2>
-                                        <p class="ccip-dash-sub">Platform-specific CMF process metrics, milestone counts, component breakdown, and pending CMF count for <%: HomeDashboardPlatformLabel %>.</p>
-                                    </div>
-                                    <div class="ccip-dash-updated">Updated <asp:Label ID="lblCmfSummaryGeneratedAt" runat="server" /></div>
-                                </div>
-
-                                <div class="platform-chip-rail" role="tablist" aria-label="CMF Summary platform switch" style="margin-bottom:14px;">
-                                    <button type="button" class="platform-chip" data-platform="CMF_NVL_H_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_NVL_H_ALL_COMPONENTS_TABLE')">NVL-H</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_NVL_S_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_NVL_S_ALL_COMPONENTS_TABLE')">NVL-S</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_PTL_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_PTL_ALL_COMPONENTS_TABLE')">PTL</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_LNL_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_LNL_ALL_COMPONENTS_TABLE')">LNL</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_ARL_S_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_ARL_S_ALL_COMPONENTS_TABLE')">ARL-S</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_ARL_H_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_ARL_H_ALL_COMPONENTS_TABLE')">ARL-H</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_ARL_U_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_ARL_U_ALL_COMPONENTS_TABLE')">ARL-U</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_ARL_HX_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_ARL_HX_ALL_COMPONENTS_TABLE')">ARL-Hx</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_ARL_Refresh_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_ARL_Refresh_ALL_COMPONENTS_TABLE')">ARL-Refresh</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_GNR_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_GNR_ALL_COMPONENTS_TABLE')">GNR</button>
-                                    <button type="button" class="platform-chip" data-platform="CMF_WCL_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_WCL_ALL_COMPONENTS_TABLE')">WCL</button>
-                                </div>
-
-                                <section class="ccip-cmf-summary-section" aria-label="CMF Summary KPI Cards">
                                     <h3 class="ccip-cmf-summary-title"><i class="fas fa-table-list" aria-hidden="true"></i> CMF Summary</h3>
                                     <div class="ccip-summary-facts" id="homeDashboardSummaryFacts"></div>
                                 </section>
 
                                 <div class="ccip-main-grid ccip-dashboard-tables-grid">
                                     <div class="ccip-col ccip-col-center">
+                                        <section class="ccip-card">
+                                            <div class="ccip-card-head">
+                                                <h3 class="ccip-card-mini-title"><i class="fas fa-chart-line" aria-hidden="true" style="color:#3b82f6; margin-right:6px;"></i>Issue Trend (Last 7 Days)</h3>
+                                            </div>
+                                            <div id="homeTrendChart" class="ccip-trend-chart"></div>
+                                        </section>
+
                                         <section class="ccip-card">
                                             <div class="ccip-card-head">
                                                 <h3 class="ccip-card-mini-title"><i class="fas fa-table" aria-hidden="true" style="color:#1d4ed8; margin-right:6px;"></i>Milestone CMF Summary</h3>
@@ -10502,138 +10386,64 @@ Submit
                                     <div class="ccip-col ccip-col-right">
                                         <section class="ccip-card">
                                             <div class="ccip-card-head">
+                                                <h3 class="ccip-card-mini-title"><i class="fas fa-chart-pie" aria-hidden="true" style="color:#3b82f6; margin-right:6px;"></i>Issues by Product</h3>
+                                            </div>
+                                            <div class="ccip-product-wrap">
+                                                <div id="homeStatusChart" class="ccip-product-chart"></div>
+                                                <ul id="homeTopComponentsList" class="ccip-product-list"></ul>
+                                            </div>
+                                        </section>
+
+                                        <section class="ccip-card">
+                                            <div class="ccip-card-head">
                                                 <h3 class="ccip-card-mini-title"><i class="fas fa-clipboard-list" aria-hidden="true" style="color:#0f766e; margin-right:6px;"></i>CMF Pending Count</h3>
                                             </div>
                                             <div id="homePendingSummaryTable" class="ccip-live-table-wrap"></div>
                                         </section>
+
+                                        <section class="ccip-card">
+                                            <div class="ccip-card-head"><h3 class="ccip-card-mini-title"><i class="fas fa-bolt" aria-hidden="true" style="color:#f59e0b; margin-right:6px;"></i>Quick Actions</h3></div>
+                                            <div class="ccip-quick-grid">
+                                                <button type="button" class="ccip-quick-btn" onclick="focusFirstRowAiSummary(); return false;">AI Debug Summary</button>
+                                                <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Analyze debug logs and stale issue signals across all CMF data'); return false;">Analyze Logs</button>
+                                                <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Generate RCA-style report for current CMF issues'); return false;">Generate RCA</button>
+                                                <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Draft a customer update for active high-risk CMF issues'); return false;">Customer Update</button>
+                                                <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Find similar issue clusters by component, customer, and debug signal'); return false;">Search Similar Cases</button>
+                                                <button type="button" class="ccip-quick-btn" onclick="focusFirstPendingRecommendation(); return false;">AI Recommendation</button>
+                                            </div>
+                                        </section>
                                     </div>
                                 </div>
                             </div>
-                        </asp:Panel>
+                        
+</div>
 
-                        <asp:Panel ID="configRulesPanel" runat="server" Visible="false" CssClass="portal-tab-shell config-rules-workspace">
-                            <div class="portal-tab-hero">
-                                <div class="portal-tab-eyebrow">Administration</div>
-                                <h2 class="portal-tab-title">Config/CMF Rules</h2>
-                                <p class="portal-tab-desc">
-                                    Admin-defined CMF qualification rules. AI recommendations in the CMF Pending List use these rules for tag / no-tag decisions.
-                                </p>
-                            </div>
-                            <div class="cmf-rules-editor-shell">
-                                <div class="portal-surface-card cmf-rules-card">
-                                    <h3 class="cmf-rules-title">CMF Qualification Rules</h3>
-                                    <asp:TextBox ID="txtCmfRules" runat="server" TextMode="MultiLine" CssClass="cmf-rules-editor" />
-                                    <div class="cmf-rules-actions">
-                                        <asp:Button ID="btnSaveCmfRules" runat="server" Text="Save Rules" CssClass="modern-button" OnClick="btnSaveCmfRules_Click" />
-                                        <asp:Button ID="btnResetCmfRules" runat="server" Text="Reset Defaults" CssClass="modern-button" OnClick="btnResetCmfRules_Click" />
-                                    </div>
-                                    <asp:Label ID="lblCmfRulesStatus" runat="server" CssClass="cmf-rules-status" />
-                                </div>
-                                <div class="portal-surface-card cmf-rules-card">
-                                    <h3 class="cmf-rules-title">How AI Uses These Rules</h3>
-                                    <p class="cmf-rules-note">When a Program Manager opens AI Recommendation on a pending item, the service loads the latest saved admin rules and evaluates the issue fields against them.</p>
-                                    <ul class="cmf-rules-list">
-                                        <li>Rules are hidden from Program Manager navigation.</li>
-                                        <li>Changing rules clears cached recommendations.</li>
-                                        <li>The AI response must explain which rules support or block tagging.</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </asp:Panel>
+                        
 
-                        <asp:Panel ID="reportsPlaceholderPanel" runat="server" Visible="false" CssClass="portal-tab-shell">
-                            <div class="portal-tab-hero">
-                                <div class="portal-tab-eyebrow">Reports</div>
-                                <h2 class="portal-tab-title">Reports &amp; Analytics</h2>
-                                <p class="portal-tab-desc">
-                                    Statistics view is currently disabled. This tab is reserved for finalized report content.
-                                </p>
-                            </div>
-                        </asp:Panel>
+                        
 
                         <!-- ================================================================
                              REPORTS & ANALYTICS PANEL
                         ================================================================ -->
-                        <div id="analyticsPanel" runat="server" visible="false" class="portal-tab-shell reports-workspace">
+                        
 
-                            <div class="portal-tab-hero">
-                                <div class="portal-tab-eyebrow">Reports</div>
-                                <h2 class="portal-tab-title">Reports &amp; Analytics</h2>
-                                <p class="portal-tab-desc">Ask data questions, generate charts, and create repeatable CMF reports from the live portal data.</p>
-                            </div>
+                <select name="ddlTables" id="ddlTables" class="dropdown" style="display:none;">
+	<option selected="selected" value="CMF_PTL_ALL_COMPONENTS_TABLE">PTL</option>
+	<option value="CMF_LNL_ALL_COMPONENTS_TABLE">LNL</option>
+	<option value="CMF_ARL_S_ALL_COMPONENTS_TABLE">ARL-S</option>
+	<option value="CMF_ARL_H_ALL_COMPONENTS_TABLE">ARL-H</option>
+	<option value="CMF_ARL_U_ALL_COMPONENTS_TABLE">ARL-U</option>
+	<option value="CMF_ARL_HX_ALL_COMPONENTS_TABLE">ARL-Hx</option>
+	<option value="CMF_GNR_ALL_COMPONENTS_TABLE">GNR</option>
+	<option value="CMF_WCL_ALL_COMPONENTS_TABLE">WCL</option>
+	<option value="CMF_ARL_Refresh_ALL_COMPONENTS_TABLE">ARL-Refresh</option>
+	<option value="CMF_NVL_S_ALL_COMPONENTS_TABLE">NVL-S</option>
+	<option value="CMF_NVL_H_ALL_COMPONENTS_TABLE">NVL-H</option>
 
-                            <div class="portal-surface-card reports-assistant-card">
-                                <div class="reports-assistant-head">
-                                    <div>
-                                        <div class="reports-card-title">AI Reports Assistant</div>
-                                        <div class="reports-card-subtitle">Ask data questions, generate Plotly charts, and create reports from live CMF data.</div>
-                                    </div>
-                                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                        <!-- Quick chart/report actions removed per request -->
-                                    </div>
-                                </div>
-
-                                <div id="reportsChatLog" class="reports-chat-log">
-                                    <div style="display:flex; justify-content:flex-start; margin-bottom:10px;">
-                                        <div class="reports-chat-example">
-                                            Ask me things like:\n- "Show status distribution chart"\n- "Give stale issues trend"\n- "Generate issue report csv"
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="reports-prompt-row">
-                                    <input id="reportsPromptInput" type="text" placeholder="Type your analytics prompt..." class="reports-prompt-input" />
-                                    <button id="reportsPromptSend" type="button" class="modern-button" onclick="sendReportsPrompt()">Send</button>
-                                </div>
-                            </div>
-
-                            <div class="portal-surface-card reports-format-card">
-                                <h3 class="reports-format-title">Report Format Template</h3>
-                                <div class="reports-format-subtitle">Define the structure once; the assistant can populate it from live CMF data when you generate a report.</div>
-                                <textarea id="reportsFormatTemplate" class="reports-format-textarea" readonly>## Weekly CMF Report - {{platform}} - {{week}}
-
-1. Executive Summary (AI, 3 bullets)
-2. New CMF-tagged sightings (table: id, issue, replication rate, impact)
-3. Pending sightings likely to qualify next
-4. Closed this week (root cause + fixed SW version)
-5. Top risks / stale issues
-6. Chart: CMF tag rate trend</textarea>
-                                <input type="file" id="reportsFormatFile" accept=".txt,.md,.csv,.json,.html" style="display:none" onchange="uploadReportsFormat(event)" />
-                                <div class="reports-format-actions">
-                                    <button type="button" class="modern-button" style="padding:6px 10px;" onclick="document.getElementById('reportsFormatFile').click()">Upload sample format</button>
-                                    <button type="button" id="reportsFormatEditBtn" class="modern-button" style="padding:6px 10px;" onclick="setReportsTemplateEditMode(true)">Edit format</button>
-                                    <button type="button" id="reportsFormatSaveBtn" class="modern-button" style="padding:6px 10px;" onclick="saveReportsFormatTemplate()" disabled>Save format</button>
-                                    <button type="button" class="modern-button" style="padding:6px 10px;" onclick="generateReportsFromTemplate()">Generate from format</button>
-                                    <span id="reportsFormatName" class="reports-format-subtitle" style="margin:0; display:none;"></span>
-                                </div>
-                            </div>
-
-                        </div>
-
-                <asp:DropDownList
-                    ID="ddlTables"
-                    runat="server"
-                    AutoPostBack="true"
-                    OnSelectedIndexChanged="ddlTables_SelectedIndexChanged"
-                    CssClass="dropdown"
-                    Style="display:none;">
-                    <asp:ListItem Text="NVL-H" Value="CMF_NVL_H_ALL_COMPONENTS_TABLE" />
-                    <asp:ListItem Text="NVL-S" Value="CMF_NVL_S_ALL_COMPONENTS_TABLE" />
-                    <asp:ListItem Text="PTL" Value="CMF_PTL_ALL_COMPONENTS_TABLE" />
-                    <asp:ListItem Text="LNL" Value="CMF_LNL_ALL_COMPONENTS_TABLE" />
-                    <asp:ListItem Text="ARL-S" Value="CMF_ARL_S_ALL_COMPONENTS_TABLE" />
-                    <asp:ListItem Text="ARL-H" Value="CMF_ARL_H_ALL_COMPONENTS_TABLE" />
-                    <asp:ListItem Text="ARL-U" Value="CMF_ARL_U_ALL_COMPONENTS_TABLE" />
-                    <asp:ListItem Text="ARL-Hx" Value="CMF_ARL_HX_ALL_COMPONENTS_TABLE" />
-                    <asp:ListItem Text="GNR" Value="CMF_GNR_ALL_COMPONENTS_TABLE" />
-                    <asp:ListItem Text="WCL" Value="CMF_WCL_ALL_COMPONENTS_TABLE" />
-                    <asp:ListItem Text="ARL-Refresh" Value="CMF_ARL_Refresh_ALL_COMPONENTS_TABLE" />
-                </asp:DropDownList>
+</select>
 
                 <div class="platform-switcher-modern" style="display:none;">
                     <div class="platform-chip-rail" role="tablist" aria-label="Quick platform switch">
-                        <button type="button" class="platform-chip" data-platform="CMF_NVL_H_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_NVL_H_ALL_COMPONENTS_TABLE')">NVL-H</button>
-                        <button type="button" class="platform-chip" data-platform="CMF_NVL_S_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_NVL_S_ALL_COMPONENTS_TABLE')">NVL-S</button>
                         <button type="button" class="platform-chip" data-platform="CMF_PTL_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_PTL_ALL_COMPONENTS_TABLE')">PTL</button>
                         <button type="button" class="platform-chip" data-platform="CMF_LNL_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_LNL_ALL_COMPONENTS_TABLE')">LNL</button>
                         <button type="button" class="platform-chip" data-platform="CMF_ARL_S_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_ARL_S_ALL_COMPONENTS_TABLE')">ARL-S</button>
@@ -10643,56 +10453,57 @@ Submit
                         <button type="button" class="platform-chip" data-platform="CMF_ARL_Refresh_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_ARL_Refresh_ALL_COMPONENTS_TABLE')">ARL-Refresh</button>
                         <button type="button" class="platform-chip" data-platform="CMF_GNR_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_GNR_ALL_COMPONENTS_TABLE')">GNR</button>
                         <button type="button" class="platform-chip" data-platform="CMF_WCL_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_WCL_ALL_COMPONENTS_TABLE')">WCL</button>
+                        <button type="button" class="platform-chip" data-platform="CMF_NVL_S_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_NVL_S_ALL_COMPONENTS_TABLE')">NVL-S</button>
+                        <button type="button" class="platform-chip" data-platform="CMF_NVL_H_ALL_COMPONENTS_TABLE" onclick="applyQuickPlatform('CMF_NVL_H_ALL_COMPONENTS_TABLE')">NVL-H</button>
                     </div>
                 </div>
 
-                <asp:HiddenField ID="hfQuickPlatform" runat="server" />
-                <asp:LinkButton ID="btnQuickPlatformApply" runat="server" OnClick="btnQuickPlatformApply_Click" Style="display:none;" />
+                <input type="hidden" name="hfQuickPlatform" id="hfQuickPlatform" />
+                <a id="btnQuickPlatformApply" href="javascript:__doPostBack(&#39;btnQuickPlatformApply&#39;,&#39;&#39;)" style="display:none;"></a>
 
                 <div class="portal-view-row" style="display:none;">
                     <div class="portal-view-left">
-                        <asp:DropDownList ID="ddlFocusedView" runat="server" CssClass="portal-view-dropdown" AutoPostBack="true" OnSelectedIndexChanged="ddlFocusedView_SelectedIndexChanged">
-                            <asp:ListItem Text="Main Dashboard" Value="home" />
-                            <asp:ListItem Text="CMF Summary" Value="cmf" />
-                            <asp:ListItem Text="Issue List" Value="issue" />
-                            <asp:ListItem Text="CMF Pending List" Value="pending" />
-                            <asp:ListItem Text="Reports &amp; Analytics" Value="reports" />
-                            <asp:ListItem Text="Config/CMF Rules" Value="config" />
-                        </asp:DropDownList>
+                        <select name="ddlFocusedView" id="ddlFocusedView" class="portal-view-dropdown">
+	<option selected="selected" value="home">Main Dashboard</option>
+	<option value="issue">Issue List</option>
+	<option value="pending">CMF Pending List</option>
+	<option value="reports">Reports &amp; Analytics</option>
+
+</select>
                     </div>
                 </div>
 
                 <div class="button-container button-container-focus" style="display:none;">
 
-                    <asp:Button ID="btnShowGridView3" runat="server" Text="CMF Summary" OnClick="btnShowGridView3_Click" CssClass="modern-button" Visible="false" />
-                    <asp:Button ID="btnShowGridView2" runat="server" Text="Design Summary" OnClick="btnShowGridView2_Click" CssClass="modern-button" Visible="false" />
-                    <asp:Button ID="btnShowGridView1" runat="server" Text="Issue List" OnClick="btnShowGridView1_Click" CssClass="modern-button tab-pill" />
-                    <asp:Button ID="btnShowGridView4" runat="server" Text="CMF Pending List" OnClick="btnShowGridView4_Click" CssClass="modern-button tab-pill" />
-                    <asp:Button ID="btnShowGridView5" runat="server" Text="Design Indicator" OnClick="btnShowGridView5_Click" CssClass="modern-button" Visible="false" />
-                    <asp:Button ID="btnShowGridView6" runat="server" Text="Ingredient Indicator" OnClick="btnShowGridView6_Click" CssClass="modern-button" Visible="false" />
-                    <asp:Button ID="btnShowGridView7" runat="server" Text="OEM Indicator" OnClick="btnShowGridView7_Click" CssClass="modern-button" Visible="false" /> 
+                    
+                    
+                    <input type="submit" name="btnShowGridView1" value="Issue List" id="btnShowGridView1" class="modern-button tab-pill" />
+                    <input type="submit" name="btnShowGridView4" value="CMF Pending List" id="btnShowGridView4" class="modern-button tab-pill" />
+                    
+                    
+                     
 
-<asp:Button ID="btnExportToExcel" runat="server" Text="Export to Excel" OnClick="btnExportToExcel_Click" CssClass="modern-button" />
-                    <asp:Button ID="btnExportToExcel_ig" runat="server" Text="Export to Excel" OnClick="btnExportToExcel_Click_ingred" CssClass="modern-button" />
-                    <asp:Button ID="btnExportToExcel_des" runat="server" Text="Export to Excel" OnClick="btnExportToExcel_Click_design" CssClass="modern-button" />
-                    <asp:Button ID="btnExportToExcel_des_summary" runat="server" Text="Export to Excel" OnClick="btnExportToExcel_Click_designsummary" CssClass="modern-button" />
-                    <asp:Button ID="btnExportToExcel_cmf_pending" runat="server" Text="Export to Excel" OnClick="btnExportToExcel_Click_cmf_pending" CssClass="modern-button" />
-                    <asp:Button ID="btnExportToExcel_oem" runat="server" Text="Export to Excel" OnClick="btnExportToExcel_Click_oem" CssClass="modern-button" Visible="false" />
-                    <asp:Button ID="btnShowGridView8" runat="server" Text="Reports &amp; Analytics" OnClick="btnShowGridView8_Click" CssClass="modern-button tab-pill" />
-                    <asp:Button ID="btnShowGridView9" runat="server" Text="Config/CMF Rules" OnClick="btnShowGridView9_Click" CssClass="modern-button tab-pill" Visible="false" />
+
+                    
+                    
+                    
+                    
+                    
+                    <input type="submit" name="btnShowGridView8" value="Reports &amp; Analytics" id="btnShowGridView8" class="modern-button tab-pill" />
+                    
         
                 </div>
 
-                <div class="pane-heading" runat="server" id="pane1" visible="false">CMF Summary</div>
-                <div class="pane-heading" runat="server" id="pane2" visible="false">Design Summary</div>
-                <div class="pane-heading" runat="server" id="pane3" visible="true">Issue List</div>
-                <div class="pane-heading" runat="server" id="pane4" visible="false">CMF Pending List</div>
+                
+                
+                
+                
 
-                <div class="pane-heading" runat="server" id="pane5" visible="false">Design Indicator</div>
-                <div class="pane-heading" runat="server" id="pane6" visible="false">Ingredient Indicator</div>
-                <div class="pane-heading" runat="server" id="pane7" visible="false">OEM Indicator</div>
-                <div class="pane-heading" runat="server" id="pane8" visible="false">Reports &amp; Analytics</div>
-                <div class="pane-heading" runat="server" id="pane9" visible="false">Config/CMF Rules</div>
+                
+                
+                
+                
+                
 
                 <div id="aiSummaryDrawerBg" class="ai-summary-drawer-bg" onclick="closeAiSummaryDrawer()"></div>
                 <aside id="aiSummaryDrawer" class="ai-summary-drawer" aria-hidden="true" role="dialog" aria-label="AI Issue Summary">
@@ -10746,13 +10557,13 @@ Submit
                         <h3>Upload Excel File</h3>
 
                         <!-- File Upload Input -->
-                        <asp:FileUpload ID="fileUploadExcel" runat="server" CssClass="form-control mb-2" />
+                        <input type="file" name="fileUploadExcel" id="fileUploadExcel" class="form-control mb-2" />
 
                         <!-- Import Button -->
-                        <asp:Button ID="btnImportExcel" runat="server" Text="Import" CssClass="btn btn-primary" OnClick="btnImportExcel_Click" />
+                        <input type="submit" name="btnImportExcel" value="Import" id="btnImportExcel" class="btn btn-primary" />
 
                         <!-- Message Label -->
-                        <asp:Label ID="lblMessage" runat="server" ForeColor="Red" CssClass="mt-2 d-block"></asp:Label>
+                        <span id="lblMessage" class="mt-2 d-block"><font color="Red"></font></span>
                     </div>
                 </div>
 
@@ -10771,11 +10582,11 @@ Submit
 
 
                 <!-- Hidden Field to store selected values -->
-                <asp:HiddenField ID="hfSelectedValues" runat="server" />
-                <asp:HiddenField ID="driverCollectorhf" runat="server" />
+                <input type="hidden" name="hfSelectedValues" id="hfSelectedValues" />
+                <input type="hidden" name="driverCollectorhf" id="driverCollectorhf" />
 
                 <!-- Invisible HTML Button -->
-                <asp:Button ID="exportBtn" runat="server" Text="Export to PPT" OnClick="ExportGridViewToPPT" Style="display: none;" />
+                <input type="submit" name="exportBtn" value="Export to PPT" id="exportBtn" style="display: none;" />
                 <!-- Modal for selecting multiple values -->
                 <div class="modal fade" id="exportModal" tabindex="-1" role="dialog" aria-labelledby="exportModalLabel" aria-hidden="true">
                     <div class="modal-dialog" role="document">
@@ -10787,25 +10598,11 @@ Submit
                                 </button>
                             </div>
                             <div class="modal-body">
-                                <asp:Repeater ID="rptDistinctFilters" runat="server">
-                                    <ItemTemplate>
-                                        <input type="checkbox" class="chkValue" value='<%# Eval("drivers") %>' />
-                                        <%# Eval("drivers") %>
-
-
-                                        <br />
-                                    </ItemTemplate>
-                                </asp:Repeater>
+                                
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                                <asp:Button
-                                    ID="btnExportInModal"
-                                    runat="server"
-                                    CssClass="btn btn-primary"
-                                    Text="Export"
-                                    OnClientClick="submitExport(); return false;"
-                                    Visible="true" />
+                                <input type="submit" name="btnExportInModal" value="Export" onclick="submitExport(); return false;" id="btnExportInModal" class="btn btn-primary" />
 
 
                             </div>
@@ -10815,685 +10612,19 @@ Submit
 
                 
 
-<div id="mainDataWrapper" runat="server" class="content-wrapper">
-    <div class="modal-body popup">
-        <asp:UpdatePanel ID="UpdatePanel1" runat="server">
-            <ContentTemplate>
-                <div class="table-container">
 
-                    <!-- SHARED FILTER PANEL FOR ISSUE LIST & CMF PENDING LIST -->
-                    <div id="sharedFilterPanel" runat="server" visible="false" class="overview-platform-actions">
-                        <div class="overview-platform-filter">
-                            <label>Platform:</label>
-                            <asp:DropDownList ID="ddlSharedPlatform" runat="server" AutoPostBack="true"
-                                OnSelectedIndexChanged="ddlSharedPlatform_SelectedIndexChanged"
-                                CssClass="form-control">
-                                <asp:ListItem Text="-- Select Platform --" Value="" />
-                            </asp:DropDownList>
-                        </div>
-                        <div class="issue-external-links">
-                            <a href="https://crtt.intel.com/Administration/SetupIDST.aspx?DNo=5343&PNo=135&Ing=92&CNo=1225" target="_blank">CRTT</a>
-                            <asp:HyperLink ID="lnkPlatformDashboard" runat="server" Target="_blank" />
-                            <asp:HyperLink ID="lnkPlatformDashboardPending" runat="server" Target="_blank" />
-                            <a href="https://pbirs01.intel.com/reports/powerbi/CCE-GCE%20DASHBOARDS/CMF_Portal" target="_blank">Infographic</a>
-                        </div>
-                    </div>
-
-                    <div class="issue-tab-shell" id="issueTabShell" style="display:none;">
-                    <div class="issue-tab-main">
-
-                    <asp:Panel ID="issueListHeaderPanel" runat="server" Visible="true">
-                        <div class="issue-page-hd">
-                            <div class="issue-page-hd-top">
-                                <h1 class="issue-page-title">Issue List</h1>
-                            </div>
-                            <p class="issue-page-desc">
-                                Review active issues, understand their current status, and identify what needs attention next.
-                            </p>
-                        </div>
-                        <div class="issue-kpi-row">
-                            <div class="issue-kpi">
-                                <div class="issue-kpi-label">Total Issues</div>
-                                <div class="issue-kpi-value"><asp:Label ID="lblIssueTotal" runat="server" Text="0" /></div>
-                                <div class="issue-kpi-sub"><i class="fas fa-arrow-up" aria-hidden="true"></i> current platform workload</div>
-                            </div>
-                            <div class="issue-kpi">
-                                <div class="issue-kpi-label">In Progress</div>
-                                <div class="issue-kpi-value" style="color:#0068b5;"><asp:Label ID="lblIssueInProgress" runat="server" Text="0" /></div>
-                                <div class="issue-kpi-sub"><i class="fas fa-arrow-up" aria-hidden="true"></i> open or implemented</div>
-                            </div>
-                            <div class="issue-kpi">
-                                <div class="issue-kpi-label">Closed</div>
-                                <div class="issue-kpi-value" style="color:#107c10;"><asp:Label ID="lblIssueClosed" runat="server" Text="0" /></div>
-                                <div class="issue-kpi-sub"><i class="fas fa-arrow-up" aria-hidden="true"></i> complete or rejected</div>
-                            </div>
-                            <div class="issue-kpi">
-                                <div class="issue-kpi-label">Stale</div>
-                                <div class="issue-kpi-value" style="color:#bc2f32;"><asp:Label ID="lblIssueStale" runat="server" Text="0" /></div>
-                                <div class="issue-kpi-sub"><i class="fas fa-clock" aria-hidden="true"></i> issues needing attention</div>
-                            </div>
-                        </div>
-                    </asp:Panel>
-
-                    <!-- TOP FILTER PANEL - FOR ISSUE LIST -->
-                    <asp:Panel ID="fieldSelectorPanel" runat="server" Visible="true">
-                        <div class="field-selector-panel issue-top-filter-panel">
-                            <div class="issue-filter-section-header">
-                                <div class="issue-filter-title"><i class="fas fa-filter" aria-hidden="true"></i> Filters</div>
-                                <button type="button" id="issueFiltersToggleBtn" class="issue-collapse-btn" aria-expanded="true" onclick="toggleCollapsibleSection('issueFilters')">
-                                    <span class="toggle-label">Hide</span>
-                                    <span class="toggle-chevron">▾</span>
-                                </button>
-                            </div>
-                            <div id="issueTopFilterBody" class="collapsible-body">
-                                <div class="issue-top-filter-grid">
-                                    <div class="issue-top-filter-item"><span>Milestone</span><asp:DropDownList ID="ddlMilestoneTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlMilestoneHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                    <div class="issue-top-filter-item"><span>Owner</span><asp:DropDownList ID="ddlOwnerTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlOwnerHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                    <div class="issue-top-filter-item"><span>RVP Repro</span><asp:DropDownList ID="ddlRvpReproTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlRvpReproHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                    <div class="issue-top-filter-item"><span>iDST</span><asp:DropDownList ID="ddlIdstTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlIdstHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                    <div class="issue-top-filter-item"><span>LOS</span><asp:DropDownList ID="ddlLosTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlLosHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                    <div class="issue-top-filter-item"><span>Company</span><asp:DropDownList ID="ddlCompanyTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlCompanyHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                    <div class="issue-top-filter-item"><span>Customer Detail</span><asp:DropDownList ID="ddlDetailTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlDetailHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                    <div class="issue-top-filter-item"><span>Component Group</span><asp:DropDownList ID="ddlComponentTop" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlComponentHeader_SelectedIndexChanged" CssClass="header-dropdown" /></div>
-                                </div>
-                                <div class="issue-top-filter-buttons">
-                                    <asp:Button ID="btnClearFilters" runat="server" CssClass="filter-btn filter-btn-secondary" Text="Clear Filters" OnClick="btnClearFilters_Click" />
-                                </div>
-                            </div>
-                        </div>
-                    </asp:Panel>
-                    <!-- END TOP FILTER PANEL -->
-
-                    <div id="searchfilters" class="header-overlay" runat="server" visible="false">
-                        <!-- Your existing search filters -->
-                        <input type="text" id="searchColumn0" placeholder="Search Progress" oninput="filterGrid()" />
-                        <input type="text" id="searchColumn5" placeholder="Search Owner" oninput="filterGrid()" />
-                        <input type="text" id="searchColumn10" placeholder="Search Component" oninput="filterGrid()" />
-                        <input type="text" id="searchColumn4" placeholder="Search Component" oninput="filterGrid()" />
-                        <input type="text" id="searchColumn6" placeholder="Search RVP Repro" oninput="filterGrid()" />
-                    </div>
-
-                    <div class="issue-user-toolbar">
-                        <div class="issue-view-note"><i class="fas fa-table-list" aria-hidden="true"></i> Compact issue workspace</div>
-                        <div class="issue-user-actions">
-                            <button
-                                type="button"
-                                id="issueFilterToolbarBtn"
-                                class="issue-toolbar-btn filter-toggle"
-                                onclick="toggleCollapsibleSection('issueFilters')">
-                                <i class="fas fa-filter" aria-hidden="true"></i>
-                                Filters
-                            </button>
-                            <button
-                                type="button"
-                                id="btnShowAllColumns"
-                                class="issue-toolbar-btn secondary"
-                                onclick="showAllColumns()"
-                                style="display:none">
-                                <i class="fas fa-table-columns" aria-hidden="true"></i>
-                                Show Columns
-                            </button>
-                        </div>
-                    </div>
-
-
-                    <div class="gridview-container issue-grid-scroll">
-                        <div class="issue-grid-toolbar">
-                            <button type="button" id="btnShowAllColumns" class="show-cols-btn" onclick="showAllColumns()" style="display:none" title="Restore all hidden columns">&#x21BA; Show All Columns</button>
-                        </div>
-                        <!-- MODIFY YOUR GRIDVIEW TO ADD DATA-FIELD ATTRIBUTES -->
-                        <div id="issue-grid-inner" class="issue-grid-inner">
-                        
-<asp:GridView ID="overall_request_details" CssClass="table-primary" runat="server" AutoGenerateColumns="False"
-    EmptyDataText="No Open CMFs" OnRowEditing="overall_request_details_RowEditing"
-    OnRowUpdating="overall_request_details_RowUpdating" OnRowCancelingEdit="overall_request_details_RowCancelingEdit"
-    OnRowDataBound="overall_request_details_RowDataBound" OnPageIndexChanging="overall_request_details_PageIndexChanging"
-    AllowPaging="true" PageSize="12" PagerStyle-CssClass="pager" Visible="false">
-
-    <PagerSettings Visible="false" />
-
-    <Columns>
-   
-        <asp:TemplateField HeaderText="#" ItemStyle-Width="50px" HeaderStyle-Width="50px"
-            ItemStyle-CssClass="field-sno" HeaderStyle-CssClass="field-sno">
-            <ItemTemplate>
-                <div class="issue-sno-cell">
-                    <span class="issue-sno-index"><%# Container.DataItemIndex + 1 %></span>
-                    <asp:LinkButton ID="btnRowEdit" runat="server" CommandName="Edit" CausesValidation="false" CssClass="issue-inline-edit-btn" ToolTip="Edit row" aria-label="Edit row">
-                        <i class="fas fa-pencil-alt" aria-hidden="true"></i>
-                    </asp:LinkButton>
-                </div>
-            </ItemTemplate>
-            <EditItemTemplate>
-                <div class="issue-sno-cell">
-                    <span class="issue-sno-index"><%# Container.DataItemIndex + 1 %></span>
-                    <span class="issue-inline-edit-actions">
-                        <asp:LinkButton ID="btnRowUpdate" runat="server" CommandName="Update" CssClass="issue-inline-edit-action" ToolTip="Save changes" aria-label="Save changes">
-                            <i class="fas fa-check" aria-hidden="true"></i>
-                        </asp:LinkButton>
-                        <asp:LinkButton ID="btnRowCancel" runat="server" CommandName="Cancel" CausesValidation="false" CssClass="issue-inline-edit-action" ToolTip="Cancel edit" aria-label="Cancel edit">
-                            <i class="fas fa-times" aria-hidden="true"></i>
-                        </asp:LinkButton>
-                    </span>
-                </div>
-            </EditItemTemplate>
-        </asp:TemplateField>
-
-        <asp:TemplateField HeaderText="Issue Details" ItemStyle-CssClass="field-issue_details" HeaderStyle-CssClass="field-issue_details">
-            <ItemTemplate>
-                <%# RenderIssueDetails(Eval("SightingID"), Eval("Merged_PromotedID"), Eval("title"), Eval("cmf_request"), Eval("SubmittedDate"), Eval("IssueStatus"), Eval("sysdebug")) %>
-            </ItemTemplate>
-        </asp:TemplateField>
-
-        <asp:TemplateField HeaderText="Customer" ItemStyle-CssClass="field-customer_detail" HeaderStyle-CssClass="field-customer_detail">
-            <ItemTemplate><%# RenderCustomerDetailWithCompanyAndProcessor(Eval("customer_detail"), Eval("customer_company"), Eval("processor")) %></ItemTemplate>
-        </asp:TemplateField>
-
-        <asp:TemplateField HeaderText="Component" ItemStyle-CssClass="component-column field-component" HeaderStyle-CssClass="field-component">
-            <HeaderTemplate>
-                <div class="filter-header-container">
-                    <div class="filter-header-text">Component</div>
-                    <div class="filter-container">
-                        <asp:DropDownList ID="ddlComponentHeader" runat="server" AutoPostBack="true"
-                            OnSelectedIndexChanged="ddlComponentHeader_SelectedIndexChanged" CssClass="header-dropdown" />
-                    </div>
-                </div>
-            </HeaderTemplate>
-            <ItemTemplate><%# RenderComponentWithGroupBadge(Eval("component"), Eval("component_group")) %></ItemTemplate>
-        </asp:TemplateField>
-
-        <asp:TemplateField HeaderText="Owner" ItemStyle-CssClass="field-owner" HeaderStyle-CssClass="field-owner">
-            <HeaderTemplate>
-                <div class="filter-header-container">
-                    <div class="filter-header-text">Owner</div>
-                    <div class="filter-container">
-                        <asp:DropDownList ID="ddlOwnerHeader" runat="server" AutoPostBack="true"
-                            OnSelectedIndexChanged="ddlOwnerHeader_SelectedIndexChanged" CssClass="header-dropdown" />
-                    </div>
-                </div>
-            </HeaderTemplate>
-            <ItemTemplate><%# RenderOwnerWithPromotedOwner(Eval("Owner"), Eval("owners_name")) %></ItemTemplate>
-            <EditItemTemplate>
-                <asp:TextBox ID="txtOwner" runat="server" TextMode="MultiLine" Text='<%# Bind("Owner") %>'
-                    CssClass="form-control"></asp:TextBox>
-            </EditItemTemplate>
-        </asp:TemplateField>
-
-        <asp:TemplateField HeaderText="Milestone" ItemStyle-CssClass="field-milestone" HeaderStyle-CssClass="field-milestone">
-            <HeaderTemplate>
-                <div class="filter-header-container">
-                    <div class="filter-header-text">Milestone</div>
-                    <div class="filter-container">
-                        <asp:DropDownList ID="ddlMilestoneHeader" runat="server" AutoPostBack="true"
-                            OnSelectedIndexChanged="ddlMilestoneHeader_SelectedIndexChanged" CssClass="header-dropdown" />
-                    </div>
-                </div>
-            </HeaderTemplate>
-            <ItemTemplate>
-                <%# RenderMilestoneText(Eval("Driver"), Eval("MustFixFor")) %>
-            </ItemTemplate>
-        </asp:TemplateField>
-
-        <asp:TemplateField HeaderText="Status" ItemStyle-CssClass="field-status" HeaderStyle-CssClass="field-status">
-            <ItemTemplate>
-                <%# RenderStatusWithAiSummaryButton(Eval("IssueStatus"), Eval("Status"), Eval("SightingID"), Eval("title"), Eval("SubmittedDate"), Eval("sysdebug")) %>
-            </ItemTemplate>
-        </asp:TemplateField>
-
-        <asp:BoundField DataField="Status" HeaderText="CMF Status" ReadOnly="True" Visible="false"
-            ItemStyle-CssClass="field-cmf_status" HeaderStyle-CssClass="field-cmf_status" />
-
-        <asp:BoundField DataField="ImageFreeze" HeaderText="Image Freeze" ReadOnly="True"
-    ItemStyle-CssClass="field-imagefreeze" HeaderStyle-CssClass="field-imagefreeze" />
-
-        <asp:TemplateField HeaderText="Duplicate Details"
-            ItemStyle-CssClass="field-duplicatedetails" HeaderStyle-CssClass="field-duplicatedetails">
-            <ItemTemplate><%# CreateDuplicateLinks(Eval("DuplicateDetails")) %></ItemTemplate>
-        </asp:TemplateField>
-
-      
-        <asp:TemplateField HeaderText="RVP Repro" ItemStyle-CssClass="field-rvp_repro" HeaderStyle-CssClass="field-rvp_repro">
-            <HeaderTemplate>
-                <div class="filter-header-container">
-                    <div class="filter-header-text">RVP Repro</div>
-                    <div class="filter-container">
-                        <asp:DropDownList ID="ddlRvpReproHeader" runat="server" AutoPostBack="true"
-                            OnSelectedIndexChanged="ddlRvpReproHeader_SelectedIndexChanged" CssClass="header-dropdown" />
-                    </div>
-                </div>
-            </HeaderTemplate>
-            <ItemTemplate><span><%# Eval("repro_on_rvp") %></span></ItemTemplate>
-        </asp:TemplateField>
-
-        <asp:TemplateField HeaderText="iDST" ItemStyle-CssClass="field-idst" HeaderStyle-CssClass="field-idst">
-            <HeaderTemplate>
-                <div class="filter-header-container">
-                    <div class="filter-header-text">iDST</div>
-                    <div class="filter-container">
-                        <asp:DropDownList ID="ddlIdstHeader" runat="server" AutoPostBack="true"
-                            OnSelectedIndexChanged="ddlIdstHeader_SelectedIndexChanged" CssClass="header-dropdown" />
-                    </div>
-                </div>
-            </HeaderTemplate>
-            <ItemTemplate><span class="idst-column"><%# Eval("idst") %></span></ItemTemplate>
-            <EditItemTemplate>
-                <asp:TextBox ID="txtidst" runat="server" TextMode="MultiLine" Text='<%# Bind("idst") %>'
-                    CssClass="form-control"></asp:TextBox>
-            </EditItemTemplate>
-        </asp:TemplateField>
-
-        
-        <asp:TemplateField HeaderText="LOS" ItemStyle-CssClass="field-los" HeaderStyle-CssClass="field-los">
-            <HeaderTemplate>
-                <div class="filter-header-container">
-                    <div class="filter-header-text">LOS</div>
-                    <div class="filter-container">
-                        <asp:DropDownList ID="ddlLosHeader" runat="server" AutoPostBack="true"
-                            OnSelectedIndexChanged="ddlLosHeader_SelectedIndexChanged" CssClass="header-dropdown" />
-                    </div>
-                </div>
-            </HeaderTemplate>
-            <ItemStyle Width="100px" />
-            <HeaderStyle Width="100px" />
-            <ItemTemplate><span class="los-column"><%# Eval("los") %></span></ItemTemplate>
-            <EditItemTemplate>
-                <asp:DropDownList ID="ddllos" runat="server" CssClass="form-control"></asp:DropDownList>
-            </EditItemTemplate>
-        </asp:TemplateField>
-
-        
-        <asp:BoundField DataField="processor" HeaderText="Processor" ReadOnly="True"
-            ItemStyle-CssClass="field-processor" HeaderStyle-CssClass="field-processor" Visible="false" />
-
-        
-    <asp:TemplateField HeaderText="Impact" ItemStyle-CssClass="field-impact_processor" HeaderStyle-CssClass="field-impact_processor">
-        <ItemTemplate><%# RenderImpactWithProcessor(Eval("impact"), Eval("processor")) %></ItemTemplate>
-            <EditItemTemplate>
-                <asp:TextBox ID="txtimpact" runat="server" TextMode="MultiLine" Text='<%# Bind("impact") %>'
-                    CssClass="form-control"></asp:TextBox>
-            </EditItemTemplate>
-        </asp:TemplateField>
-
-       
-        <asp:TemplateField HeaderText="Days Open" ItemStyle-CssClass="daysopen-column field-days_open" HeaderStyle-CssClass="field-days_open">
-            <ItemTemplate><%# RenderDaysOpen(Eval("days_active")) %></ItemTemplate>
-        </asp:TemplateField>
-
-        <asp:BoundField DataField="ClosedDetails" HeaderText="Closed Reason / Fixed Version" ReadOnly="True"
-            ItemStyle-CssClass="cmfrequest-column field-closed_reason" HeaderStyle-CssClass="field-closed_reason" />
-
-        <asp:BoundField DataField="progress" HeaderText="Progress" ReadOnly="True" Visible="false"
-            ItemStyle-CssClass="field-progress" HeaderStyle-CssClass="field-progress" />
-
-    </Columns>
-    
-<EmptyDataTemplate>
-    <div class="empty-data-container">
-        <table class="table-primary" style="width:100%">
-            <thead>
-                <tr>
-                    
-                    <th style="width:50px;" class="field-sno">S.No</th>
-
-                    <th class="field-sightingid">SightingID | Promoted ID</th>
-
-                    <th class="field-milestone">
-                        <div class="filter-header-container">
-                            <div class="filter-header-text">Milestone</div>
-                            <div class="filter-container">
-                                <asp:DropDownList ID="ddlMilestoneHeaderEmpty" runat="server"
-                                    AutoPostBack="true"
-                                    OnSelectedIndexChanged="ddlMilestoneHeader_SelectedIndexChanged"
-                                    CssClass="header-dropdown">
-                                </asp:DropDownList>
-                            </div>
-                        </div>
-                    </th>
-
-                    <th class="field-title">Title</th>
-
-                    <th class="field-owner">
-                        <div class="filter-header-container">
-                            <div class="filter-header-text">Owner</div>
-                            <div class="filter-container">
-                                <asp:DropDownList ID="ddlOwnerHeaderEmpty" runat="server"
-                                    AutoPostBack="true"
-                                    OnSelectedIndexChanged="ddlOwnerHeader_SelectedIndexChanged"
-                                    CssClass="header-dropdown">
-                                </asp:DropDownList>
-                            </div>
-                        </div>
-                    </th>
-
-                    <th class="field-status">Status</th>
-
-                    <th class="field-component">Component</th>
-
-
-                    <th class="field-customer_detail">
-                        <div class="filter-header-container">
-                            <div class="filter-header-text">Customer Detail</div>
-                            <div class="filter-container">
-                                <asp:DropDownList ID="ddlDetailHeaderEmpty" runat="server"
-                                    AutoPostBack="true"
-                                    OnSelectedIndexChanged="ddlDetailHeader_SelectedIndexChanged"
-                                    CssClass="header-dropdown">
-                                </asp:DropDownList>
-                            </div>
-                        </div>
-                    </th>
-
-                    <th class="field-imagefreeze">ImageFreeze</th>
-                    
-                    <th class="field-duplicatedetails">Duplicate Details</th>
-
-                    <th class="field-rvp_repro">
-                        <div class="filter-header-container">
-                            <div class="filter-header-text">RVP Repro</div>
-                            <div class="filter-container">
-                                <asp:DropDownList ID="ddlRvpReproHeaderEmpty" runat="server"
-                                    AutoPostBack="true"
-                                    OnSelectedIndexChanged="ddlRvpReproHeader_SelectedIndexChanged"
-                                    CssClass="header-dropdown">
-                                </asp:DropDownList>
-                            </div>
-                        </div>
-                    </th>
-
-                    <th class="field-idst">
-                        <div class="filter-header-container">
-                            <div class="filter-header-text">iDST</div>
-                            <div class="filter-container">
-                                <asp:DropDownList ID="ddlIdstHeaderEmpty" runat="server"
-                                    AutoPostBack="true"
-                                    OnSelectedIndexChanged="ddlIdstHeader_SelectedIndexChanged"
-                                    CssClass="header-dropdown">
-                                </asp:DropDownList>
-                            </div>
-                        </div>
-                    </th>
-
-                    
-                    <th class="field-los" style="width:100px;">
-                        <div class="filter-header-container">
-                            <div class="filter-header-text">LOS</div>
-                            <div class="filter-container">
-                                <asp:DropDownList ID="ddlLosHeaderEmpty" runat="server"
-                                    AutoPostBack="true"
-                                    OnSelectedIndexChanged="ddlLosHeader_SelectedIndexChanged"
-                                    CssClass="header-dropdown">
-                                </asp:DropDownList>
-                            </div>
-                        </div>
-                    </th>
-
-                   
-                    <th class="field-processor">Processor</th>
-
-                   
-                    <th class="field-impact">Impact</th>
-
-                    
-                    <th class="field-days_open">Days_Open</th>
-
-                    
-                    <th class="field-closed_reason">Closed Reason / Fixed Version</th>
-
-                    <th class="field-progress">Progress</th>
-
-                   
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td colspan="23" style="text-align:center; padding:20px;">
-                        No Open CMFs found for the selected filters. Please adjust your filter criteria.
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</EmptyDataTemplate>
-
-  
-</asp:GridView>
-                        </div>
-                    </div>
-                        <asp:Panel ID="issuePagerPanel" runat="server" Visible="false">
-                            <div id="issue-scroll-proxy" class="issue-scroll-proxy" aria-label="Issue list horizontal scroll">
-                                <div id="issue-scroll-proxy-inner" class="issue-scroll-proxy-inner"></div>
-                            </div>
-                            <div class="issue-pager-controls">
-                                <div class="issue-page-nav" aria-label="Issue pages">
-                                    <asp:LinkButton ID="btnPageGroupPrev" runat="server" CssClass="issue-pager-group-btn" OnClick="btnPageGroupPrev_Click" ToolTip="Previous 10 pages">&laquo;</asp:LinkButton>
-                                    <asp:Repeater ID="rptPageNumbers" runat="server" OnItemCommand="rptPageNumbers_ItemCommand">
-                                        <ItemTemplate>
-                                            <asp:LinkButton ID="btnPageNumber" runat="server" CommandName="SelectPage" CommandArgument='<%# Eval("PageNumber") %>' CssClass='<%# "issue-pager-btn " + (Eval("IsCurrentPage").ToString() == "True" ? "issue-pager-current" : "") %>' Text='<%# Eval("PageNumber") %>' />
-                                        </ItemTemplate>
-                                    </asp:Repeater>
-                                    <asp:LinkButton ID="btnPageGroupNext" runat="server" CssClass="issue-pager-group-btn" OnClick="btnPageGroupNext_Click" ToolTip="Next 10 pages">&raquo;</asp:LinkButton>
-                                </div>
-                                <span class="issue-page-size-control">
-                                    <span>Rows per page</span>
-                                    <asp:DropDownList ID="ddlIssuePageSize" runat="server" AutoPostBack="true" CssClass="issue-page-size-select" OnSelectedIndexChanged="ddlIssuePageSize_SelectedIndexChanged">
-                                        <asp:ListItem Text="10" Value="10" />
-                                        <asp:ListItem Text="12" Value="12" Selected="True" />
-                                        <asp:ListItem Text="25" Value="25" />
-                                        <asp:ListItem Text="50" Value="50" />
-                                        <asp:ListItem Text="100" Value="100" />
-                                    </asp:DropDownList>
-                                </span>
-                            </div>
-                            <div class="issue-page-status">
-                                <asp:Label ID="lblIssuePageStatus" runat="server" />
-                            </div>
-                        </asp:Panel>
-
-                    <aside class="issue-side-panel" aria-label="Issue tab assistant panel">
-                        <section class="interactive-side-card">
-                            <div class="interactive-side-head">
-                                <h3 class="interactive-side-title"><i class="fas fa-robot" aria-hidden="true" style="color:#4f46e5; margin-right:6px;"></i>AI Assistant</h3>
-                            </div>
-                            <p class="interactive-side-sub">Ask anything about your active issues and triage signals.</p>
-                            <button type="button" class="interactive-side-btn" onclick="focusReportsAssistant('Summarize active issues and debug risks across all CMF data'); return false;">Ask AI</button>
-                        </section>
-
-                        <section class="interactive-side-card">
-                            <div class="interactive-side-head"><h3 class="interactive-side-title">Quick Insights</h3></div>
-                            <ul class="interactive-chip-list">
-                                <li><span>Total visible issues</span><span class="interactive-chip" id="issueSideTotal">0</span></li>
-                                <li><span>In progress signals</span><span class="interactive-chip" id="issueSideProgress">0</span></li>
-                                <li><span>Stale over SLA</span><span class="interactive-chip" id="issueSideStale">0</span></li>
-                            </ul>
-                        </section>
-
-                        <section class="interactive-side-card">
-                            <div class="interactive-side-head"><h3 class="interactive-side-title">Shortcuts</h3></div>
-                            <div class="interactive-shortcuts">
-                                <button type="button" class="interactive-shortcut-btn" onclick="document.getElementById('issueFiltersToggleBtn').click()">Toggle Filters</button>
-                                <button type="button" class="interactive-shortcut-btn" onclick="showAllColumns()">Show Columns</button>
-                                <button type="button" class="interactive-shortcut-btn" onclick="focusFirstRowAiSummary(); return false;">AI Summary</button>
-                                <button type="button" class="interactive-shortcut-btn" onclick="focusReportsAssistant('Generate an export-ready issue report for all CMF data'); return false;">Export View</button>
-                            </div>
-                        </section>
-                    </aside>
-                    </div>
-
-                    <!-- CMF PENDING LIST HEADER PANEL - INSIDE mainDataWrapper -->
-                    <div class="pending-tab-shell" id="pendingTabShell" style="display:none;">
-                        <div class="pending-tab-main">
-                            <div class="cmf-pending-page-hd">
-                                <div>
-                                    <h1 class="cmf-pending-page-title">CMF Pending</h1>
-
-                                    <p class="cmf-pending-page-desc">
-                                        Review pending requests, supporting evidence, customer impact, and qualification signals.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <asp:Panel ID="cmf_pending_header_panel" runat="server" Visible="false"></asp:Panel>
-
-                            <div style="display:none;" aria-hidden="true">
-                                <asp:Label ID="lblPendingSightings" runat="server" Text="0" />
-                                <asp:Label ID="lblQualifyForCmf" runat="server" Text="0" />
-                                <asp:Label ID="lblLikelyDuplicate" runat="server" Text="0" />
-                                <asp:Label ID="lblIncompleteSysScope" runat="server" Text="0" />
-                            </div>
-
-                            <!-- CMF PENDING LIST GRIDVIEW - INSIDE mainDataWrapper -->
-                            <div class="gridview-container cmf-pending-grid-wrap" id="cmfPendingGridContainer" runat="server">
-                                <asp:GridView ID="GridView_cmf_pending" CssClass="table-primary" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="false">
-                                    <Columns>
-                                        <asp:TemplateField HeaderText="Issue Details" ItemStyle-Width="285px" HeaderStyle-Width="285px">
-                                            <ItemTemplate><%# RenderPendingIssueDetailsWithRecommendation(Eval("cp_id"), Eval("title"), Eval("cmf_request"), Eval("component"), Eval("impact"), Eval("idst"), Eval("repro_on_rvp"), Eval("reproducibility"), Eval("customer_detail"), Eval("customer_owner")) %></ItemTemplate>
-                                        </asp:TemplateField>
-
-                                        <asp:TemplateField HeaderText="Customer / Owner" ItemStyle-Width="160px" HeaderStyle-Width="160px">
-                                            <ItemTemplate><%# RenderPendingCustomer(Eval("customer_detail"), Eval("customer_owner")) %></ItemTemplate>
-                                        </asp:TemplateField>
-
-                                        <asp:TemplateField HeaderText="Evidence" ItemStyle-Width="190px" HeaderStyle-Width="190px">
-                                            <ItemTemplate><%# RenderPendingEvidence(Eval("idst"), Eval("repro_on_rvp"), Eval("reproducibility")) %></ItemTemplate>
-                                        </asp:TemplateField>
-
-                                        <asp:TemplateField HeaderText="Impact" ItemStyle-Width="210px" HeaderStyle-Width="210px">
-                                            <ItemTemplate><%# RenderPendingAskImpact(Eval("date_cmf_ask"), Eval("cmf_request"), Eval("impact")) %></ItemTemplate>
-                                        </asp:TemplateField>
-
-                                        <asp:TemplateField HeaderText="AI Recommendation" ItemStyle-Width="150px" HeaderStyle-Width="150px">
-                                            <ItemTemplate><%# RenderPendingRecommendationCell(Eval("cp_id"), Eval("title"), Eval("component"), Eval("cmf_request"), Eval("impact"), Eval("idst"), Eval("repro_on_rvp"), Eval("reproducibility"), Eval("customer_detail"), Eval("customer_owner")) %></ItemTemplate>
-                                        </asp:TemplateField>
-
-                                    </Columns> 
-                                </asp:GridView>
-                            </div>
-                        </div>
-                        
-                        <aside class="pending-side-panel" aria-label="CMF pending assistant panel">
-                            <section class="interactive-side-card">
-                                <div class="interactive-side-head">
-                                    <h3 class="interactive-side-title"><i class="fas fa-brain" aria-hidden="true" style="color:#7c3aed; margin-right:6px;"></i>Pending AI Queue</h3>
-                                </div>
-                                <p class="interactive-side-sub">Recommendation engine snapshots for current platform selection.</p>
-                                <button type="button" class="interactive-side-btn" onclick="focusFirstPendingRecommendation(); return false;">Open Recommendation Flow</button>
-                            </section>
-
-                            <section class="interactive-side-card">
-                                <div class="interactive-side-head"><h3 class="interactive-side-title">Quick Insights</h3></div>
-                                <ul class="interactive-chip-list">
-                                    <li><span>Qualification candidates</span><span class="interactive-chip" id="pendingSideQualify">0</span></li>
-                                    <li><span>Potential duplicates</span><span class="interactive-chip" id="pendingSideDup">0</span></li>
-                                    <li><span>Missing debug evidence</span><span class="interactive-chip" id="pendingSideMissing">0</span></li>
-                                </ul>
-                            </section>
-
-                            <section class="interactive-side-card">
-                                <div class="interactive-side-head"><h3 class="interactive-side-title">Shortcuts</h3></div>
-                                <div class="interactive-shortcuts">
-                                    <button type="button" class="interactive-shortcut-btn" onclick="focusFirstPendingRecommendation(); return false;">Top Priority First</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="showPortalToast('Use shared platform dropdown above to switch context.')">Switch Platform</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="focusFirstPendingRecommendation(); return false;">Review Scores</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="focusReportsAssistant('Generate a CMF pending backlog report for all platforms'); return false;">Export Pending</button>
-                                </div>
-                            </section>
-
-                            <section class="interactive-side-card">
-                                <div class="interactive-side-head"><h3 class="interactive-side-title">Actions</h3></div>
-                                <div class="interactive-shortcuts">
-                                    <button type="button" class="interactive-shortcut-btn" onclick="focusFirstPendingRecommendation(); return false;">Prioritize High Score</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="focusFirstPendingRecommendation(); return false;">Commit Auto-fill</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="focusReportsAssistant('Generate a CMF backlog sharing report for all platforms'); return false;">Export Backlog</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="showPortalToast('Switch platform in the shared filter bar.')">Switch Platform</button>
-                                </div>
-                            </section>
-                        </aside>
-                    </div>
-
-                    </div>
-                </div>
-            </ContentTemplate>
-        </asp:UpdatePanel>
-    </div>
-</div>
 
                  
 
                                     <div class="gridview-container">
-                                        <asp:GridView ID="GridView_design_open" CssClass="table-primary2" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="false" OnRowEditing="GridView_design_open_RowEditing" OnRowDataBound="GridView_design_open_RowDataBound" DataKeyNames="Design">
-                                        </asp:GridView>
+                                        
                                     </div>
 
                                     <div class="gridview-container">
-                                        <asp:GridView ID="GridView2_edit" CssClass="table-primary2" runat="server" AutoGenerateColumns="false" EmptyDataText="No Open CMFs" Visible="false" OnRowUpdating="GridView_design_open_RowUpdating" OnRowCancelingEdit="GridView_design_open_RowCancelingEdit" OnRowDataBound="GridView_design_open_RowDataBound" DataKeyNames="Design">
-                                            <Columns>
-                                                <asp:BoundField DataField="Design" HeaderText="Design Name" ReadOnly="True" />
-
-                                                <asp:TemplateField HeaderText="SW Image Freeze">
-                                                    <ItemTemplate>
-                                                        <span><%# Eval("SWImageFreeze") %></span>
-                                                    </ItemTemplate>
-                                                    <EditItemTemplate>
-                                                        <asp:TextBox ID="txtSWImageFreeze" runat="server" TextMode="MultiLine" Text='<%# Bind("SWImageFreeze") %>' CssClass="form-control"></asp:TextBox>
-                                                    </EditItemTemplate>
-                                                </asp:TemplateField>
-                                                <asp:TemplateField HeaderText="Support Model">
-                                                    <ItemTemplate>
-                                                        <span><%# Eval("SupportModel") %></span>
-                                                    </ItemTemplate>
-                                                    <EditItemTemplate>
-                                                        <asp:TextBox ID="txtSupportModel" runat="server" TextMode="MultiLine" Text='<%# Bind("SupportModel") %>' CssClass="form-control"></asp:TextBox>
-                                                    </EditItemTemplate>
-                                                </asp:TemplateField>
-                                                <asp:CommandField ShowEditButton="True" />
-                                            </Columns>
-                                        </asp:GridView>
+                                        
                                     </div>
 
-                                    <asp:Panel ID="panelExtraGridViews" runat="server" Visible="false">
-                                    <div class="gridview-container">
-                                        <asp:GridView ID="GridView_design_summary" CssClass="table-primary" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="false" OnRowDataBound="GridView5_RowDataBound">
-                                            <Columns>
-                                                
-                                                <asp:BoundField DataField="Design" HeaderText="Design" />
-                                                <asp:BoundField DataField="SWImageFreeze" HeaderText="SW Image Freeze" />
-                                                <asp:BoundField DataField="Issues_in_CMF_ASK" HeaderText="Issues in CMF_ASK" />
-                                                <asp:BoundField DataField="Total_CMF_REJECT" HeaderText="Total CMF_REJECT" />
-                                                <asp:BoundField DataField="Total_CMF_Approved" HeaderText="Total CMF_Approved" />
-                                               <asp:BoundField DataField="crit_tpt" HeaderText="CMF Overall TPT"  />
-                                                <asp:BoundField DataField="disp_tpt" HeaderText="CMF Disposition TPT"  />
-                                                <asp:BoundField DataField="resolve_tpt" HeaderText="CMF Resolution TPT"  />
-
-                                                <asp:BoundField DataField="CMFOpenPercentage" HeaderText="CMF Open %"  />
-                                                <asp:BoundField DataField="Noise" HeaderText="Noise%"  />
-                                                <asp:BoundField DataField="IntelIssuePercentage" HeaderText="Intel Issue %"/>  
-                                                <asp:BoundField DataField="ThirdPartyPercentage" HeaderText="3rd Party %" />
-                                                <asp:BoundField DataField="CustomerIssuePercentage" HeaderText="Customer Issue %" />
-                                                
-                                            </Columns>
-                                        </asp:GridView>
-                                    </div>
-                        
                                     
-                                <div class="gridview-container">
-    <asp:GridView ID="GridView_oem_summary" CssClass="table-primary" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="false" OnRowDataBound="GridView7_RowDataBound">
-        <Columns>
-            <asp:BoundField DataField="OEM" HeaderText="OEM" />
-            <asp:BoundField DataField="Issues_in_CMF_ASK" HeaderText="Issues in CMF_ASK" />
-            <asp:BoundField DataField="Total_CMF_REJECT" HeaderText="Total CMF_REJECT" />
-            <asp:BoundField DataField="Total_CMF_Approved" HeaderText="Total CMF_Approved" />
-            <asp:BoundField DataField="crit_tpt" HeaderText="CMF Overall TPT" />
-            <asp:BoundField DataField="disp_tpt" HeaderText="CMF Disposition TPT" />
-            <asp:BoundField DataField="resolve_tpt" HeaderText="CMF Resolution TPT" />
-            <asp:BoundField DataField="CMFOpenPercentage" HeaderText="CMF Open %" />
-            <asp:BoundField DataField="Noise" HeaderText="Noise%" />
-            <asp:BoundField DataField="IntelIssuePercentage" HeaderText="Intel Issue %" />
-            <asp:BoundField DataField="ThirdPartyPercentage" HeaderText="3rd Party %" />
-            <asp:BoundField DataField="CustomerIssuePercentage" HeaderText="Customer Issue %" />
-        </Columns>
-    </asp:GridView>
-</div>
-                    </asp:Panel>
                 <!-- Bootstrap Modal for OEM Summary -->
 <div class="modal fade" id="detailsModal3" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog custom-modal-dialog" role="document"> <!-- Custom class for modal -->
@@ -11501,7 +10632,7 @@ Submit
       <div class="modal-header">
         <div class="modal-title-container">
             <h5 class="modal-title">OEM Summary Details</h5>
-            <asp:Button ID="btnExportOEMToExcel" runat="server" Text="Export to Excel" CssClass="modern-button1 export-btn" OnClientClick="exportToExcel3('<%= HiddenModalDesign.Value %>'); return false;" />
+            <input type="submit" name="btnExportOEMToExcel" value="Export to Excel" onclick="exportToExcel3(&#39;&lt;%= HiddenModalDesign.Value %>&#39;); return false;" id="btnExportOEMToExcel" class="modern-button1 export-btn" />
         </div>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
@@ -11509,27 +10640,9 @@ Submit
       </div>
       <div class="modal-body custom-modal-body" id="modalContent7">
         <div class="gridview-container">
-          <asp:GridView ID="GridView_oem_summary_modal7" CssClass="table-primary custom-gridview" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="true" >
-            <Columns>
-               <asp:HyperLinkField
-                 DataTextField="cp_id"
-                 HeaderText="Sighting ID"
-                 DataNavigateUrlFields="cp_id"
-                 DataNavigateUrlFormatString="https://hsdes.intel.com/appstore/article/#/{0}"
-                 Target="_blank" />
-              <asp:BoundField DataField="title" HeaderText="title" />
-              <asp:BoundField DataField="status" HeaderText="status" />
-              <asp:BoundField DataField="component" HeaderText="component" />
-              <asp:BoundField DataField="cmf_request" HeaderText="cmf_request" />
-              <asp:BoundField DataField="customer_owner" HeaderText="customer_owner" />
-              <asp:BoundField DataField="customer_company" HeaderText="customer_company" />
-              <asp:BoundField DataField="promoted_id" HeaderText="promoted_id" />
-              <asp:BoundField DataField="closed_reason" HeaderText="closed_reason" />
-              <asp:BoundField DataField="days_active" HeaderText="days_active" />
-              <asp:BoundField DataField="idst" HeaderText="idst" />
-              <asp:BoundField DataField="drivers" HeaderText="Milestones" />
-            </Columns>
-          </asp:GridView>
+          <div>
+
+</div>
         </div>
       </div>
     </div>
@@ -11547,26 +10660,9 @@ Submit
       </div>
       <div class="modal-body custom-modal-body" id="modalContent0">
         <div class="gridview-container">
-          <asp:GridView ID="GridView_design_summary_modal0" CssClass="table-primary custom-gridview" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="true" OnRowDataBound="GridViewdesign_RowDataBound">
-            <Columns>
-               <asp:HyperLinkField
-     DataTextField="cp_id"
-     HeaderText="Sighting ID"
-     DataNavigateUrlFields="cp_id"
-     DataNavigateUrlFormatString="https://hsdes.intel.com/appstore/article/#/{0}"
-     Target="_blank" />
-              <asp:BoundField DataField="title" HeaderText="title" />
-              <asp:BoundField DataField="status" HeaderText="status" />
-              <asp:BoundField DataField="component" HeaderText="component" />
-              <asp:BoundField DataField="cmf_request" HeaderText="cmf_request" />
-              <asp:BoundField DataField="customer_owner" HeaderText="customer_owner" />
-              <asp:BoundField DataField="promoted_id" HeaderText="promoted_id" />
-              <asp:BoundField DataField="closed_reason" HeaderText="closed_reason" />
-              <asp:BoundField DataField="days_active" HeaderText="days_active" />
-              <asp:BoundField DataField="idst" HeaderText="idst" />
-              <asp:BoundField DataField="drivers" HeaderText="Milestones" />
-            </Columns>
-          </asp:GridView>
+          <div>
+
+</div>
         </div>
       </div>
     </div>
@@ -11580,7 +10676,7 @@ Submit
       <div class="modal-header">
         <div class="modal-title-container">
             <h5 class="modal-title">Issue List</h5>
-            <asp:Button ID="btnExportDesignToExcel" runat="server" Text="Export to Excel" CssClass="modern-button1 export-btn" OnClientClick="exportToExcel('<%= HiddenModalDesign.Value %>'); return false;" />
+            <input type="submit" name="btnExportDesignToExcel" value="Export to Excel" onclick="exportToExcel(&#39;&lt;%= HiddenModalDesign.Value %>&#39;); return false;" id="btnExportDesignToExcel" class="modern-button1 export-btn" />
         </div>        
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
@@ -11588,27 +10684,9 @@ Submit
       </div>
       <div class="modal-body custom-modal-body" id="modalContent">
         <div class="gridview-container">
-          <asp:GridView ID="GridView_design_summary_modal" CssClass="table-primary custom-gridview" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="true">
-            <Columns>
-                         <asp:HyperLinkField
-DataTextField="cp_id"
-HeaderText="Sighting ID"
-DataNavigateUrlFields="cp_id"
-DataNavigateUrlFormatString="https://hsdes.intel.com/appstore/article/#/{0}"
-Target="_blank" />
+          <div>
 
-              <asp:BoundField DataField="title" HeaderText="title" />
-              <asp:BoundField DataField="status" HeaderText="status" />
-              <asp:BoundField DataField="component" HeaderText="component" />
-              <asp:BoundField DataField="cmf_request" HeaderText="cmf_request" />
-              <asp:BoundField DataField="customer_owner" HeaderText="customer_owner" />
-              <asp:BoundField DataField="promoted_id" HeaderText="promoted_id" />
-              <asp:BoundField DataField="closed_reason" HeaderText="closed_reason" />
-              <asp:BoundField DataField="days_active" HeaderText="days_active" />
-              <asp:BoundField DataField="idst" HeaderText="idst" />
-              <asp:BoundField DataField="drivers" HeaderText="Milestones" />
-            </Columns>
-          </asp:GridView>
+</div>
         </div>
       </div>
     </div>
@@ -11618,27 +10696,9 @@ Target="_blank" />
 
                                     <div class="gridview-container">
                                             <div class="button-wrapper">
- <asp:Button ID="btnImportPopup" runat="server" Text="Import Excel" CssClass="modern-button2" OnClientClick="openPopup(); return false;" />
+ 
 </div>
-                                        <asp:GridView ID="GridView_component_summary" CssClass="table-primary" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="false" OnRowDataBound="GridView6_RowDataBound">
-                                            <Columns>
-
-                                                <asp:BoundField DataField="Component" HeaderText="Ingredient" />
-                                                <asp:BoundField DataField="Total_CMF_Approved" HeaderText="Total CMF_Approved" />
-                                                <asp:BoundField DataField="Total_CMF_REJECT" HeaderText="Total CMF_REJECT" />
-                                                <asp:BoundField DataField="Issues_in_CMF_ASK" HeaderText="Issues in CMF_ASK" />
-                                                <asp:BoundField DataField="CMFOpenPercentage" HeaderText="CMF Open %" />
-                                                <asp:BoundField DataField="disp_tpt" HeaderText="CMF disposition TPT" />
-                                                <asp:BoundField DataField="crit_tpt" HeaderText="CMF Overall TPT" />
-                                                                                                
-                                                <asp:BoundField DataField="resolve_tpt" HeaderText="CMF Resolution TPT"  />
-
-                                                <asp:BoundField DataField="Noise" HeaderText="Noise%" />
-                                                <asp:BoundField DataField="IntelIssuePercentage" HeaderText="Intel Issue %" />       
-                                                <asp:BoundField DataField="ThirdPartyPercentage" HeaderText="3rd Party %" />
-                                                <asp:BoundField DataField="CustomerIssuePercentage" HeaderText="Customer Issue %" />                  
-                                            </Columns>
-                                        </asp:GridView>
+                                        
                                     </div>
                                 </div>
 
@@ -11648,11 +10708,8 @@ Target="_blank" />
 
       <div class="modal-header">
         <div class="modal-title-container">
-          <h5 class="modal-title">Issue List (by Milestone) — <asp:Label ID="lblDriverName" runat="server" /></h5>
-          <asp:Button ID="btnExportDriverIssues" runat="server"
-                      Text="Export to Excel"
-                      CssClass="modern-button1 export-btn"
-                      OnClientClick="exportDriverIssues('<%= HiddenDriverName.Value %>'); return false;" />
+          <h5 class="modal-title">Issue List (by Milestone) — <span id="lblDriverName"></span></h5>
+          <input type="submit" name="btnExportDriverIssues" value="Export to Excel" onclick="exportDriverIssues(&#39;&lt;%= HiddenDriverName.Value %>&#39;); return false;" id="btnExportDriverIssues" class="modern-button1 export-btn" />
         </div>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
@@ -11661,24 +10718,9 @@ Target="_blank" />
 
       <div class="modal-body custom-modal-body">
         <div class="gridview-container">
-          <asp:GridView ID="GridView_driver_issues"
-                        runat="server"
-                        CssClass="table-primary custom-gridview"
-                        AutoGenerateColumns="False"
-                        EmptyDataText="No issues for this driver">
-            <Columns>
-            
-              <asp:HyperLinkField DataTextField="cp_id"
-                                  HeaderText="Sighting ID"
-                                  DataNavigateUrlFields="cp_id"
-                                  DataNavigateUrlFormatString="https://hsdes.intel.com/appstore/article/#/{0}"
-                                  Target="_blank" />
-                
-              <asp:BoundField DataField="title" HeaderText="Title" />
-              <asp:BoundField DataField="component" HeaderText="Component" />
-              <%-- Add more columns if you want, e.g. status/component --%>
-            </Columns>
-          </asp:GridView>
+          <div>
+
+</div>
         </div>
       </div>
 
@@ -11692,11 +10734,8 @@ Target="_blank" />
 
       <div class="modal-header">
         <div class="modal-title-container">
-          <h5 class="modal-title">Issue List (by Milestone) — <asp:Label ID="lblDriverName1" runat="server" /></h5>
-        <asp:Button ID="btnExportDriverIssues1" runat="server"
-            Text="Export to Excel"
-            CssClass="modern-button1 export-btn"
-            OnClientClick="exportCMFIssues(getComponentValue(), getDriverValue(), getIssueTypeValue()); return false;" />
+          <h5 class="modal-title">Issue List (by Milestone) — <span id="lblDriverName1"></span></h5>
+        <input type="submit" name="btnExportDriverIssues1" value="Export to Excel" onclick="exportCMFIssues(getComponentValue(), getDriverValue(), getIssueTypeValue()); return false;" id="btnExportDriverIssues1" class="modern-button1 export-btn" />
 
         </div>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -11706,26 +10745,9 @@ Target="_blank" />
 
       <div class="modal-body custom-modal-body">
         <div class="gridview-container">
-          <asp:GridView ID="GridView_cmf_issues"
-                        runat="server"
-                        CssClass="table-primary custom-gridview"
-                        AutoGenerateColumns="False"
-                        EmptyDataText="No issues for this driver">
-            <Columns>
-            
-              <asp:HyperLinkField DataTextField="cp_id"
-                                  HeaderText="Sighting ID"
-                                  DataNavigateUrlFields="cp_id"
-                                  DataNavigateUrlFormatString="https://hsdes.intel.com/appstore/article/#/{0}"
-                                  Target="_blank" />
-                
-              <asp:BoundField DataField="title" HeaderText="Title" />
-              <asp:BoundField DataField="component" HeaderText="Component" />
-                <asp:BoundField DataField="cmf_request" HeaderText="CMF Request" />
-             <asp:BoundField DataField="los" HeaderText="LOS" />
-              <%-- Add more columns if you want, e.g. status/component --%>
-            </Columns>
-          </asp:GridView>
+          <div>
+
+</div>
         </div>
       </div>
 
@@ -11740,7 +10762,7 @@ Target="_blank" />
       <div class="modal-header">
         <div class="modal-title-container">
           <h5 class="modal-title">Issue List</h5>
-          <asp:Button ID="btnExportIngredientToExcel" runat="server" Text="Export to Excel" CssClass="modern-button1 export-btn" OnClientClick="exportToExcel2('<%= HiddenModalDesign.Value %>'); return false;" />
+          <input type="submit" name="btnExportIngredientToExcel" value="Export to Excel" onclick="exportToExcel2(&#39;&lt;%= HiddenModalDesign.Value %>&#39;); return false;" id="btnExportIngredientToExcel" class="modern-button1 export-btn" />
         </div>        
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
@@ -11748,26 +10770,9 @@ Target="_blank" />
       </div>
       <div class="modal-body custom-modal-body" id="modalContent2">
         <div class="gridview-container">
-          <asp:GridView ID="GridView_component_summary_modal" CssClass="table-primary custom-gridview" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="true">
-            <Columns>
-                        <asp:HyperLinkField
-DataTextField="cp_id"
-HeaderText="Sighting ID"
-DataNavigateUrlFields="cp_id"
-DataNavigateUrlFormatString="https://hsdes.intel.com/appstore/article/#/{0}"
-Target="_blank" />
-              <asp:BoundField DataField="title" HeaderText="title" />
-              <asp:BoundField DataField="status" HeaderText="status" />
-              <asp:BoundField DataField="component" HeaderText="component" />
-              <asp:BoundField DataField="cmf_request" HeaderText="cmf_request" />
-              <asp:BoundField DataField="customer_owner" HeaderText="customer_owner" />
-              <asp:BoundField DataField="promoted_id" HeaderText="promoted_id" />
-              <asp:BoundField DataField="closed_reason" HeaderText="closed_reason" />
-              <asp:BoundField DataField="days_active" HeaderText="days_active" />
-              <asp:BoundField DataField="idst" HeaderText="idst" />
-              <asp:BoundField DataField="drivers" HeaderText="Milestones" />
-            </Columns>
-          </asp:GridView>
+          <div>
+
+</div>
         </div>
       </div>
     </div>
@@ -11777,105 +10782,21 @@ Target="_blank" />
 
 
 
-                                <%--<!-- Display Metrics -->
-                                    <div class="gridview-container3">
-                                        <asp:GridView ID="GridView_cmf_summary1" CssClass="table-primary" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="true">
-                                            <Columns>
-                                                <asp:TemplateField HeaderText="Total">
-                                                    <ItemTemplate>
-                                                        <asp:Label ID="lblTotal" runat="server" Text='<%# Eval("Total") %>'></asp:Label><br />
-                                                    </ItemTemplate>
-                                                </asp:TemplateField>
-                                                <asp:TemplateField HeaderText="Closed">
-                                                    <ItemTemplate>
-                                                        <asp:Label ID="lblClosed" runat="server" Text='<%# Eval("Closed") %>'></asp:Label>
-                                                    </ItemTemplate>
-                                                </asp:TemplateField>
-                                                <asp:TemplateField HeaderText="Implemented">
-                                                    <ItemTemplate>
-                                                        <asp:Label ID="lblImplementedCount" runat="server" Text='<%# Eval("ImplementedCount") %>'></asp:Label><br />
-                                                        <asp:Label ID="lblImplementedDetails" runat="server" Text='<%# Eval("ImplementedDetails") %>'></asp:Label>
-                                                    </ItemTemplate>
-                                                </asp:TemplateField>
-                                            </Columns>
-
-
-                                        </asp:GridView>
-                                    </div>
-                                    <div class="gridview-container3">
-                                        <asp:GridView ID="GridView_cmf_summary" CssClass="table-primary" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="true" DataKeyNames="Component">
-                                            <Columns>
-                                                <asp:BoundField DataField="Component" HeaderText="Component" SortExpression="Component" />
-                                                <asp:BoundField DataField="Driver_issues" HeaderText="Driver_issues" SortExpression="Driver_issues" ReadOnly="True" />
-
-                                            </Columns>
-                                        </asp:GridView>--%>
+                                
 
                                     <!-- Display Metrics -->
                                     <div class="gridview-container-wrapper">
                                         <div class="gridview-container3">
-                                            <asp:GridView ID="GridView_cmf_summary1" CssClass="table-primary" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="true">
-                                                <Columns>
-                                                    <asp:TemplateField HeaderText="Total">
-                                                        <ItemTemplate>
-                                                            <asp:Label ID="lblTotal" runat="server" Text='<%# Eval("Total") %>'></asp:Label><br />
-                                                        </ItemTemplate>
-                                                        <ItemStyle Width="33%" />
-                                                    </asp:TemplateField>
-                                                    <asp:TemplateField HeaderText="Closed">
-                                                        <ItemTemplate>
-                                                            <asp:Label ID="lblClosed" runat="server" Text='<%# Eval("Closed") %>'></asp:Label>
-                                                        </ItemTemplate>
-                                                        <ItemStyle Width="33%" />
-                                                    </asp:TemplateField>
-                                                    <asp:TemplateField HeaderText="Implemented">
-                                                        <ItemTemplate>
-                                                            <asp:Label ID="lblImplementedCountAndDup" runat="server" Text='<%# Eval("ImplementedCountAndDup") %>'></asp:Label><br />
-                                                            <asp:Label ID="lblImplementedComponents" runat="server" Text='<%# Eval("ImplementedComponentsOnly") %>'></asp:Label>
-                                                        </ItemTemplate>
-                                                        <ItemStyle Width="33%" />
-                                                    </asp:TemplateField>
-                                                </Columns>
-                                            </asp:GridView>
+                                            
 
-                                            <asp:GridView ID="GridView_notes" CssClass="table-primary" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="true" OnRowDataBound="GridView_notes_RowDataBound">
-                                                <Columns>
-                                                  
-                                                    <asp:BoundField DataField="disp_tpt" HeaderText="CMF Disposition TPT" ReadOnly="True" ItemStyle-Width="33%" />
-                                                    <asp:BoundField DataField="resolve_tpt" HeaderText="CMF Resolution TPT" ReadOnly="True" ItemStyle-Width="33%" />
-                                                    <asp:BoundField DataField="crit_tpt" HeaderText="CMF Overall TPT" ReadOnly="True" ItemStyle-Width="33%" />
-                                                </Columns>
-                                            </asp:GridView>
+                                            
 
                                                                                         
 
                                           
                                             <!-- Milestone Mapping: Drivers and CMF counts -->
                                             
-                                            <asp:GridView ID="GridView_milestone_map"
-              runat="server"
-              AutoGenerateColumns="False"
-              CssClass="table-primary"
-              EmptyDataText="No CMF data for milestones"
-              Visible="true">
-    <Columns>
-
-        <asp:BoundField DataField="Driver" HeaderText="Milestone" ReadOnly="True" ItemStyle-Width="50%" />
-
-       <asp:TemplateField HeaderText="Unique CMF Count">
-          <ItemTemplate>
-            <a href="javascript:void(0)"
-               onclick='showDriverIssues("<%# HttpUtility.JavaScriptStringEncode(Convert.ToString(Eval("Driver") ?? "")) %>"); return false;'
-               style="font-weight: bold; text-decoration: none;"
-               class="btn btn-link p-0">
-              <%# Eval("CMFCount") %>
-            </a>
-          </ItemTemplate>
-          <ItemStyle Width="50%" />
-        </asp:TemplateField>
-        
-    </Columns>
-</asp:GridView>
+                                            
 
                                         </div>
 
@@ -11885,25 +10806,11 @@ Target="_blank" />
 
 
                                         <div class="gridview-container3">
-                                            <asp:GridView ID="GridView_cmf_summary" CssClass="table-primary7" runat="server" AutoGenerateColumns="False" EmptyDataText="No Open CMFs" Visible="true" DataKeyNames="Component">
-                                                <Columns>
-                                                    <asp:BoundField DataField="Component" HeaderText="Component_Open_CMFs" SortExpression="Component" ReadOnly="True" ItemStyle-Width="25%"/>
-                                                    <asp:BoundField DataField="Driver_issues" HeaderText="Driver_issues" SortExpression="Driver_issues" ReadOnly="True" ItemStyle-Width="25%"/>
-                                                </Columns>
-                                            </asp:GridView>
+                                            
 
-                                                                                        <asp:GridView ID="GridView_comp" CssClass="table-primary" runat="server" AutoGenerateColumns="False" EmptyDataText="No CMFs Pending" Visible="true">
-    <Columns>
-      
-        <asp:BoundField DataField="component_group" HeaderText="Component" ReadOnly="True" ItemStyle-Width="50%" />
-        <asp:BoundField DataField="CMF Pending Count" HeaderText="CMF Pending Count" ReadOnly="True" ItemStyle-Width="50%" />
-    </Columns>
-</asp:GridView>
+                                                                                        
 
-                                                                                                                                    <div class="tptdefinitions" id="tptdefdiv" runat="server"> 
-                                                  <p><strong>CMF resolution TPT:</strong> CMF decided date - Implemented date</p>
-                                                  <p><strong>CMF disposition TPT:</strong> CMF decided date - CMF ask date</p>
-                                                </div>
+                                                                                                                                    
                                            
                                         </div>
                                                                                                    
@@ -11928,7 +10835,13 @@ Target="_blank" />
                 </div>
                     </div>
                 </div>
-            </form>
+            
+
+<script type="text/javascript">
+//<![CDATA[
+window.CMF_PORTAL=window.CMF_PORTAL||{};window.CMF_PORTAL.activeFocusedTab='home';setTimeout(function(){if(typeof syncIssuePendingSidePanelVisibility==='function')syncIssuePendingSidePanelVisibility();},0);setTimeout(function(){if(typeof syncIssuePendingSidePanelVisibility==='function')syncIssuePendingSidePanelVisibility();},120);//]]>
+</script>
+</form>
 
         </div>
                                                                                                                                                                  
