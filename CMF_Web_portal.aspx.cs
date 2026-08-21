@@ -136,9 +136,12 @@ public class HomeDashboardSnapshot
     public string GeneratedAt { get; set; }
     public int ActiveIssues { get; set; }
     public int NeedsAttention { get; set; }
+    public int ClosedIssues { get; set; }
+    public int StaleIssues { get; set; }
     public int ResolvedThisWeek { get; set; }
     public decimal AverageResolutionDays { get; set; }
     public int CustomersAffected { get; set; }
+    public int PendingIssues { get; set; }
     public int NewToday { get; set; }
     public int ResolvedToday { get; set; }
     public int AiWatchlist { get; set; }
@@ -147,6 +150,7 @@ public class HomeDashboardSnapshot
     public string TopRisk { get; set; }
     public string RiskConcentration { get; set; }
     public List<string> PredictedBlockers { get; set; }
+    public List<string> WeeklyChanges { get; set; }
     public List<HomeDashboardFact> SummaryFacts { get; set; }
     public List<HomeDashboardFact> TptFacts { get; set; }
     public HomeDashboardTable MilestoneSummary { get; set; }
@@ -1059,12 +1063,12 @@ public partial class CMF_Web_portal : System.Web.UI.Page
 
         if (lblHomeResolvedThisWeekValue != null)
         {
-            lblHomeResolvedThisWeekValue.Text = snapshot.ResolvedThisWeek.ToString(CultureInfo.InvariantCulture);
+            lblHomeResolvedThisWeekValue.Text = snapshot.ClosedIssues.ToString(CultureInfo.InvariantCulture);
         }
 
         if (lblHomeResolutionDaysValue != null)
         {
-            lblHomeResolutionDaysValue.Text = snapshot.AverageResolutionDays.ToString("0.0", CultureInfo.InvariantCulture);
+            lblHomeResolutionDaysValue.Text = snapshot.StaleIssues.ToString(CultureInfo.InvariantCulture);
         }
 
         if (lblHomeCustomersAffectedValue != null)
@@ -1098,18 +1102,152 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         }
     }
 
+    [WebMethod(EnableSession = true)]
+    public static AiSummaryResponse GetHomeExecutiveSummary(string platformLabel, string snapshotContext)
+    {
+        try
+        {
+            return AiSummaryService.GenerateDashboardExecutiveSummary(platformLabel, snapshotContext);
+        }
+        catch (Exception ex)
+        {
+            return new AiSummaryResponse
+            {
+                Success = false,
+                Message = "Dashboard executive summary failed: " + ex.Message
+            };
+        }
+    }
+
+    [WebMethod(EnableSession = true)]
+    public static AiSummaryResponse GetHomePredictedBlockers(string platformLabel, string snapshotContext)
+    {
+        try
+        {
+            return AiSummaryService.GenerateDashboardPredictedBlockers(platformLabel, snapshotContext);
+        }
+        catch (Exception ex)
+        {
+            return new AiSummaryResponse
+            {
+                Success = false,
+                Message = "Dashboard blocker prediction failed: " + ex.Message
+            };
+        }
+    }
+
     private string BuildHomeDashboardSourceSql(string platformTable)
     {
         platformTable = ResolvePlatformTable(platformTable);
+        string filterValue = Session["filterValue"] as string;
+        if (string.IsNullOrWhiteSpace(filterValue) || filterValue == "AllDrivers")
+        {
+            filterValue = BuildDefaultIssueDriverFilter(platformTable);
+            Session["filterValue"] = filterValue;
+        }
+
+        Dictionary<string, string> filters = GetAllFilterValues();
+        StringBuilder whereClause = new StringBuilder();
+        whereClause.Append("WHERE status NOT IN ('rejected') AND sysdebug LIKE ('%customer_must_fix%') AND cmf_request IN ('cmf_ok') ");
+        AppendDashboardDriverFilter(whereClause, filterValue);
+        AppendDashboardColumnFilters(whereClause, filters);
+
         return @"(SELECT
     status,
     priority,
     customer_impact,
+    title,
     implemented_date,
     date_cmf_decided,
     date_cmf_ask,
-    component_group
-FROM " + platformTable + ") AS platform_cmf_issues";
+    component_group,
+    drivers,
+    customer_owner,
+    repro_on_rvp,
+    idst,
+    los,
+    customer_company,
+    customer_detail
+FROM " + platformTable + @"
+" + whereClause.ToString() + ") AS platform_cmf_issues";
+    }
+
+    private string BuildDefaultIssueDriverFilter(string platformTable)
+    {
+        platformTable = ResolvePlatformTable(platformTable);
+        return string.Join(",", GetDistinctDrivers(platformTable, "open", "implemented").ToArray());
+    }
+
+    private static void AppendDashboardDriverFilter(StringBuilder whereClause, string filterValue)
+    {
+        if (whereClause == null || string.IsNullOrWhiteSpace(filterValue) || filterValue == "AllDrivers")
+        {
+            return;
+        }
+
+        if (filterValue.Contains(","))
+        {
+            whereClause.Append("AND ((");
+            whereClause.Append("'");
+            whereClause.Append(EscapeSqlLiteral(filterValue));
+            whereClause.Append("' = 'Pre-PV' AND drivers LIKE '%WW%' AND FLOOR(CAST(SUBSTRING(drivers, CHARINDEX('WW', must_fix_for) + 2, 2) AS FLOAT)) BETWEEN 1 AND 31) OR '");
+            whereClause.Append(EscapeSqlLiteral(filterValue));
+            whereClause.Append("' LIKE '%,' + drivers + ',%' OR '");
+            whereClause.Append(EscapeSqlLiteral(filterValue));
+            whereClause.Append("' LIKE drivers + ',%' OR '");
+            whereClause.Append(EscapeSqlLiteral(filterValue));
+            whereClause.Append("' LIKE '%,' + drivers) ");
+            return;
+        }
+
+        whereClause.Append("AND (( '");
+        whereClause.Append(EscapeSqlLiteral(filterValue));
+        whereClause.Append("' = 'Pre-PV' AND drivers LIKE '%WW%' AND FLOOR(CAST(SUBSTRING(drivers, CHARINDEX('WW', must_fix_for) + 2, 2) AS FLOAT)) BETWEEN 1 AND 31) OR drivers = '");
+        whereClause.Append(EscapeSqlLiteral(filterValue));
+        whereClause.Append("') ");
+    }
+
+    private static void AppendDashboardColumnFilters(StringBuilder whereClause, Dictionary<string, string> filters)
+    {
+        if (whereClause == null || filters == null)
+        {
+            return;
+        }
+
+        foreach (KeyValuePair<string, string> filter in filters)
+        {
+            if (string.IsNullOrWhiteSpace(filter.Value) || filter.Value.Equals("All", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string columnName = null;
+            switch (filter.Key)
+            {
+                case "owner": columnName = "customer_owner"; break;
+                case "rvpRepro": columnName = "repro_on_rvp"; break;
+                case "idst": columnName = "idst"; break;
+                case "los": columnName = "los"; break;
+                case "milestone": columnName = "drivers"; break;
+                case "Company": columnName = "customer_company"; break;
+                case "Detail": columnName = "customer_detail"; break;
+                case "Component": columnName = "component_group"; break;
+            }
+
+            if (!string.IsNullOrWhiteSpace(columnName))
+            {
+                whereClause.Append("AND LTRIM(RTRIM(ISNULL(");
+                whereClause.Append(columnName);
+                whereClause.Append(", ''))) = '");
+                whereClause.Append(EscapeSqlLiteral(filter.Value.Trim()));
+                whereClause.Append("' ");
+            }
+        }
+    }
+
+    private static string EscapeSqlLiteral(string value)
+    {
+        return (value ?? string.Empty).Replace("'", "''");
     }
 
     private HomeDashboardSnapshot BuildHomeDashboardSnapshot()
@@ -1120,6 +1258,7 @@ FROM " + platformTable + ") AS platform_cmf_issues";
         snapshot.PlatformLabel = BuildPlatformDisplayName(dashboardPlatform);
         snapshot.GeneratedAt = DateTime.Now.ToString("dd MMM yyyy HH:mm", CultureInfo.InvariantCulture);
         snapshot.PredictedBlockers = new List<string>();
+        snapshot.WeeklyChanges = new List<string>();
         snapshot.SummaryFacts = new List<HomeDashboardFact>();
         snapshot.TptFacts = new List<HomeDashboardFact>();
         snapshot.MilestoneSummary = NewDashboardTable("Milestone", "Unique CMF Count");
@@ -1128,6 +1267,8 @@ FROM " + platformTable + ") AS platform_cmf_issues";
         snapshot.Trend = new List<HomeDashboardTrendPoint>();
         snapshot.StatusDistribution = new List<HomeDashboardCategoryPoint>();
         snapshot.TopComponents = new List<HomeDashboardCategoryPoint>();
+        HomeDashboardCategoryPoint milestoneRiskConcentration = null;
+        HomeDashboardCategoryPoint predictedTopRisk = null;
 
         using (SqlConnection con = new SqlConnection(ConnectionString))
         {
@@ -1135,10 +1276,10 @@ FROM " + platformTable + ") AS platform_cmf_issues";
 
             using (SqlCommand metricsCommand = new SqlCommand(@"
 SELECT
-    SUM(CASE WHEN ISNULL(status, '') NOT IN ('complete', 'rejected', 'implemented', 'verified') THEN 1 ELSE 0 END) AS ActiveIssues,
-    SUM(CASE WHEN ISNULL(status, '') NOT IN ('complete', 'rejected', 'implemented', 'verified')
-              AND (ISNULL(priority, '') IN ('p0-blocker', 'p1-showstopper') OR ISNULL(customer_impact, '') IN ('1-critical', '2-high'))
-        THEN 1 ELSE 0 END) AS NeedsAttention,
+                COUNT(1) AS ActiveIssues,
+                SUM(CASE WHEN LOWER(LTRIM(RTRIM(ISNULL(status, '')))) = 'open' THEN 1 ELSE 0 END) AS NeedsAttention,
+                SUM(CASE WHEN LOWER(LTRIM(RTRIM(ISNULL(status, '')))) IN ('complete', 'rejected') THEN 1 ELSE 0 END) AS ClosedIssues,
+                SUM(CASE WHEN LOWER(LTRIM(RTRIM(ISNULL(status, '')))) IN ('implemented', 'verified') THEN 1 ELSE 0 END) AS StaleIssues,
     SUM(CASE WHEN TRY_CAST(implemented_date AS DATE) >= DATEADD(DAY, -7, CAST(GETDATE() AS DATE)) THEN 1 ELSE 0 END) AS ResolvedThisWeek,
     ISNULL(AVG(CAST(CASE
         WHEN TRY_CAST(date_cmf_decided AS DATE) IS NOT NULL AND TRY_CAST(implemented_date AS DATE) IS NOT NULL
@@ -1157,11 +1298,13 @@ FROM " + dashboardSourceSql, con))
                 {
                     snapshot.ActiveIssues = reader.IsDBNull(0) ? 0 : Convert.ToInt32(reader.GetValue(0), CultureInfo.InvariantCulture);
                     snapshot.NeedsAttention = reader.IsDBNull(1) ? 0 : Convert.ToInt32(reader.GetValue(1), CultureInfo.InvariantCulture);
-                    snapshot.ResolvedThisWeek = reader.IsDBNull(2) ? 0 : Convert.ToInt32(reader.GetValue(2), CultureInfo.InvariantCulture);
-                    snapshot.AverageResolutionDays = reader.IsDBNull(3) ? 0 : Convert.ToDecimal(reader.GetValue(3), CultureInfo.InvariantCulture);
-                    snapshot.CustomersAffected = reader.IsDBNull(4) ? 0 : Convert.ToInt32(reader.GetValue(4), CultureInfo.InvariantCulture);
-                    snapshot.NewToday = reader.IsDBNull(5) ? 0 : Convert.ToInt32(reader.GetValue(5), CultureInfo.InvariantCulture);
-                    snapshot.ResolvedToday = reader.IsDBNull(6) ? 0 : Convert.ToInt32(reader.GetValue(6), CultureInfo.InvariantCulture);
+                    snapshot.ClosedIssues = reader.IsDBNull(2) ? 0 : Convert.ToInt32(reader.GetValue(2), CultureInfo.InvariantCulture);
+                    snapshot.StaleIssues = reader.IsDBNull(3) ? 0 : Convert.ToInt32(reader.GetValue(3), CultureInfo.InvariantCulture);
+                    snapshot.ResolvedThisWeek = reader.IsDBNull(4) ? 0 : Convert.ToInt32(reader.GetValue(4), CultureInfo.InvariantCulture);
+                    snapshot.AverageResolutionDays = reader.IsDBNull(5) ? 0 : Convert.ToDecimal(reader.GetValue(5), CultureInfo.InvariantCulture);
+                    snapshot.CustomersAffected = reader.IsDBNull(6) ? 0 : Convert.ToInt32(reader.GetValue(6), CultureInfo.InvariantCulture);
+                    snapshot.NewToday = reader.IsDBNull(7) ? 0 : Convert.ToInt32(reader.GetValue(7), CultureInfo.InvariantCulture);
+                    snapshot.ResolvedToday = reader.IsDBNull(8) ? 0 : Convert.ToInt32(reader.GetValue(8), CultureInfo.InvariantCulture);
                     snapshot.AiWatchlist = snapshot.NeedsAttention;
                 }
             }
@@ -1180,6 +1323,7 @@ new_issues AS (
     FROM " + dashboardSourceSql + @"
     WHERE TRY_CAST(date_cmf_ask AS DATE) IS NOT NULL
       AND DATEDIFF(WEEK, TRY_CAST(date_cmf_ask AS DATE), CAST(GETDATE() AS DATE)) BETWEEN 0 AND 5
+            AND LOWER(LTRIM(RTRIM(ISNULL(status, '')))) = 'open'
     GROUP BY DATEDIFF(WEEK, TRY_CAST(date_cmf_ask AS DATE), CAST(GETDATE() AS DATE))
 ),
 resolved_issues AS (
@@ -1187,25 +1331,17 @@ resolved_issues AS (
     FROM " + dashboardSourceSql + @"
     WHERE TRY_CAST(implemented_date AS DATE) IS NOT NULL
       AND DATEDIFF(WEEK, TRY_CAST(implemented_date AS DATE), CAST(GETDATE() AS DATE)) BETWEEN 0 AND 5
+            AND LOWER(LTRIM(RTRIM(ISNULL(status, '')))) IN ('complete', 'rejected')
     GROUP BY DATEDIFF(WEEK, TRY_CAST(implemented_date AS DATE), CAST(GETDATE() AS DATE))
-),
-attention_issues AS (
-    SELECT DATEDIFF(WEEK, TRY_CAST(date_cmf_ask AS DATE), CAST(GETDATE() AS DATE)) AS week_offset, COUNT(*) AS count_value
-    FROM " + dashboardSourceSql + @"
-    WHERE TRY_CAST(date_cmf_ask AS DATE) IS NOT NULL
-      AND DATEDIFF(WEEK, TRY_CAST(date_cmf_ask AS DATE), CAST(GETDATE() AS DATE)) BETWEEN 0 AND 5
-      AND (ISNULL(priority, '') IN ('p0-blocker', 'p1-showstopper') OR ISNULL(customer_impact, '') IN ('1-critical', '2-high'))
-    GROUP BY DATEDIFF(WEEK, TRY_CAST(date_cmf_ask AS DATE), CAST(GETDATE() AS DATE))
 )
 SELECT
     DATEADD(WEEK, -w.week_offset, CAST(GETDATE() AS DATE)) AS week_date,
     ISNULL(n.count_value, 0) AS new_issues,
-    ISNULL(r.count_value, 0) AS resolved_issues,
-    ISNULL(a.count_value, 0) AS needs_attention
+        ISNULL(r.count_value, 0) AS resolved_issues,
+        0 AS needs_attention
 FROM weeks w
 LEFT JOIN new_issues n ON n.week_offset = w.week_offset
 LEFT JOIN resolved_issues r ON r.week_offset = w.week_offset
-LEFT JOIN attention_issues a ON a.week_offset = w.week_offset
 ORDER BY week_date", con))
             using (SqlDataReader reader = trendCommand.ExecuteReader())
             {
@@ -1255,7 +1391,6 @@ SELECT TOP 6
     CASE WHEN ISNULL(component_group, '') = '' THEN 'Unassigned' ELSE component_group END AS component_group,
     COUNT(*) AS issue_count
 FROM " + dashboardSourceSql + @"
-WHERE ISNULL(status, '') NOT IN ('complete', 'rejected')
 GROUP BY CASE WHEN ISNULL(component_group, '') = '' THEN 'Unassigned' ELSE component_group END
 ORDER BY issue_count DESC", con))
             using (SqlDataReader reader = componentCommand.ExecuteReader())
@@ -1268,10 +1403,118 @@ ORDER BY issue_count DESC", con))
                     snapshot.TopComponents.Add(point);
                 }
             }
+
+            using (SqlCommand milestoneRiskCommand = new SqlCommand(@"
+SELECT TOP 1
+    CASE WHEN ISNULL(LTRIM(RTRIM(drivers)), '') = '' THEN 'Unassigned milestone' ELSE LTRIM(RTRIM(drivers)) END AS milestone,
+    COUNT(*) AS risk_count
+FROM " + dashboardSourceSql + @"
+GROUP BY CASE WHEN ISNULL(LTRIM(RTRIM(drivers)), '') = '' THEN 'Unassigned milestone' ELSE LTRIM(RTRIM(drivers)) END
+ORDER BY risk_count DESC, milestone", con))
+            using (SqlDataReader reader = milestoneRiskCommand.ExecuteReader())
+            {
+                if (reader.Read())
+                {
+                    milestoneRiskConcentration = new HomeDashboardCategoryPoint();
+                    milestoneRiskConcentration.Name = reader.IsDBNull(0) ? "Unassigned milestone" : reader.GetString(0);
+                    milestoneRiskConcentration.Value = reader.IsDBNull(1) ? 0 : reader.GetInt32(1);
+                }
+            }
+
+            using (SqlCommand topRiskCommand = new SqlCommand(@"
+SELECT TOP 1
+    risk_name,
+    SUM(risk_weight) AS risk_score
+FROM (
+    SELECT
+        CASE
+            WHEN LOWER(LTRIM(RTRIM(ISNULL(priority, '')))) IN ('p0-blocker', 'p1-showstopper') THEN 'Priority blocker / showstopper risk'
+            WHEN LOWER(LTRIM(RTRIM(ISNULL(customer_impact, '')))) IN ('1-critical', '2-high') THEN 'Critical customer impact risk'
+            WHEN LOWER(LTRIM(RTRIM(ISNULL(priority, '')))) IN ('p2-high', 'p2') THEN 'High priority execution risk'
+            WHEN LOWER(LTRIM(RTRIM(ISNULL(customer_impact, '')))) = '3-medium' THEN 'Medium customer impact risk'
+            ELSE 'General workload risk'
+        END AS risk_name,
+        CASE
+            WHEN LOWER(LTRIM(RTRIM(ISNULL(priority, '')))) IN ('p0-blocker', 'p1-showstopper') THEN 6
+            WHEN LOWER(LTRIM(RTRIM(ISNULL(customer_impact, '')))) IN ('1-critical', '2-high') THEN 5
+            WHEN LOWER(LTRIM(RTRIM(ISNULL(priority, '')))) IN ('p2-high', 'p2') THEN 4
+            WHEN LOWER(LTRIM(RTRIM(ISNULL(customer_impact, '')))) = '3-medium' THEN 3
+            ELSE 1
+        END AS risk_weight
+    FROM " + dashboardSourceSql + @"
+) risk_candidates
+GROUP BY risk_name
+ORDER BY risk_score DESC, risk_name", con))
+            using (SqlDataReader reader = topRiskCommand.ExecuteReader())
+            {
+                if (reader.Read())
+                {
+                    predictedTopRisk = new HomeDashboardCategoryPoint();
+                    predictedTopRisk.Name = reader.IsDBNull(0) ? "General workload risk" : reader.GetString(0);
+                    predictedTopRisk.Value = reader.IsDBNull(1) ? 0 : Convert.ToInt32(reader.GetValue(1), CultureInfo.InvariantCulture);
+                }
+            }
+
+            using (SqlCommand blockerCommand = new SqlCommand(@"
+SELECT TOP 3
+    CASE WHEN LEN(LTRIM(RTRIM(ISNULL(title, '')))) > 92 THEN LEFT(LTRIM(RTRIM(title)), 89) + '...' ELSE LTRIM(RTRIM(ISNULL(title, 'Untitled issue'))) END AS issue_title
+FROM " + dashboardSourceSql + @"
+WHERE ISNULL(LTRIM(RTRIM(title)), '') <> ''
+ORDER BY
+    CASE
+        WHEN LOWER(LTRIM(RTRIM(ISNULL(priority, '')))) IN ('p0-blocker', 'p1-showstopper') THEN 1
+        WHEN LOWER(LTRIM(RTRIM(ISNULL(customer_impact, '')))) IN ('1-critical', '2-high') THEN 2
+        WHEN LOWER(LTRIM(RTRIM(ISNULL(priority, '')))) IN ('p2-high', 'p2') THEN 3
+        WHEN LOWER(LTRIM(RTRIM(ISNULL(customer_impact, '')))) = '3-medium' THEN 4
+        ELSE 5
+    END,
+    TRY_CAST(date_cmf_ask AS DATE) DESC", con))
+            using (SqlDataReader reader = blockerCommand.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    string blocker = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
+                    if (!string.IsNullOrWhiteSpace(blocker))
+                    {
+                        snapshot.PredictedBlockers.Add(blocker);
+                    }
+                }
+            }
+
+            using (SqlCommand weeklyChangesCommand = new SqlCommand(@"
+SELECT
+    SUM(CASE WHEN TRY_CAST(date_cmf_ask AS DATE) >= DATEADD(DAY, 1 - DATEPART(WEEKDAY, CAST(GETDATE() AS DATE)), CAST(GETDATE() AS DATE)) THEN 1 ELSE 0 END) AS NewThisWeek,
+    SUM(CASE WHEN TRY_CAST(implemented_date AS DATE) >= DATEADD(DAY, 1 - DATEPART(WEEKDAY, CAST(GETDATE() AS DATE)), CAST(GETDATE() AS DATE)) AND LOWER(LTRIM(RTRIM(ISNULL(status, '')))) IN ('implemented', 'verified') THEN 1 ELSE 0 END) AS ImplementedThisWeek,
+    SUM(CASE WHEN TRY_CAST(implemented_date AS DATE) >= DATEADD(DAY, 1 - DATEPART(WEEKDAY, CAST(GETDATE() AS DATE)), CAST(GETDATE() AS DATE)) AND LOWER(LTRIM(RTRIM(ISNULL(status, '')))) IN ('complete', 'rejected') THEN 1 ELSE 0 END) AS ClosedThisWeek,
+    SUM(CASE WHEN LOWER(LTRIM(RTRIM(ISNULL(priority, '')))) IN ('p0-blocker', 'p1-showstopper') OR LOWER(LTRIM(RTRIM(ISNULL(customer_impact, '')))) IN ('1-critical', '2-high') THEN 1 ELSE 0 END) AS HighRiskNow
+FROM " + dashboardSourceSql, con))
+            using (SqlDataReader reader = weeklyChangesCommand.ExecuteReader())
+            {
+                if (reader.Read())
+                {
+                    int newThisWeek = ReadInt(reader, 0);
+                    int implementedThisWeek = ReadInt(reader, 1);
+                    int closedThisWeek = ReadInt(reader, 2);
+                    int highRiskNow = ReadInt(reader, 3);
+
+                    snapshot.WeeklyChanges.Add(newThisWeek > 0
+                        ? newThisWeek.ToString(CultureInfo.InvariantCulture) + " new issue" + (newThisWeek == 1 ? " was" : "s were") + " added this week."
+                        : "No new issues were added this week.");
+                    snapshot.WeeklyChanges.Add(implementedThisWeek > 0
+                        ? implementedThisWeek.ToString(CultureInfo.InvariantCulture) + " issue" + (implementedThisWeek == 1 ? " moved" : "s moved") + " into implemented or verified status."
+                        : "No issues moved into implemented or verified status this week.");
+                    snapshot.WeeklyChanges.Add(closedThisWeek > 0
+                        ? closedThisWeek.ToString(CultureInfo.InvariantCulture) + " issue" + (closedThisWeek == 1 ? " was" : "s were") + " closed this week."
+                        : "No issues were closed this week.");
+                    snapshot.WeeklyChanges.Add(highRiskNow > 0
+                        ? highRiskNow.ToString(CultureInfo.InvariantCulture) + " high-priority or high-impact issue" + (highRiskNow == 1 ? " remains" : "s remain") + " in the current workload."
+                        : "No high-priority or high-impact issues are visible in the current workload.");
+                }
+            }
         }
 
         PopulateHomeCmfSummaryTables(snapshot, dashboardPlatform);
-        PopulateHomePortalHealth(snapshot);
+        PopulateHomePortalHealth(snapshot, milestoneRiskConcentration, predictedTopRisk);
 
         if (snapshot.Trend.Count > 1)
         {
@@ -1338,7 +1581,7 @@ WHERE sysdebug LIKE '%customer_must_fix%'", con))
                     snapshot.SummaryFacts.Add(new HomeDashboardFact { Label = "Total CMFs", Value = total.ToString(CultureInfo.InvariantCulture), Note = duplicates + " duplicates" });
                     snapshot.SummaryFacts.Add(new HomeDashboardFact { Label = "Closed", Value = closed.ToString(CultureInfo.InvariantCulture), Note = closedDup + " duplicates" });
                     snapshot.SummaryFacts.Add(new HomeDashboardFact { Label = "Implemented", Value = implemented.ToString(CultureInfo.InvariantCulture), Note = implementedDup + " duplicates" });
-                    snapshot.SummaryFacts.Add(new HomeDashboardFact { Label = "Pending", Value = pending.ToString(CultureInfo.InvariantCulture), Note = "open CMFs" });
+                    snapshot.SummaryFacts.Add(new HomeDashboardFact { Label = "Open", Value = pending.ToString(CultureInfo.InvariantCulture), Note = "open CMFs" });
                     snapshot.TptFacts.Add(new HomeDashboardFact { Label = "CMF Disposition TPT", Value = dispositionTpt.ToString(CultureInfo.InvariantCulture), Note = "days" });
                     snapshot.TptFacts.Add(new HomeDashboardFact { Label = "CMF Resolution TPT", Value = resolutionTpt.ToString(CultureInfo.InvariantCulture), Note = "days" });
                     snapshot.TptFacts.Add(new HomeDashboardFact { Label = "CMF Overall TPT", Value = overallTpt.ToString(CultureInfo.InvariantCulture), Note = "days" });
@@ -1403,6 +1646,8 @@ ORDER BY Component", con))
                     totalOpen.ToString(CultureInfo.InvariantCulture) + "(" + totalLos.ToString(CultureInfo.InvariantCulture) + ") + " + totalDuplicates.ToString(CultureInfo.InvariantCulture) + " Dups",
                     totalImplemented.ToString(CultureInfo.InvariantCulture)
                 });
+                SetHomeDashboardFact(snapshot.SummaryFacts, "Open", totalOpen.ToString(CultureInfo.InvariantCulture), "from component summary");
+                SetHomeDashboardFact(snapshot.SummaryFacts, "Implemented", totalImplemented.ToString(CultureInfo.InvariantCulture), "from component summary");
             }
 
             if (SqlTableExists(con, pendingTable))
@@ -1424,13 +1669,29 @@ ORDER BY component_group", con))
                         totalPending += count;
                         snapshot.PendingSummary.Rows.Add(new List<string> { ReadString(reader, 0), count.ToString(CultureInfo.InvariantCulture) });
                     }
+                    snapshot.PendingIssues = totalPending;
+                    snapshot.SummaryFacts.Add(new HomeDashboardFact { Label = "Pending", Value = totalPending.ToString(CultureInfo.InvariantCulture), Note = "CMF pending table" });
                     snapshot.PendingSummary.Rows.Add(new List<string> { "Total", totalPending.ToString(CultureInfo.InvariantCulture) });
                 }
             }
         }
     }
 
-    private void PopulateHomePortalHealth(HomeDashboardSnapshot snapshot)
+    private static void SetHomeDashboardFact(List<HomeDashboardFact> facts, string label, string value, string note)
+    {
+        if (facts == null) return;
+        HomeDashboardFact fact = facts.FirstOrDefault(item => string.Equals(item.Label, label, StringComparison.OrdinalIgnoreCase));
+        if (fact == null)
+        {
+            facts.Add(new HomeDashboardFact { Label = label, Value = value, Note = note });
+            return;
+        }
+
+        fact.Value = value;
+        fact.Note = note;
+    }
+
+    private void PopulateHomePortalHealth(HomeDashboardSnapshot snapshot, HomeDashboardCategoryPoint milestoneRiskConcentration, HomeDashboardCategoryPoint predictedTopRisk)
     {
         if (snapshot == null) return;
         int overallTpt = 0;
@@ -1446,27 +1707,19 @@ ORDER BY component_group", con))
         score += Math.Min(10, snapshot.ResolvedThisWeek * 2);
         snapshot.ProgramReadinessScore = Math.Max(0, Math.Min(100, score));
         snapshot.ProgramRiskLevel = snapshot.ProgramReadinessScore >= 85 ? "Low Risk" : (snapshot.ProgramReadinessScore >= 70 ? "Moderate Risk" : "High Risk");
-        snapshot.TopRisk = snapshot.TopComponents != null && snapshot.TopComponents.Count > 0
-            ? snapshot.TopComponents[0].Name
-            : "No concentrated component risk";
+        snapshot.TopRisk = predictedTopRisk != null && !string.IsNullOrWhiteSpace(predictedTopRisk.Name)
+            ? predictedTopRisk.Name
+            : "No priority or impact risk detected";
 
-        int topValue = snapshot.TopComponents != null && snapshot.TopComponents.Count > 0 ? snapshot.TopComponents[0].Value : 0;
+        int topValue = milestoneRiskConcentration != null ? milestoneRiskConcentration.Value : 0;
         int active = Math.Max(1, snapshot.ActiveIssues);
-        snapshot.RiskConcentration = topValue > 0 ? Math.Round((topValue * 100.0) / active).ToString("0", CultureInfo.InvariantCulture) + "%" : "0%";
+        snapshot.RiskConcentration = topValue > 0 && milestoneRiskConcentration != null
+            ? milestoneRiskConcentration.Name + " (" + Math.Round((topValue * 100.0) / active).ToString("0", CultureInfo.InvariantCulture) + "%)"
+            : "No milestone concentration";
 
-        if (snapshot.TopComponents != null)
-        {
-            foreach (HomeDashboardCategoryPoint component in snapshot.TopComponents.Take(3))
-            {
-                if (component.Value > 0)
-                {
-                    snapshot.PredictedBlockers.Add(component.Name + " (" + component.Value.ToString(CultureInfo.InvariantCulture) + ")");
-                }
-            }
-        }
         if (snapshot.PredictedBlockers.Count == 0)
         {
-            snapshot.PredictedBlockers.Add("No blocker concentration detected");
+            snapshot.PredictedBlockers.Add("No high-risk issue blockers detected");
         }
     }
 
@@ -2368,9 +2621,9 @@ ORDER BY component_group", con))
         }
 
         int totalIssues = dt.Rows.Count;
-        int inProgressIssues = 0;
+        int openIssues = 0;
         int closedIssues = 0;
-        int staleIssues = 0;
+        int implementedIssues = 0;
 
         foreach (DataRow row in dt.Rows)
         {
@@ -2382,20 +2635,20 @@ ORDER BY component_group", con))
             {
                 closedIssues++;
             }
-            else if (status == "open" || status == "implemented")
+            else if (status == "implemented" || status == "verified")
             {
-                inProgressIssues++;
+                implementedIssues++;
             }
             else
             {
-                staleIssues++;
+                openIssues++;
             }
         }
 
         lblIssueTotal.Text = totalIssues.ToString();
-        lblIssueInProgress.Text = inProgressIssues.ToString();
+        lblIssueInProgress.Text = openIssues.ToString();
         lblIssueClosed.Text = closedIssues.ToString();
-        lblIssueStale.Text = staleIssues.ToString();
+        lblIssueStale.Text = implementedIssues.ToString();
 
         int maxPageIndex = Math.Max(0, (int)Math.Ceiling(dt.Rows.Count / (double)overall_request_details.PageSize) - 1);
         if (overall_request_details.PageIndex > maxPageIndex)
@@ -4272,7 +4525,7 @@ LEFT JOIN " + designTable + @" AS d
         return sb.ToString();
     }
 
-    protected string RenderPendingAskImpact(object dateCmfAskValue, object cmfRequestValue, object impactValue)
+    protected string RenderPendingAskImpact(object cpIdValue, object titleValue, object componentValue, object dateCmfAskValue, object cmfRequestValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
     {
         string dateCmfAsk = dateCmfAskValue == null || dateCmfAskValue == DBNull.Value ? string.Empty : dateCmfAskValue.ToString().Trim();
         string impact = impactValue == null || impactValue == DBNull.Value ? string.Empty : impactValue.ToString().Trim();
@@ -4289,8 +4542,27 @@ LEFT JOIN " + designTable + @" AS d
         sb.AppendFormat("<span class=\"pending-chip\">Date: {0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(dateCmfAsk) ? "N/A" : dateCmfAsk));
         sb.Append("</span>");
         sb.AppendFormat("<span class=\"pending-mini-label\">Impact</span><span>{0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(impact) ? "Impact not specified" : impact));
+        sb.Append("<span class=\"pending-issue-action-row\">");
+        sb.Append(RenderPendingImpactDetailsButton(cpIdValue, titleValue, componentValue, cmfRequestValue, impactValue, idstValue, reproOnRvpValue, reproducibilityValue, customerDetailValue, customerOwnerValue));
+        sb.Append("</span>");
         sb.Append("</span>");
         return sb.ToString();
+    }
+
+    protected string RenderPendingImpactDetailsButton(object cpIdValue, object titleValue, object componentValue, object cmfRequestValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
+    {
+        return string.Format(
+            "<button type=\"button\" class=\"pending-recommendation-btn pending-impact-details-btn\" onclick='openCmfPendingImpactModal(\"{0}\", \"{1}\", \"{2}\", \"{3}\", \"{4}\", \"{5}\", \"{6}\", \"{7}\", \"{8}\", \"{9}\")' title=\"AI impact details\" aria-label=\"AI impact details\"><i class=\"fas fa-bolt\" aria-hidden=\"true\"></i><span>AI Impact</span></button>",
+            JsEncode(cpIdValue),
+            JsEncode(titleValue),
+            JsEncode(componentValue),
+            JsEncode(cmfRequestValue),
+            JsEncode(impactValue),
+            JsEncode(idstValue),
+            JsEncode(reproOnRvpValue),
+            JsEncode(reproducibilityValue),
+            JsEncode(customerDetailValue),
+            JsEncode(customerOwnerValue));
     }
 
     protected string RenderPendingRecommendationButton(object cpIdValue, object titleValue, object componentValue, object cmfRequestValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
@@ -5233,6 +5505,59 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
             {
                 Success = false,
                 Message = "CMF decision details failed: " + ex.Message
+            };
+        }
+    }
+
+    [WebMethod]
+    public static CmfRecommendationResponse GetCmfPendingImpactDetails(
+        string cpId,
+        string title,
+        string component,
+        string cmfRequest,
+        string impact,
+        string idst,
+        string reproOnRvp,
+        string reproducibility,
+        string customerDetail,
+        string customerOwner,
+        string platform)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(platform) && !AllowedPlatformTables.Contains(platform))
+            {
+                return new CmfRecommendationResponse
+                {
+                    Success = false,
+                    Message = "Invalid platform input for CMF impact details."
+                };
+            }
+
+            CmfRecommendationRequest request = new CmfRecommendationRequest
+            {
+                CpId = cpId,
+                Title = title,
+                Component = component,
+                CmfRequest = cmfRequest,
+                Impact = impact,
+                Idst = idst,
+                ReproOnRvp = reproOnRvp,
+                Reproducibility = reproducibility,
+                CustomerDetail = customerDetail,
+                CustomerOwner = customerOwner,
+                Rules = CmfRecommendationService.GetActiveRulesText(),
+                HsdContext = BuildPendingRecommendationContext(platform, cpId)
+            };
+
+            return CmfRecommendationService.GenerateCmfPendingImpactDetails(request);
+        }
+        catch (Exception ex)
+        {
+            return new CmfRecommendationResponse
+            {
+                Success = false,
+                Message = "CMF impact details failed: " + ex.Message
             };
         }
     }

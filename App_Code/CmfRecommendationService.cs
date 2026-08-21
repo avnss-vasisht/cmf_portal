@@ -200,6 +200,48 @@ threshold_for_cmf_tag: 0.70";
         return response;
     }
 
+    public static CmfRecommendationResponse GenerateCmfPendingImpactDetails(CmfRecommendationRequest request)
+    {
+        if (request == null)
+        {
+            return new CmfRecommendationResponse { Success = false, Message = "Invalid CMF impact request." };
+        }
+
+        string cpId = SafeText(request.CpId);
+        string title = SafeText(request.Title);
+        string component = SafeText(request.Component);
+        string cmfRequest = SafeText(request.CmfRequest);
+        string impact = SafeText(request.Impact);
+        string idst = SafeText(request.Idst);
+        string reproOnRvp = SafeText(request.ReproOnRvp);
+        string reproducibility = SafeText(request.Reproducibility);
+        string customerDetail = SafeText(request.CustomerDetail);
+        string customerOwner = SafeText(request.CustomerOwner);
+        string hsdContext = SafeText(request.HsdContext);
+        string rules = string.IsNullOrWhiteSpace(request.Rules) ? GetActiveRulesText() : SafeText(request.Rules);
+        string cacheKey = "cmf-impact-details:" + ComputeHash("cmf-impact-details-live-context-v1|" + GetAiProviderCacheSignature() + "|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + hsdContext);
+
+        CmfRecommendationResponse cached = TryGetCached(cacheKey);
+        if (cached != null) return cached;
+
+        string details;
+        string modelError;
+        bool hasModelDetails = TryGenerateWithGitHubModel(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, string.Empty, out details, out modelError, BuildCmfImpactDetailsPrompt(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, hsdContext), "You explain the practical impact of CMF pending issues. Be concise, evidence-grounded, and business-readable.");
+
+        CmfRecommendationResponse response = new CmfRecommendationResponse
+        {
+            Success = true,
+            CpId = cpId,
+            Title = title,
+            Recommendation = "AI Impact Details",
+            Evidence = hasModelDetails ? details.Trim() : BuildFallbackCmfImpactDetails(title, component, impact, reproOnRvp, reproducibility, customerDetail, hsdContext),
+            Message = hasModelDetails ? "AI impact details generated." : BuildFallbackMessage(modelError)
+        };
+
+        SetCached(cacheKey, response, DateTime.UtcNow.AddMinutes(30));
+        return response;
+    }
+
     public static string GetDefaultRulesText()
     {
         return DefaultRulesText;
@@ -1252,6 +1294,31 @@ threshold_for_cmf_tag: 0.70";
         return prompt.ToString();
     }
 
+    private static string BuildCmfImpactDetailsPrompt(string cpId, string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string hsdContext)
+    {
+        StringBuilder prompt = new StringBuilder();
+        prompt.AppendLine("Give an AI perspective on the impact of this CMF pending issue. Focus only on what the impact means for validation, customer readiness, schedule, or release risk.");
+        prompt.AppendLine("Return 3-4 short bullet sentences. Do not make a CMF tag/no-tag recommendation. Do not invent facts. If impact data is weak, say what is missing.");
+        prompt.AppendLine();
+        prompt.AppendLine("Row data:");
+        prompt.AppendLine("CP ID: " + SafeDisplay(cpId));
+        prompt.AppendLine("Title: " + SafeDisplay(title));
+        prompt.AppendLine("Component: " + SafeDisplay(component));
+        prompt.AppendLine("CMF Request: " + SafeDisplay(cmfRequest));
+        prompt.AppendLine("Impact: " + SafeDisplay(impact));
+        prompt.AppendLine("Debug/Evidence Reference: " + SafeDisplay(idst));
+        prompt.AppendLine("RVP Repro: " + SafeDisplay(reproOnRvp));
+        prompt.AppendLine("Reproducibility: " + SafeDisplay(reproducibility));
+        prompt.AppendLine("Customer Detail: " + SafeDisplay(customerDetail));
+        if (!string.IsNullOrWhiteSpace(hsdContext))
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("HSD context:");
+            prompt.AppendLine(hsdContext);
+        }
+        return prompt.ToString();
+    }
+
     private static string BuildFallbackCmfDecisionDetails(string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string hsdContext)
     {
         string contextSignal = ExtractContextSignal(hsdContext, "Description", "Impact", "Customer Impact", "Sysdebug Forum", "Fix Description", "Closed Reason");
@@ -1272,6 +1339,17 @@ threshold_for_cmf_tag: 0.70";
         builder.AppendLine();
         builder.AppendLine("## Reviewer Attention");
         builder.Append("- Confirm customer blocking status, similar CMFs, and whether the supplied evidence justifies " + SafeDisplay(cmfRequest) + ".");
+        return builder.ToString();
+    }
+
+    private static string BuildFallbackCmfImpactDetails(string title, string component, string impact, string reproOnRvp, string reproducibility, string customerDetail, string hsdContext)
+    {
+        string contextSignal = ExtractContextSignal(hsdContext, "Customer Impact", "Impact", "Description", "Sysdebug Forum", "Fix Description");
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("- " + SafeDisplay(title) + " can affect " + SafeDisplay(component) + " readiness because the stated impact is: " + SafeDisplay(impact) + ".");
+        builder.AppendLine("- Customer scope is " + SafeDisplay(customerDetail) + ", so validate whether this blocks customer usage, launch criteria, or qualification sign-off.");
+        builder.AppendLine("- Repro signal is " + SafeDisplay(reproducibility) + " and RVP repro is " + SafeDisplay(reproOnRvp) + ", which determines how confidently the impact can be acted on.");
+        builder.Append("- " + (string.IsNullOrWhiteSpace(contextSignal) ? "Impact details are limited; add customer-visible symptom, affected flow, and workaround/recovery status." : "HSD signal: " + contextSignal + "."));
         return builder.ToString();
     }
 

@@ -36,6 +36,106 @@ public static class AiSummaryService
     private static readonly object CacheSync = new object();
     private static readonly Dictionary<string, AiSummaryCacheEntry> Cache = new Dictionary<string, AiSummaryCacheEntry>(StringComparer.Ordinal);
 
+    public static AiSummaryResponse GenerateDashboardExecutiveSummary(string platformLabel, string contextDetails)
+    {
+        platformLabel = SafeText(platformLabel);
+        contextDetails = SafeText(contextDetails);
+
+        string hash = ComputeHash("dashboard-executive-v1|" + GetAiProviderCacheSignature() + "|" + platformLabel + "|" + contextDetails);
+        string cacheKey = "dashboard-executive:" + hash;
+
+        AiSummaryResponse cached = TryGetCached(cacheKey);
+        if (cached != null)
+        {
+            return cached;
+        }
+
+        string prompt = "Create a brief executive summary for the current CMF platform workload. " +
+            "Use only the supplied metrics and tables, but write in normal business language with clear grammar and punctuation. " +
+            "Do not dump raw metrics or table names; mention only the few numbers needed to explain the situation. " +
+            "Keep it to 3-4 short sentences suitable for a manager demo. Do not invent customer names, dates, or counts.\n\n" +
+            "Platform: " + platformLabel + "\n\n" + contextDetails;
+
+        string modelSummary;
+        string modelError;
+        bool hasModelSummary = TryGenerateWithGitHubModel(
+            "dashboard",
+            DateTime.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+            "CMF Dashboard Executive Summary",
+            "Dashboard",
+            string.Empty,
+            contextDetails,
+            out modelSummary,
+            out modelError,
+            prompt,
+            "You are an executive CMF program analyst. Be specific, evidence-grounded, concise, and business-focused. Do not invent facts.");
+
+        AiSummaryResponse response = new AiSummaryResponse
+        {
+            Success = true,
+            IssueId = "dashboard",
+            Title = "CMF Dashboard Executive Summary",
+            SubmittedDate = DateTime.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+            Summary = hasModelSummary ? CleanupSummarySpacing(modelSummary, 180) : BuildFallbackDashboardExecutiveSummary(platformLabel, contextDetails),
+            Confidence = hasModelSummary ? 86 : 58,
+            UsedFallback = !hasModelSummary,
+            Message = hasModelSummary ? string.Empty : "AI provider output was unavailable; local dashboard summary was used."
+        };
+
+        SetCached(cacheKey, response, DateTime.UtcNow.AddMinutes(20));
+        return response;
+    }
+
+    public static AiSummaryResponse GenerateDashboardPredictedBlockers(string platformLabel, string contextDetails)
+    {
+        platformLabel = SafeText(platformLabel);
+        contextDetails = SafeText(contextDetails);
+
+        string hash = ComputeHash("dashboard-blockers-v1|" + GetAiProviderCacheSignature() + "|" + platformLabel + "|" + contextDetails);
+        string cacheKey = "dashboard-blockers:" + hash;
+
+        AiSummaryResponse cached = TryGetCached(cacheKey);
+        if (cached != null)
+        {
+            return cached;
+        }
+
+        string prompt = "Read the supplied current CMF workload and predict the most likely blockers the program may face next. " +
+            "Return exactly 1 to 3 short bullet lines. Each bullet must be one plain-English sentence under 120 characters. " +
+            "Do not repeat issue titles verbatim; infer the blocker from priority, impact, milestone, status, and issue wording. " +
+            "Do not invent customers, owners, dates, or counts.\n\n" +
+            "Platform: " + platformLabel + "\n\n" + contextDetails;
+
+        string modelSummary;
+        string modelError;
+        bool hasModelSummary = TryGenerateWithGitHubModel(
+            "dashboard-blockers",
+            DateTime.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+            "CMF Dashboard Predicted Blockers",
+            "Dashboard",
+            string.Empty,
+            contextDetails,
+            out modelSummary,
+            out modelError,
+            prompt,
+            "You are a CMF program risk analyst. Predict concise blockers only from supplied evidence. Be brief and practical.");
+
+        AiSummaryResponse response = new AiSummaryResponse
+        {
+            Success = true,
+            IssueId = "dashboard-blockers",
+            Title = "CMF Dashboard Predicted Blockers",
+            SubmittedDate = DateTime.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+            Summary = hasModelSummary ? CleanupSummarySpacing(modelSummary, 80) : BuildFallbackDashboardPredictedBlockers(contextDetails),
+            Confidence = hasModelSummary ? 84 : 54,
+            UsedFallback = !hasModelSummary,
+            Message = hasModelSummary ? string.Empty : "AI provider output was unavailable; local blocker forecast was used."
+        };
+
+        SetCached(cacheKey, response, DateTime.UtcNow.AddMinutes(20));
+        return response;
+    }
+
     public static AiSummaryResponse GenerateIssueSummary(AiSummaryRequest request)
     {
         if (request == null)
@@ -346,6 +446,36 @@ public static class AiSummaryService
 
             return entry.Value;
         }
+    }
+
+    private static string BuildFallbackDashboardExecutiveSummary(string platformLabel, string contextDetails)
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.Append("For ").Append(string.IsNullOrWhiteSpace(platformLabel) ? "the selected platform" : platformLabel).Append(", the dashboard shows the current CMF workload and risk posture from live portal data. ");
+        builder.Append("The issue buckets, CMF summary counts, readiness score, top risk, and pending CMF signals should be reviewed together to prioritize triage. ");
+        builder.Append("Focus first on the need-attention and stale buckets, then use the CMF pending and component summaries to identify where decisions can unblock validation. ");
+        builder.Append("AI provider output was unavailable, so this summary is generated from the dashboard metrics without adding unsupported assumptions.");
+        return builder.ToString();
+    }
+
+    private static string BuildFallbackDashboardPredictedBlockers(string contextDetails)
+    {
+        if (ContainsAnyToken(contextDetails, "blocker", "showstopper"))
+        {
+            return "High-priority issues may block validation until owners close the main debug path.";
+        }
+
+        if (ContainsAnyToken(contextDetails, "critical", "high"))
+        {
+            return "High-impact issues may delay customer validation if fixes do not land quickly.";
+        }
+
+        if (ContainsAnyToken(contextDetails, "open=") && !ContainsAnyToken(contextDetails, "open=0"))
+        {
+            return "Open issues may slow milestone readiness unless the largest cluster is resolved first.";
+        }
+
+        return "No major blocker pattern is visible from the current workload.";
     }
 
     private static void SetCached(string cacheKey, AiSummaryResponse value, DateTime expiresAtUtc)

@@ -2759,9 +2759,9 @@ body {
 
 .ccip-main-grid {
     display: grid;
-    grid-template-columns: minmax(560px, 1.55fr) minmax(320px, 0.9fr);
+    grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.9fr);
     gap: 12px;
-    align-items: start;
+    align-items: stretch;
 }
 
 .ccip-dashboard-overview {
@@ -2772,15 +2772,45 @@ body {
 }
 
 .ccip-dashboard-left {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     min-width: 0;
 }
 
+.ccip-dashboard-overview .ccip-dashboard-left {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.28fr);
+    gap: 12px;
+    align-items: stretch;
+}
+
+.ccip-dashboard-overview .dashboard-kpis-left {
+    grid-column: 1 / -1;
+}
+
+.ccip-dashboard-overview .ccip-trend-card-inline {
+    grid-column: 1 / -1;
+}
+
+.ccip-dashboard-right-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+.ccip-trend-card-inline {
+    min-height: 360px;
+}
+
 .dashboard-kpis-left {
-    grid-template-columns: repeat(5, minmax(128px, 1fr));
+    grid-template-columns: repeat(4, minmax(190px, 1fr));
 }
 
 .dashboard-kpis-left .ccip-kpi {
     min-height: 118px;
+    padding: 20px 22px;
 }
 
 .dashboard-kpis-left .ccip-kpi-value {
@@ -2793,6 +2823,9 @@ body {
     border-radius: 8px;
     box-shadow: 0 12px 28px rgba(16, 24, 40, 0.08);
     padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .ccip-ai-health-head {
@@ -2879,9 +2912,14 @@ body {
     font-weight: 700;
 }
 
+.ccip-ai-health-summary {
+    border-top: 1px solid #e4e7ec;
+    padding-top: 12px;
+}
+
 .ccip-summary-facts {
     display: grid;
-    grid-template-columns: repeat(7, minmax(112px, 1fr));
+    grid-template-columns: repeat(8, minmax(96px, 1fr));
     gap: 8px;
 }
 
@@ -2938,6 +2976,7 @@ body {
     color: #344054;
     font-size: 11px;
     font-weight: 800;
+    white-space: nowrap;
 }
 
 .ccip-summary-fact-value {
@@ -2953,10 +2992,15 @@ body {
     font-size: 10px;
     font-weight: 800;
     margin-top: 3px;
+    white-space: nowrap;
 }
 
 .ccip-dashboard-tables-grid {
-    grid-template-columns: minmax(560px, 1.55fr) minmax(320px, 0.85fr);
+    grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.9fr);
+}
+
+.ccip-dashboard-charts-grid {
+    grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.9fr);
 }
 
 .ccip-live-table-wrap {
@@ -3011,6 +3055,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-width: 0;
 }
 
 .ccip-card {
@@ -3019,6 +3064,7 @@ body {
     border-radius: 14px;
     box-shadow: 0 8px 20px rgba(16, 24, 40, 0.04);
     padding: 14px;
+    min-width: 0;
 }
 
 .ccip-card-head {
@@ -3363,7 +3409,11 @@ body {
 
 @media (max-width: 1500px) {
     .ccip-main-grid {
-        grid-template-columns: minmax(520px, 1.4fr) minmax(300px, 0.9fr);
+        grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.9fr);
+    }
+
+    .ccip-dashboard-overview {
+        grid-template-columns: 1fr;
     }
 
     .ccip-main-grid .ccip-col-right {
@@ -4986,6 +5036,12 @@ td:nth-child(odd), th:nth-child(odd) {
         border-color: #ddd0fe;
     }
 
+    .pending-impact-details-btn {
+        color: #9a3412;
+        background: #fff7ed;
+        border-color: #fed7aa;
+    }
+
     .pending-recommendation-btn:hover {
         background: #eaf3ff;
         border-color: #9ec5ee;
@@ -4994,6 +5050,11 @@ td:nth-child(odd), th:nth-child(odd) {
     .pending-decision-details-btn:hover {
         background: #efe7ff;
         border-color: #c4b5fd;
+    }
+
+    .pending-impact-details-btn:hover {
+        background: #ffedd5;
+        border-color: #fdba74;
     }
 
     .pending-ai-rec-cell {
@@ -8865,6 +8926,69 @@ td:nth-child(odd), th:nth-child(odd) {
             });
         }
 
+        function openCmfPendingImpactModal(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner) {
+            var cpIdNode = document.getElementById('cmfRecCpId');
+            var titleNode = document.getElementById('cmfRecTitle');
+            var componentNode = document.getElementById('cmfRecComponent');
+            var drawerBg = document.getElementById('cmfRecDrawerBg');
+            var drawer = document.getElementById('cmfRecDrawer');
+            var headingNode = document.getElementById('cmfRecHeading');
+            var recNode = document.getElementById('cmfRecRecommendation');
+            var evidenceNode = document.getElementById('cmfRecEvidence');
+            var qualityNode = document.getElementById('cmfRecQuality');
+            var actionsNode = document.getElementById('cmfRecActions');
+
+            if (!cpIdNode || !titleNode || !componentNode || !drawerBg || !drawer) {
+                console.error('CMF impact modal elements not found');
+                return;
+            }
+
+            setCmfDrawerMode('recommendation');
+            if (headingNode) headingNode.textContent = 'AI Impact Details';
+            cpIdNode.textContent = cpId || 'N/A';
+            titleNode.textContent = title || 'N/A';
+            componentNode.textContent = component || 'N/A';
+            if (recNode) recNode.textContent = 'Impact perspective';
+            if (qualityNode) qualityNode.textContent = 'Issue-specific impact assessment';
+            if (evidenceNode) evidenceNode.textContent = 'Generating AI impact details...';
+            if (actionsNode) actionsNode.classList.add('cmf-rec-hidden');
+
+            drawerBg.classList.add('show');
+            drawer.classList.add('show');
+
+            var payload = {
+                cpId: cpId || '',
+                title: title || '',
+                component: component || '',
+                cmfRequest: cmfRequest || '',
+                impact: impact || '',
+                idst: idst || '',
+                reproOnRvp: reproOnRvp || '',
+                reproducibility: reproducibility || '',
+                customerDetail: customerDetail || '',
+                customerOwner: customerOwner || '',
+                platform: getIssuePendingPlatformValue()
+            };
+
+            fetch('CMF_Web_portal.aspx/GetCmfPendingImpactDetails', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify(payload)
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                var result = data && data.d ? data.d : data;
+                if (!result || result.Success !== true) {
+                    if (evidenceNode) evidenceNode.textContent = (result && result.Message) ? result.Message : 'Unable to generate AI impact details.';
+                    return;
+                }
+                if (evidenceNode) evidenceNode.innerHTML = renderCmfRecommendationHighlights(result.Evidence || 'No AI impact details returned.');
+            })
+            .catch(function () {
+                if (evidenceNode) evidenceNode.textContent = 'Error while calling AI impact details service.';
+            });
+        }
+
         function setCmfDrawerMode(mode) {
             var isDetails = mode === 'details';
             var titleRow = document.getElementById('cmfRecTitleRow');
@@ -9541,6 +9665,7 @@ td:nth-child(odd), th:nth-child(odd) {
             }
 
             renderHomePortalHealth(snapshot);
+            renderHomePredictedBlockers(snapshot);
             renderHomeExecutiveSummary(snapshot);
             renderHomeSummaryFacts(snapshot);
             renderDashboardLiveTable('homeMilestoneSummaryTable', snapshot.MilestoneSummary);
@@ -9548,25 +9673,19 @@ td:nth-child(odd), th:nth-child(odd) {
             renderDashboardLiveTable('homePendingSummaryTable', snapshot.PendingSummary);
 
             var trendHost = document.getElementById('homeTrendChart');
-            var statusHost = document.getElementById('homeStatusChart');
-            var listHost = document.getElementById('homeTopComponentsList');
-            if (!trendHost || !statusHost || !listHost || typeof echarts === 'undefined') {
+            if (!trendHost || typeof echarts === 'undefined') {
                 return;
             }
 
             var trend = snapshot.Trend || [];
-            var topComponents = snapshot.TopComponents || [];
-            var statusDistribution = snapshot.StatusDistribution || [];
             var snapshotKey = [
                 window.CMF_PORTAL.currentPlatform || '',
                 trend.length,
-                topComponents.length,
-                statusDistribution.length,
                 getTextById(window.CMF_PORTAL.ids.lblIssueTotal),
                 getTextById(window.CMF_PORTAL.ids.lblPendingSightings)
             ].join('|');
 
-            if (window.CMF_PORTAL.lastHomeDashboardKey === snapshotKey && window.CMF_PORTAL.homeTrendChart && window.CMF_PORTAL.homeStatusChart) {
+            if (window.CMF_PORTAL.lastHomeDashboardKey === snapshotKey && window.CMF_PORTAL.homeTrendChart) {
                 return;
             }
 
@@ -9574,13 +9693,9 @@ td:nth-child(odd), th:nth-child(odd) {
                 window.CMF_PORTAL.homeTrendChart = echarts.init(trendHost);
             }
 
-            if (!window.CMF_PORTAL.homeStatusChart) {
-                window.CMF_PORTAL.homeStatusChart = echarts.init(statusHost);
-            }
-
             window.CMF_PORTAL.homeTrendChart.setOption({
                 animation: false,
-                color: ['#ef4444', '#16a34a', '#f59e0b'],
+                color: ['#ef4444', '#16a34a'],
                 tooltip: { trigger: 'axis' },
                 legend: {
                     top: 0,
@@ -9615,7 +9730,7 @@ td:nth-child(odd), th:nth-child(odd) {
                         symbolSize: 6
                     },
                     {
-                        name: 'Resolved',
+                        name: 'Closed',
                         type: 'line',
                         smooth: true,
                         data: trend.map(function (item) { return item.ResolvedIssues; }),
@@ -9623,113 +9738,185 @@ td:nth-child(odd), th:nth-child(odd) {
                         symbol: 'circle',
                         symbolSize: 6,
                         areaStyle: { color: 'rgba(22,163,74,0.12)' }
-                    },
-                    {
-                        name: 'Need Attention',
-                        type: 'line',
-                        smooth: true,
-                        data: trend.map(function (item) { return item.NeedsAttention; }),
-                        lineStyle: { width: 3 },
-                        symbol: 'circle',
-                        symbolSize: 6,
-                        areaStyle: { color: 'rgba(245,158,11,0.08)' }
                     }
                 ]
             }, true);
 
-            var productData = [];
-            var palette = ['#4f79ff', '#4caf64', '#f5a53a', '#8b5cf6', '#94a3b8', '#ef4444'];
-            var i;
-            for (i = 0; i < topComponents.length; i++) {
-                productData.push({
-                    name: topComponents[i].Name || 'Unassigned',
-                    value: topComponents[i].Value || 0,
-                    itemStyle: { color: palette[i % palette.length] }
-                });
-            }
-
-            if (productData.length === 0) {
-                for (i = 0; i < statusDistribution.length; i++) {
-                    productData.push({
-                        name: statusDistribution[i].Name || 'Status',
-                        value: statusDistribution[i].Value || 0,
-                        itemStyle: { color: palette[i % palette.length] }
-                    });
-                }
-            }
-
-            window.CMF_PORTAL.homeStatusChart.setOption({
-                animation: false,
-                tooltip: { trigger: 'item' },
-                legend: { show: false },
-                series: [{
-                    type: 'pie',
-                    radius: ['56%', '82%'],
-                    center: ['50%', '50%'],
-                    data: productData,
-                    label: { show: false },
-                    itemStyle: { borderColor: '#ffffff', borderWidth: 2 }
-                }]
-            }, true);
-
-            listHost.innerHTML = '';
-            var total = 0;
-            for (i = 0; i < productData.length; i++) {
-                total += Number(productData[i].value || 0);
-            }
-
-            for (i = 0; i < productData.length && i < 6; i++) {
-                var entry = productData[i];
-                var pct = total > 0 ? Math.round((Number(entry.value || 0) * 100) / total) : 0;
-                var listItem = document.createElement('li');
-                listItem.className = 'ccip-product-item';
-                listItem.innerHTML =
-                    '<span class="ccip-product-name"><span class="ccip-dot" style="background:' + escapeHtml(entry.itemStyle.color) + '"></span>' +
-                    escapeHtml(entry.name) + '</span>' +
-                    '<span class="ccip-product-value">' + escapeHtml(String(entry.value)) + ' (' + escapeHtml(String(pct)) + '%)</span>';
-                listHost.appendChild(listItem);
-            }
-
             window.CMF_PORTAL.lastHomeDashboardKey = snapshotKey;
             window.CMF_PORTAL.homeTrendChart.resize();
-            window.CMF_PORTAL.homeStatusChart.resize();
         }
 
         function renderHomeExecutiveSummary(snapshot) {
             var host = document.getElementById('homeExecutiveSummary');
             if (!host) return;
             var platform = snapshot.PlatformLabel || 'selected platform';
-            var active = Number(snapshot.ActiveIssues || 0);
-            var attention = Number(snapshot.NeedsAttention || 0);
-            var resolved = Number(snapshot.ResolvedThisWeek || 0);
-            var readiness = Number(snapshot.ProgramReadinessScore || 0);
-            var riskLevel = snapshot.ProgramRiskLevel || 'No risk data';
-            var topRisk = snapshot.TopRisk || 'no concentrated component risk';
-            var blockers = snapshot.PredictedBlockers || [];
-            var blockerText = blockers.length > 0 ? blockers.slice(0, 2).join(' and ') : 'no major blocker concentration';
-            host.innerHTML = '<strong>' + escapeHtml(platform) + '</strong> currently has <strong>' + escapeHtml(String(active)) + '</strong> active CMF issue signals, with <strong>' + escapeHtml(String(attention)) + '</strong> needing attention and <strong>' + escapeHtml(String(resolved)) + '</strong> resolved in the last 7 days. Program readiness is <strong>' + escapeHtml(String(readiness)) + '</strong> with <strong>' + escapeHtml(riskLevel) + '</strong>; the main risk area is <strong>' + escapeHtml(topRisk) + '</strong>, and the leading blocker signal is <strong>' + escapeHtml(blockerText) + '</strong>.';
+            var summaryKey = [
+                window.CMF_PORTAL.currentPlatform || '',
+                snapshot.ActiveIssues || 0,
+                snapshot.NeedsAttention || 0,
+                snapshot.ClosedIssues || 0,
+                snapshot.StaleIssues || 0,
+                snapshot.ProgramReadinessScore || 0,
+                snapshot.TopRisk || '',
+                (snapshot.PredictedBlockers || []).join('|')
+            ].join('|');
+
+            if (window.CMF_PORTAL.lastExecutiveSummaryKey === summaryKey) {
+                return;
+            }
+
+            window.CMF_PORTAL.lastExecutiveSummaryKey = summaryKey;
+            host.textContent = 'Generating AI executive summary...';
+
+            fetch('CMF_Web_portal.aspx/GetHomeExecutiveSummary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify({
+                    platformLabel: platform,
+                    snapshotContext: buildHomeExecutiveSummaryContext(snapshot)
+                })
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                var result = data && data.d ? data.d : data;
+                if (!result || result.Success !== true || !result.Summary) {
+                    host.textContent = (result && result.Message) ? result.Message : 'Unable to generate AI executive summary at this time.';
+                    return;
+                }
+                if (typeof renderMarkdown === 'function') {
+                    host.innerHTML = renderMarkdown(result.Summary);
+                } else {
+                    host.textContent = result.Summary;
+                }
+            })
+            .catch(function () {
+                host.textContent = 'Unable to generate AI executive summary at this time.';
+            });
+        }
+
+        function buildHomeExecutiveSummaryContext(snapshot) {
+            var lines = [];
+            lines.push('Platform: ' + (snapshot.PlatformLabel || 'selected platform'));
+            lines.push('Current workload only. Issue buckets: total=' + String(snapshot.ActiveIssues || 0) + ', open=' + String(snapshot.NeedsAttention || 0) + ', implemented=' + String(snapshot.StaleIssues || 0) + ', closed=' + String(snapshot.ClosedIssues || 0));
+            lines.push('Operational metrics: resolved_last_7_days=' + String(snapshot.ResolvedThisWeek || 0) + ', average_resolution_days=' + String(snapshot.AverageResolutionDays || 0) + ', customer_impacted_rows=' + String(snapshot.CustomersAffected || 0));
+            lines.push('AI portal health: readiness_score=' + String(snapshot.ProgramReadinessScore || 0) + ', risk_level=' + (snapshot.ProgramRiskLevel || 'unknown') + ', top_risk=' + (snapshot.TopRisk || 'none') + ', risk_concentration=' + (snapshot.RiskConcentration || '0%'));
+            lines.push('Predicted blockers: ' + ((snapshot.PredictedBlockers || []).join('; ') || 'none'));
+            lines.push('CMF summary facts: ' + summarizeFactsForAi(snapshot.SummaryFacts));
+            lines.push('CMF TPT facts: ' + summarizeFactsForAi(snapshot.TptFacts));
+            lines.push('Milestone CMF summary: ' + summarizeTableForAi(snapshot.MilestoneSummary, 5));
+            lines.push('Component CMF summary: ' + summarizeTableForAi(snapshot.ComponentSummary, 6));
+            lines.push('Pending CMF summary: ' + summarizeTableForAi(snapshot.PendingSummary, 4));
+            return lines.join('\n');
+        }
+
+        function summarizeFactsForAi(facts) {
+            facts = facts || [];
+            var parts = [];
+            for (var i = 0; i < facts.length; i++) {
+                parts.push((facts[i].Label || '-') + '=' + (facts[i].Value || '0') + (facts[i].Note ? ' (' + facts[i].Note + ')' : ''));
+            }
+            return parts.join(', ') || 'none';
+        }
+
+        function summarizeTableForAi(tableData, maxRows) {
+            if (!tableData || !tableData.Columns || !tableData.Rows) return 'none';
+            var rows = [];
+            for (var r = 0; r < tableData.Rows.length && r < maxRows; r++) {
+                var cells = [];
+                for (var c = 0; c < tableData.Columns.length; c++) {
+                    cells.push(tableData.Columns[c] + '=' + (tableData.Rows[r][c] == null ? '' : tableData.Rows[r][c]));
+                }
+                rows.push(cells.join(', '));
+            }
+            return rows.join(' | ') || 'none';
         }
 
         function renderHomePortalHealth(snapshot) {
             var scoreNode = document.getElementById('homePortalHealthScore');
             var riskNode = document.getElementById('homePortalHealthRisk');
-            var topRiskNode = document.getElementById('homePortalTopRisk');
+            var weeklyNode = document.getElementById('homeWeeklyChanges');
             var concentrationNode = document.getElementById('homePortalRiskConcentration');
             var blockersNode = document.getElementById('homePortalBlockers');
             if (scoreNode) scoreNode.textContent = String(snapshot.ProgramReadinessScore || 0);
             if (riskNode) riskNode.textContent = snapshot.ProgramRiskLevel || 'No risk data';
-            if (topRiskNode) topRiskNode.textContent = snapshot.TopRisk || 'No concentrated component risk';
+            if (weeklyNode) {
+                weeklyNode.innerHTML = '';
+                var weeklyChanges = snapshot.WeeklyChanges || [];
+                if (weeklyChanges.length === 0) weeklyChanges = ['No weekly changes are available yet.'];
+                for (var weeklyIndex = 0; weeklyIndex < weeklyChanges.length && weeklyIndex < 4; weeklyIndex++) {
+                    var changeItem = document.createElement('li');
+                    changeItem.textContent = weeklyChanges[weeklyIndex];
+                    weeklyNode.appendChild(changeItem);
+                }
+            }
             if (concentrationNode) concentrationNode.textContent = snapshot.RiskConcentration || '0%';
             if (blockersNode) {
                 blockersNode.innerHTML = '';
                 var blockers = snapshot.PredictedBlockers || [];
-                if (blockers.length === 0) blockers = ['No blocker concentration detected'];
+                if (blockers.length === 0) blockers = ['Predicting blockers from current workload...'];
                 for (var i = 0; i < blockers.length && i < 4; i++) {
                     var item = document.createElement('li');
                     item.textContent = blockers[i];
                     blockersNode.appendChild(item);
                 }
             }
+        }
+
+        function renderHomePredictedBlockers(snapshot) {
+            var blockersNode = document.getElementById('homePortalBlockers');
+            if (!blockersNode) return;
+
+            var blockerKey = [
+                window.CMF_PORTAL.currentPlatform || '',
+                snapshot.ActiveIssues || 0,
+                snapshot.NeedsAttention || 0,
+                snapshot.StaleIssues || 0,
+                snapshot.ClosedIssues || 0,
+                snapshot.TopRisk || '',
+                snapshot.RiskConcentration || '',
+                (snapshot.PredictedBlockers || []).join('|')
+            ].join('|');
+
+            if (window.CMF_PORTAL.lastPredictedBlockersKey === blockerKey) {
+                return;
+            }
+
+            window.CMF_PORTAL.lastPredictedBlockersKey = blockerKey;
+
+            fetch('CMF_Web_portal.aspx/GetHomePredictedBlockers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify({
+                    platformLabel: snapshot.PlatformLabel || 'selected platform',
+                    snapshotContext: buildHomeExecutiveSummaryContext(snapshot)
+                })
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                var result = data && data.d ? data.d : data;
+                if (!result || result.Success !== true || !result.Summary) {
+                    return;
+                }
+
+                var lines = result.Summary
+                    .replace(/<[^>]+>/g, '')
+                    .split(/\r?\n|\s*[-•]\s+/)
+                    .map(function (line) { return line.replace(/^\d+[\.)]\s*/, '').trim(); })
+                    .filter(function (line) { return line.length > 0; })
+                    .slice(0, 3);
+
+                if (lines.length === 0) {
+                    lines = [result.Summary.trim()];
+                }
+
+                blockersNode.innerHTML = '';
+                for (var i = 0; i < lines.length; i++) {
+                    var item = document.createElement('li');
+                    item.textContent = lines[i];
+                    blockersNode.appendChild(item);
+                }
+            })
+            .catch(function () { });
         }
 
         function renderHomeSummaryFacts(snapshot) {
@@ -10326,7 +10513,7 @@ Submit
                         </div>
                         <div id="mainMenuSectionBody" class="collapsible-body">
                             <asp:LinkButton ID="lnkNavHome" runat="server" CssClass="portal-nav-link" OnClick="btnShowHomeDashboard_Click"><i class="fas fa-chart-pie" aria-hidden="true"></i><span>Dashboard</span></asp:LinkButton>
-                            <asp:LinkButton ID="lnkNavCmfSummary" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView3_Click"><i class="fas fa-table-list" aria-hidden="true"></i><span>CMF Summary</span></asp:LinkButton>
+                            <asp:LinkButton ID="lnkNavCmfSummary" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView3_Click" Visible="false"><i class="fas fa-table-list" aria-hidden="true"></i><span>CMF Summary</span></asp:LinkButton>
                             <asp:LinkButton ID="lnkNavIssueList" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView1_Click"><i class="fas fa-fire" aria-hidden="true"></i><span>Issue List</span></asp:LinkButton>
                             <asp:LinkButton ID="lnkNavPendingList" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView4_Click"><i class="fas fa-clipboard-check" aria-hidden="true"></i><span>CMF Pending</span></asp:LinkButton>
                             <asp:LinkButton ID="lnkNavReports" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView8_Click"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Reports &amp; Analytics</span></asp:LinkButton>
@@ -10347,7 +10534,7 @@ Submit
                                         <p class="ccip-dash-sub">Here is what is happening with your critical issues today on <%: HomeDashboardPlatformLabel %> in <asp:Label ID="lblWelcomeMode" runat="server" /> mode.</p>
                                     </div>
                                     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                                        <div class="ccip-dash-updated">Updated <asp:Label ID="lblHomeDashboardGeneratedAt" runat="server" /></div>
+                                        <div class="ccip-dash-updated">Updated  <asp:Label ID="lblHomeDashboardGeneratedAt" runat="server" /></div>
                                         <asp:HyperLink ID="lnkPlatformDashboardHome" runat="server" Target="_blank" CssClass="ccip-link-btn" Visible="false">Open platform dashboard</asp:HyperLink>
                                     </div>
                                 </div>
@@ -10373,51 +10560,32 @@ Submit
                                     <div class="ccip-dashboard-left">
                                         <div class="ccip-kpi-row dashboard-kpis-left">
                                             <div class="ccip-kpi kpi-red">
-                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Open Critical Issues</div><div class="ccip-kpi-icon"><i class="fas fa-circle-exclamation" aria-hidden="true"></i></div></div>
+                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Total Issues</div><div class="ccip-kpi-icon"><i class="fas fa-list-check" aria-hidden="true"></i></div></div>
                                                 <div class="ccip-kpi-value"><asp:Label ID="lblHomeActiveIssuesValue" runat="server" /></div>
-                                                <div class="ccip-kpi-note">Platform-specific open high-priority CMFs</div>
+                                                <div class="ccip-kpi-note">Current platform workload</div>
                                             </div>
                                             <div class="ccip-kpi kpi-orange">
-                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Need Attention</div><div class="ccip-kpi-icon"><i class="fas fa-bell" aria-hidden="true"></i></div></div>
+                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Open Issues</div><div class="ccip-kpi-icon"><i class="fas fa-spinner" aria-hidden="true"></i></div></div>
                                                 <div class="ccip-kpi-value"><asp:Label ID="lblHomeNeedsAttentionValue" runat="server" /></div>
-                                                <div class="ccip-kpi-note">Critical or high customer impact</div>
+                                                <div class="ccip-kpi-note">Open status</div>
                                             </div>
                                             <div class="ccip-kpi kpi-green">
-                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Resolved This Week</div><div class="ccip-kpi-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></div></div>
+                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Closed Issues</div><div class="ccip-kpi-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></div></div>
                                                 <div class="ccip-kpi-value"><asp:Label ID="lblHomeResolvedThisWeekValue" runat="server" /></div>
-                                                <div class="ccip-kpi-note">Implemented in last 7 days</div>
+                                                <div class="ccip-kpi-note">Complete or rejected</div>
                                             </div>
                                             <div class="ccip-kpi kpi-blue">
-                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Avg. Resolution Time</div><div class="ccip-kpi-icon"><i class="fas fa-clock" aria-hidden="true"></i></div></div>
+                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Implemented Issues</div><div class="ccip-kpi-icon"><i class="fas fa-clock" aria-hidden="true"></i></div></div>
                                                 <div class="ccip-kpi-value"><asp:Label ID="lblHomeResolutionDaysValue" runat="server" /></div>
-                                                <div class="ccip-kpi-note">Days from CMF decision to implementation</div>
+                                                <div class="ccip-kpi-note">Implemented or verified</div>
                                             </div>
-                                            <div class="ccip-kpi kpi-purple">
+                                            <div class="ccip-kpi kpi-purple" style="display:none;">
                                                 <div class="ccip-kpi-head"><div class="ccip-kpi-title">Customers Affected</div><div class="ccip-kpi-icon"><i class="fas fa-users" aria-hidden="true"></i></div></div>
                                                 <div class="ccip-kpi-value"><asp:Label ID="lblHomeCustomersAffectedValue" runat="server" /></div>
                                                 <div class="ccip-kpi-note">Medium-to-critical active rows</div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <aside class="ccip-ai-health-card">
-                                        <div class="ccip-ai-health-head"><span><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> AI Portal Health</span><span class="ccip-ai-beta">Beta</span></div>
-                                        <div class="ccip-ai-health-grid">
-                                            <div class="ccip-health-score"><div id="homePortalHealthScore" class="ccip-health-score-value">--</div><div class="ccip-health-score-label">Program Readiness</div><div id="homePortalHealthRisk" class="ccip-health-risk">--</div></div>
-                                            <div><div class="ccip-health-label">Top Risk</div><div id="homePortalTopRisk" class="ccip-health-value">-</div></div>
-                                            <div><div class="ccip-health-label">Risks Concentrated In</div><div id="homePortalRiskConcentration" class="ccip-health-value large">-</div></div>
-                                            <div><div class="ccip-health-label">Predicted Blockers</div><ul id="homePortalBlockers" class="ccip-health-list"></ul></div>
-                                        </div>
-                                    </aside>
-                                </div>
-
-                                <section class="ccip-cmf-summary-section" aria-label="CMF Summary">
-                                    <h3 class="ccip-cmf-summary-title"><i class="fas fa-file-lines" aria-hidden="true"></i> AI Executive Summary</h3>
-                                    <div id="homeExecutiveSummary" class="ccip-executive-summary-body">Building executive summary...</div>
-                                </section>
-
-                                <div class="ccip-main-grid">
-                                    <div class="ccip-col ccip-col-center">
-                                        <section class="ccip-card">
+                                        <section class="ccip-card ccip-trend-card-inline">
                                             <div class="ccip-card-head">
                                                 <h3 class="ccip-card-mini-title"><i class="fas fa-chart-line" aria-hidden="true" style="color:#3b82f6; margin-right:6px;"></i>Issue Trend by Work Week</h3>
                                             </div>
@@ -10425,23 +10593,59 @@ Submit
                                         </section>
 
                                     </div>
+                                    <div class="ccip-dashboard-right-stack">
+                                        <aside class="ccip-ai-health-card">
+                                            <div class="ccip-ai-health-head"><span><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> AI Program Health</span><span class="ccip-ai-beta">Beta</span></div>
+                                            <div class="ccip-ai-health-grid">
+                                                <div class="ccip-health-score"><div id="homePortalHealthScore" class="ccip-health-score-value">--</div><div class="ccip-health-score-label">Program Readiness</div><div id="homePortalHealthRisk" class="ccip-health-risk">--</div></div>
+                                                <div><div class="ccip-health-label">What Changed This Week?</div><ul id="homeWeeklyChanges" class="ccip-health-list"></ul></div>
+                                                <div><div class="ccip-health-label">Risks Concentrated In</div><div id="homePortalRiskConcentration" class="ccip-health-value large">-</div></div>
+                                                <div><div class="ccip-health-label">Predicted Blockers</div><ul id="homePortalBlockers" class="ccip-health-list"></ul></div>
+                                            </div>
+                                            <div class="ccip-ai-health-summary">
+                                                <h3 class="ccip-cmf-summary-title"><i class="fas fa-file-lines" aria-hidden="true"></i> AI Executive Summary</h3>
+                                                <div id="homeExecutiveSummary" class="ccip-executive-summary-body">Building executive summary...</div>
+                                            </div>
+                                        </aside>
+
+                                    </div>
+                                </div>
+
+                                <section class="ccip-cmf-summary-section" aria-label="CMF Summary KPI Cards">
+                                    <h3 class="ccip-cmf-summary-title"><i class="fas fa-table-list" aria-hidden="true"></i> CMF Summary</h3>
+                                    <div class="ccip-summary-facts" id="homeDashboardSummaryFacts"></div>
+                                </section>
+
+                                <div class="ccip-main-grid ccip-dashboard-tables-grid">
+                                    <div class="ccip-col ccip-col-center">
+                                        <section class="ccip-card">
+                                            <div class="ccip-card-head">
+                                                <h3 class="ccip-card-mini-title"><i class="fas fa-table" aria-hidden="true" style="color:#1d4ed8; margin-right:6px;"></i>Milestone CMF Summary</h3>
+                                            </div>
+                                            <div id="homeMilestoneSummaryTable" class="ccip-live-table-wrap"></div>
+                                        </section>
+
+                                        <section class="ccip-card">
+                                            <div class="ccip-card-head">
+                                                <h3 class="ccip-card-mini-title"><i class="fas fa-layer-group" aria-hidden="true" style="color:#f97316; margin-right:6px;"></i>Component CMF Summary</h3>
+                                            </div>
+                                            <div id="homeComponentSummaryTable" class="ccip-live-table-wrap"></div>
+                                        </section>
+                                    </div>
 
                                     <div class="ccip-col ccip-col-right">
                                         <section class="ccip-card">
                                             <div class="ccip-card-head">
-                                                <h3 class="ccip-card-mini-title"><i class="fas fa-chart-pie" aria-hidden="true" style="color:#3b82f6; margin-right:6px;"></i>Issues by Product</h3>
+                                                <h3 class="ccip-card-mini-title"><i class="fas fa-clipboard-list" aria-hidden="true" style="color:#0f766e; margin-right:6px;"></i>CMF Pending Count</h3>
                                             </div>
-                                            <div class="ccip-product-wrap">
-                                                <div id="homeStatusChart" class="ccip-product-chart"></div>
-                                                <ul id="homeTopComponentsList" class="ccip-product-list"></ul>
-                                            </div>
+                                            <div id="homePendingSummaryTable" class="ccip-live-table-wrap"></div>
                                         </section>
 
                                         <section class="ccip-card">
                                             <div class="ccip-card-head"><h3 class="ccip-card-mini-title"><i class="fas fa-bolt" aria-hidden="true" style="color:#f59e0b; margin-right:6px;"></i>Quick Actions</h3></div>
                                             <div class="ccip-quick-grid">
                                                 <button type="button" class="ccip-quick-btn" onclick="focusFirstRowAiSummary(); return false;">AI Debug Summary</button>
-                                                <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Analyze debug logs and stale issue signals across all CMF data'); return false;">Analyze Logs</button>
+                                                <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Analyze debug logs and current issue risk signals across all CMF data'); return false;">Analyze Logs</button>
                                                 <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Generate RCA-style report for current CMF issues'); return false;">Generate RCA</button>
                                                 <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Draft a customer update for active high-risk CMF issues'); return false;">Customer Update</button>
                                                 <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Find similar issue clusters by component, customer, and debug signal'); return false;">Search Similar Cases</button>
@@ -10450,6 +10654,7 @@ Submit
                                         </section>
                                     </div>
                                 </div>
+
                             </div>
                         </asp:Panel>
 
@@ -10576,7 +10781,7 @@ Submit
                                 <div id="reportsChatLog" class="reports-chat-log">
                                     <div style="display:flex; justify-content:flex-start; margin-bottom:10px;">
                                         <div class="reports-chat-example">
-                                            Ask me things like:\n- "Show status distribution chart"\n- "Give stale issues trend"\n- "Generate issue report csv"
+                                            Ask me things like:\n- "Show status distribution chart"\n- "Give open versus closed trend"\n- "Generate issue report csv"
                                         </div>
                                     </div>
                                 </div>
@@ -10596,7 +10801,7 @@ Submit
 2. New CMF-tagged sightings (table: id, issue, replication rate, impact)
 3. Pending sightings likely to qualify next
 4. Closed this week (root cause + fixed SW version)
-5. Top risks / stale issues
+5. Weekly changes / current workload
 6. Chart: CMF tag rate trend</textarea>
                                 <input type="file" id="reportsFormatFile" accept=".txt,.md,.csv,.json,.html" style="display:none" onchange="uploadReportsFormat(event)" />
                                 <div class="reports-format-actions">
@@ -10858,19 +11063,19 @@ Submit
                                 <div class="issue-kpi-sub"><i class="fas fa-arrow-up" aria-hidden="true"></i> current platform workload</div>
                             </div>
                             <div class="issue-kpi">
-                                <div class="issue-kpi-label">In Progress</div>
+                                <div class="issue-kpi-label">Open Issues</div>
                                 <div class="issue-kpi-value" style="color:#0068b5;"><asp:Label ID="lblIssueInProgress" runat="server" Text="0" /></div>
-                                <div class="issue-kpi-sub"><i class="fas fa-arrow-up" aria-hidden="true"></i> open or implemented</div>
+                                <div class="issue-kpi-sub"><i class="fas fa-arrow-up" aria-hidden="true"></i> open status</div>
                             </div>
                             <div class="issue-kpi">
-                                <div class="issue-kpi-label">Closed</div>
+                                <div class="issue-kpi-label">Closed Issues</div>
                                 <div class="issue-kpi-value" style="color:#107c10;"><asp:Label ID="lblIssueClosed" runat="server" Text="0" /></div>
                                 <div class="issue-kpi-sub"><i class="fas fa-arrow-up" aria-hidden="true"></i> complete or rejected</div>
                             </div>
                             <div class="issue-kpi">
-                                <div class="issue-kpi-label">Stale</div>
+                                <div class="issue-kpi-label">Implemented Issues</div>
                                 <div class="issue-kpi-value" style="color:#bc2f32;"><asp:Label ID="lblIssueStale" runat="server" Text="0" /></div>
-                                <div class="issue-kpi-sub"><i class="fas fa-clock" aria-hidden="true"></i> issues needing attention</div>
+                                <div class="issue-kpi-sub"><i class="fas fa-clock" aria-hidden="true"></i> implemented or verified</div>
                             </div>
                         </div>
                     </asp:Panel>
@@ -11303,7 +11508,7 @@ Submit
                             <ul class="interactive-chip-list">
                                 <li><span>Total visible issues</span><span class="interactive-chip" id="issueSideTotal">0</span></li>
                                 <li><span>In progress signals</span><span class="interactive-chip" id="issueSideProgress">0</span></li>
-                                <li><span>Stale over SLA</span><span class="interactive-chip" id="issueSideStale">0</span></li>
+                                <li><span>Implemented issues</span><span class="interactive-chip" id="issueSideStale">0</span></li>
                             </ul>
                         </section>
 
@@ -11358,7 +11563,7 @@ Submit
                                         </asp:TemplateField>
 
                                         <asp:TemplateField HeaderText="Impact" ItemStyle-Width="210px" HeaderStyle-Width="210px">
-                                            <ItemTemplate><%# RenderPendingAskImpact(Eval("date_cmf_ask"), Eval("cmf_request"), Eval("impact")) %></ItemTemplate>
+                                            <ItemTemplate><%# RenderPendingAskImpact(Eval("cp_id"), Eval("title"), Eval("component"), Eval("date_cmf_ask"), Eval("cmf_request"), Eval("impact"), Eval("idst"), Eval("repro_on_rvp"), Eval("reproducibility"), Eval("customer_detail"), Eval("customer_owner")) %></ItemTemplate>
                                         </asp:TemplateField>
 
                                         <asp:TemplateField HeaderText="AI Recommendation" ItemStyle-Width="150px" HeaderStyle-Width="150px">
