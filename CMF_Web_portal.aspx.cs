@@ -5090,6 +5090,61 @@ LEFT JOIN " + designTable + @" AS d
         }
     }
 
+    [WebMethod(EnableSession = true)]
+    public static AiSummaryResponse AskIssueAiFollowUp(
+        string issueId,
+        string title,
+        string submittedDate,
+        string status,
+        string sysdebug,
+        string platform,
+        string question)
+    {
+        try
+        {
+            string resolvedPlatform = platform;
+            if (string.IsNullOrWhiteSpace(resolvedPlatform) && HttpContext.Current != null && HttpContext.Current.Session != null)
+            {
+                resolvedPlatform = HttpContext.Current.Session[IssuePendingPlatformSessionKey] as string;
+                if (string.IsNullOrWhiteSpace(resolvedPlatform))
+                {
+                    resolvedPlatform = HttpContext.Current.Session["selectedPlatform"] as string;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(resolvedPlatform) && !AllowedPlatformTables.Contains(resolvedPlatform))
+            {
+                return new AiSummaryResponse
+                {
+                    Success = false,
+                    Message = "Invalid platform input for follow-up generation."
+                };
+            }
+
+            string issueContext = BuildIssueSummaryContext(resolvedPlatform, issueId);
+
+            AiSummaryRequest request = new AiSummaryRequest
+            {
+                IssueId = issueId,
+                Title = title,
+                SubmittedDate = submittedDate,
+                Status = status,
+                Sysdebug = sysdebug,
+                ContextDetails = issueContext
+            };
+
+            return AiSummaryService.GenerateFollowUpResponse(request, question ?? string.Empty);
+        }
+        catch (Exception ex)
+        {
+            return new AiSummaryResponse
+            {
+                Success = false,
+                Message = "Follow-up generation failed: " + ex.Message
+            };
+        }
+    }
+
     private static string BuildIssueSummaryContext(string platformTable, string issueId)
     {
         if (string.IsNullOrWhiteSpace(issueId))

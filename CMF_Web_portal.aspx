@@ -2269,6 +2269,29 @@
     transform: translateX(0);
 }
 
+.ai-summary-chat {
+    border-top: 1px solid rgba(205,217,229,0.8);
+    margin-top: 12px;
+    padding-top: 12px;
+}
+.ai-chat-messages {
+    /* make the chat area take most of the drawer height to feel like a chatbot */
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.ai-chat-message { display:block; }
+.ai-chat-message.ai-chat-assistant .ai-chat-message-body { background:#f1f5f9; color:#0b1720; padding:10px 12px; border-radius:10px; max-width:100%; }
+.ai-chat-message.ai-chat-user { align-self:flex-end; }
+.ai-chat-message.ai-chat-user .ai-chat-message-body { background:#2b6cb0; color:#fff; padding:10px 12px; border-radius:10px; max-width:100%; }
+.ai-chat-input { display:flex; gap:8px; align-items:center; }
+.ai-chat-input-box { flex:1; min-height:40px; max-height:120px; padding:8px 10px; border-radius:8px; border:1px solid #cfd8e3; resize:vertical; }
+.ai-chat-send { background:#2563eb; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
+
 .ai-summary-drawer-close {
     position: absolute;
     top: 14px;
@@ -8594,6 +8617,15 @@ td:nth-child(odd), th:nth-child(odd) {
             window._aiSummaryLastPayload = payload;
             window._aiSummaryLastText = '';
 
+            // Ensure any previous chat UI is hidden/cleared immediately so chats don't leak
+            try {
+                var chatEl = document.getElementById('aiSummaryChat');
+                var chatMsgs = document.getElementById('aiSummaryChatMessages');
+                if (chatEl) chatEl.style.display = 'none';
+                if (chatMsgs) chatMsgs.innerHTML = '';
+                window._aiCurrentIssueId = null;
+            } catch (e) {}
+
             fetchAiSummary(payload, bodyNode, actionsNode);
         }
 
@@ -8630,18 +8662,54 @@ td:nth-child(odd), th:nth-child(odd) {
                     statusBadgeNode.className = 'ai-summary-status-value ' + getAiStatusClass(summaryStatus);
                 }
                 updateIssueListConfidenceBadge(payload.issueId, preparedSummary.confidence);
+                // Build the assistant message that represents the summary (chat-first layout)
+                var assistantSummary = '';
                 if (payload.mode === 'details') {
-                    bodyNode.innerHTML = renderMarkdown(prepareIssueDetailsForDrawer(summary));
-                    bodyNode.className = 'ai-summary-body markdown-content issue-details-brief';
+                    assistantSummary = prepareIssueDetailsForDrawer(summary);
                 } else if (preparedSummary.hasDecisionSections) {
-                    bodyNode.innerHTML = renderMarkdown(preparedSummary.body);
-                    bodyNode.className = 'ai-summary-body markdown-content';
+                    assistantSummary = preparedSummary.body;
                 } else {
-                    bodyNode.innerHTML = '<div class="ai-summary-section-title">Summary</div>' + renderMarkdown(preparedSummary.body) + '<div class="ai-summary-section-title">Follow up</div>' + renderMarkdown(preparedSummary.followUp || '- No further action identified from available details.');
-                    bodyNode.className = 'ai-summary-body markdown-content';
+                    assistantSummary = 'Summary\n\n' + preparedSummary.body + '\n\nFollow up\n' + (preparedSummary.followUp || '- No further action identified from available details.');
                 }
-                window._aiSummaryLastText = payload.mode === 'details' ? summary : (preparedSummary.hasDecisionSections ? preparedSummary.body : preparedSummary.body + '\n\nFollow up\n' + (preparedSummary.followUp || ''));
+
+                window._aiSummaryLastText = payload.mode === 'details' ? summary : assistantSummary;
                 if (actionsNode) actionsNode.style.display = '';
+
+                // Chat-first UI: hide the standalone body and render the summary as the first assistant message
+                if (!window._aiChatStore) window._aiChatStore = {}; // issueId => [{role,text}, ...]
+                window._aiCurrentIssueId = payload.issueId || '';
+
+                var chat = document.getElementById('aiSummaryChat');
+                var messages = document.getElementById('aiSummaryChatMessages');
+                if (chat && messages) {
+                    chat.style.display = '';
+                    // Hide the separate body node so the drawer looks like a chat window
+                    if (bodyNode) bodyNode.style.display = 'none';
+
+                    // If we have stored conversation for this issue, render it; otherwise seed with summary
+                    var hist = window._aiChatStore[window._aiCurrentIssueId];
+                    messages.innerHTML = '';
+                    if (hist && hist.length) {
+                        for (var i = 0; i < hist.length; i++) {
+                            var m = hist[i];
+                            appendAiChatMessage(m.role, m.text, /*store*/ false);
+                        }
+                    } else {
+                        // seed with assistant summary message
+                        window._aiChatStore[window._aiCurrentIssueId] = [{ role: 'assistant', text: assistantSummary }];
+                        appendAiChatMessage('assistant', assistantSummary, /*store*/ false);
+                    }
+
+                    var inputBox = document.getElementById('aiSummaryChatInput');
+                    if (inputBox) {
+                        inputBox.onkeydown = function (evt) {
+                            if ((evt.key === 'Enter' || evt.keyCode === 13) && !evt.shiftKey) {
+                                evt.preventDefault();
+                                sendAiFollowUp();
+                            }
+                        };
+                    }
+                }
             })
             .catch(function () {
                 bodyNode.textContent = 'Error while calling summary service.';
@@ -8725,6 +8793,72 @@ td:nth-child(odd), th:nth-child(odd) {
             fetchAiSummary(window._aiSummaryLastPayload, bodyNode, actionsNode);
         }
 
+        function appendAiChatMessage(role, text, storeMessage) {
+            if (typeof storeMessage === 'undefined') storeMessage = true;
+            var container = document.getElementById('aiSummaryChatMessages');
+            if (!container) return;
+            var msg = document.createElement('div');
+            msg.className = 'ai-chat-message ai-chat-' + (role === 'user' ? 'user' : 'assistant');
+            var inner = document.createElement('div');
+            inner.className = 'ai-chat-message-body';
+            inner.innerHTML = renderMarkdown(escapeHtml(text).replace(/\n/g, '\n'));
+            msg.appendChild(inner);
+            container.appendChild(msg);
+            container.scrollTop = container.scrollHeight;
+
+            // store in per-issue conversation if requested
+            try {
+                var id = window._aiCurrentIssueId || '';
+                if (storeMessage && id) {
+                    if (!window._aiChatStore) window._aiChatStore = {};
+                    if (!window._aiChatStore[id]) window._aiChatStore[id] = [];
+                    window._aiChatStore[id].push({ role: role, text: text });
+                }
+            } catch (e) {
+                // ignore storage errors
+            }
+        }
+
+        function sendAiFollowUp() {
+            var input = document.getElementById('aiSummaryChatInput');
+            if (!input) return;
+            var question = input.value || '';
+            if (!question.trim()) return;
+
+            // show user's question and store it
+            appendAiChatMessage('user', question.trim(), true);
+            input.value = '';
+            input.disabled = true;
+            var sendBtn = document.getElementById('aiSummaryChatSend');
+            if (sendBtn) sendBtn.disabled = true;
+
+            // build payload from last payload
+            var payload = window._aiSummaryLastPayload || {};
+            payload.question = question.trim();
+
+            fetch('CMF_Web_portal.aspx/AskIssueAiFollowUp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify(payload)
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                var result = data && data.d ? data.d : data;
+                if (!result || result.Success !== true) {
+                    appendAiChatMessage('assistant', (result && result.Message) ? result.Message : 'Unable to answer follow-up at this time.', true);
+                } else {
+                    appendAiChatMessage('assistant', result.Summary || 'No answer returned.', true);
+                }
+            })
+            .catch(function () {
+                appendAiChatMessage('assistant', 'Error while calling follow-up service.');
+            })
+            .finally(function () {
+                if (input) input.disabled = false;
+                if (sendBtn) sendBtn.disabled = false;
+            });
+        }
+
         function showPortalToast(msg) {
             var t = document.getElementById('aiSummaryToast');
             if (!t) {
@@ -8748,6 +8882,22 @@ td:nth-child(odd), th:nth-child(odd) {
 
             drawerBg.classList.remove('show');
             drawer.classList.remove('show');
+
+            // Reset chat/body UI and current issue context so conversations don't leak between issues
+            try {
+                window._aiCurrentIssueId = null;
+                var chat = document.getElementById('aiSummaryChat');
+                var messages = document.getElementById('aiSummaryChatMessages');
+                var bodyNode = document.getElementById('aiSummaryBody');
+                if (chat) chat.style.display = 'none';
+                if (messages) messages.innerHTML = '';
+                if (bodyNode) {
+                    bodyNode.style.display = '';
+                    bodyNode.textContent = '';
+                }
+            } catch (e) {
+                // ignore
+            }
         }
 
         document.addEventListener('keydown', function (event) {
@@ -10560,22 +10710,22 @@ Submit
                                     <div class="ccip-dashboard-left">
                                         <div class="ccip-kpi-row dashboard-kpis-left">
                                             <div class="ccip-kpi kpi-red">
-                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Total Issues</div><div class="ccip-kpi-icon"><i class="fas fa-list-check" aria-hidden="true"></i></div></div>
+                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Total CMF Issues</div><div class="ccip-kpi-icon"><i class="fas fa-list-check" aria-hidden="true"></i></div></div>
                                                 <div class="ccip-kpi-value"><asp:Label ID="lblHomeActiveIssuesValue" runat="server" /></div>
                                                 <div class="ccip-kpi-note">Current platform workload</div>
                                             </div>
                                             <div class="ccip-kpi kpi-orange">
-                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Open Issues</div><div class="ccip-kpi-icon"><i class="fas fa-spinner" aria-hidden="true"></i></div></div>
+                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Open CMF Issues</div><div class="ccip-kpi-icon"><i class="fas fa-spinner" aria-hidden="true"></i></div></div>
                                                 <div class="ccip-kpi-value"><asp:Label ID="lblHomeNeedsAttentionValue" runat="server" /></div>
                                                 <div class="ccip-kpi-note">Open status</div>
                                             </div>
                                             <div class="ccip-kpi kpi-green">
-                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Closed Issues</div><div class="ccip-kpi-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></div></div>
+                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Closed CMF Issues</div><div class="ccip-kpi-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></div></div>
                                                 <div class="ccip-kpi-value"><asp:Label ID="lblHomeResolvedThisWeekValue" runat="server" /></div>
                                                 <div class="ccip-kpi-note">Complete or rejected</div>
                                             </div>
                                             <div class="ccip-kpi kpi-blue">
-                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Implemented Issues</div><div class="ccip-kpi-icon"><i class="fas fa-clock" aria-hidden="true"></i></div></div>
+                                                <div class="ccip-kpi-head"><div class="ccip-kpi-title">Implemented CMF Issues</div><div class="ccip-kpi-icon"><i class="fas fa-clock" aria-hidden="true"></i></div></div>
                                                 <div class="ccip-kpi-value"><asp:Label ID="lblHomeResolutionDaysValue" runat="server" /></div>
                                                 <div class="ccip-kpi-note">Implemented or verified</div>
                                             </div>
@@ -10914,6 +11064,13 @@ Submit
                         <button type="button" class="ai-action-btn ai-action-regen" onclick="regenerateAiSummary()" title="Regenerate summary from AI">
                             &#x21BA; Regenerate
                         </button>
+                    </div>
+                    <div id="aiSummaryChat" class="ai-summary-chat" style="display:none">
+                        <div id="aiSummaryChatMessages" class="ai-chat-messages" aria-live="polite"></div>
+                        <div class="ai-chat-input">
+                            <textarea id="aiSummaryChatInput" class="ai-chat-input-box" placeholder="Ask about this defect... (Enter to send, Shift+Enter for newline)"></textarea>
+                            <button type="button" id="aiSummaryChatSend" class="ai-chat-send" onclick="sendAiFollowUp();">Send</button>
+                        </div>
                     </div>
                 </aside>
 

@@ -35,6 +35,8 @@ public static class AiSummaryService
 {
     private static readonly object CacheSync = new object();
     private static readonly Dictionary<string, AiSummaryCacheEntry> Cache = new Dictionary<string, AiSummaryCacheEntry>(StringComparer.Ordinal);
+    // Store latest assistant/model summary per issueId to support follow-up Q&A (chat-like followups)
+    private static readonly Dictionary<string, string> ConversationStore = new Dictionary<string, string>(StringComparer.Ordinal);
 
     public static AiSummaryResponse GenerateDashboardExecutiveSummary(string platformLabel, string contextDetails)
     {
@@ -154,6 +156,16 @@ public static class AiSummaryService
         string sysdebug = SafeText(request.Sysdebug);
         string contextDetails = SafeText(request.ContextDetails);
 
+        // Enrich context with HSD sighting and promoted article details (sysdebug_forum etc.)
+        try
+        {
+            contextDetails = EnrichContextWithHsdArticles(issueId, contextDetails);
+        }
+        catch
+        {
+            // Ignore enrichment failures - fall back to provided context only
+        }
+
         int confidence = CalculateSummaryConfidence(status, sysdebug, contextDetails);
         string hash = ComputeHash("summary-debug-decision-live-v6|" + GetAiProviderCacheSignature() + "|" + issueId + "|" + title + "|" + submittedDate + "|" + status + "|" + sysdebug + "|" + contextDetails);
         string cacheKey = "ai-summary:" + hash;
@@ -199,6 +211,22 @@ public static class AiSummaryService
         // Post-process the model output to clean up spacing and ensure word limit
         string concise = CleanupSummarySpacing(modelSummary, 220);
 
+        // Save the raw model output for follow-up chat interactions keyed by issueId
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(issueId))
+            {
+                lock (CacheSync)
+                {
+                    ConversationStore[issueId] = modelSummary ?? string.Empty;
+                }
+            }
+        }
+        catch
+        {
+            // swallow any errors in conversation caching
+        }
+
         AiSummaryResponse result = new AiSummaryResponse
         {
             Success = true,
@@ -213,6 +241,133 @@ public static class AiSummaryService
 
         SetCached(cacheKey, result, DateTime.UtcNow.AddMinutes(30));
         return result;
+    }
+
+    // Generate an assistant-style follow-up response based on the last AI summary and ticket context.
+    // Returns an AiSummaryResponse with the follow-up answer in `Summary` and confidence estimate.
+    public static AiSummaryResponse GenerateFollowUpResponse(AiSummaryRequest request, string followUpQuestion)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(followUpQuestion))
+        {
+            return new AiSummaryResponse { Success = false, Message = "Invalid follow-up request." };
+        }
+
+        string issueId = SafeText(request.IssueId);
+        string title = SafeText(request.Title);
+        string submittedDate = SafeText(request.SubmittedDate);
+        string status = SafeText(request.Status);
+        string sysdebug = SafeText(request.Sysdebug);
+        string contextDetails = SafeText(request.ContextDetails);
+
+        // Enrich context with HSD sighting and promoted articles
+        try { contextDetails = EnrichContextWithHsdArticles(issueId, contextDetails); } catch { }
+
+        // Retrieve last model summary if present
+        string lastModelSummary = string.Empty;
+        lock (CacheSync)
+        {
+            if (!string.IsNullOrWhiteSpace(issueId) && ConversationStore.ContainsKey(issueId))
+            {
+                lastModelSummary = ConversationStore[issueId] ?? string.Empty;
+            }
+        }
+
+        string prompt = BuildFollowUpPrompt(issueId, submittedDate, title, status, sysdebug, contextDetails, lastModelSummary, followUpQuestion);
+
+        string modelAnswer;
+        string modelError;
+        bool gotAnswer = TryGenerateWithGitHubModel(issueId + "-followup", submittedDate, title, status, sysdebug, contextDetails, out modelAnswer, out modelError, prompt, "You are a helpful CMF issue assistant. Answer succinctly and only using the supplied ticket context and previous AI summary. If the information is not available, say so.");
+
+        if (!gotAnswer)
+        {
+            string fallback = BuildFallbackFollowUpAnswer(followUpQuestion, contextDetails, lastModelSummary);
+            return new AiSummaryResponse
+            {
+                Success = true,
+                IssueId = issueId,
+                Title = title,
+                SubmittedDate = submittedDate,
+                Summary = fallback,
+                Confidence = Math.Max(30, EstimateSummaryConfidence(request) - 10),
+                Message = BuildFallbackMessage(modelError),
+                UsedFallback = true
+            };
+        }
+
+        string concise = CleanupSummarySpacing(modelAnswer, 200);
+
+        // update conversation store with the assistant reply (so further follow-ups can reference it)
+        try { lock (CacheSync) { if (!string.IsNullOrWhiteSpace(issueId)) ConversationStore[issueId] = lastModelSummary + "\n\nAssistant Reply:\n" + concise; } } catch { }
+
+        return new AiSummaryResponse
+        {
+            Success = true,
+            IssueId = issueId,
+            Title = title,
+            SubmittedDate = submittedDate,
+            Summary = concise,
+            Confidence = EstimateSummaryConfidence(request),
+            Message = "Follow-up answer generated.",
+            UsedFallback = false
+        };
+    }
+
+    private static string BuildFollowUpPrompt(string issueId, string submittedDate, string title, string status, string sysdebug, string contextDetails, string previousSummary, string question)
+    {
+        StringBuilder b = new StringBuilder();
+        b.AppendLine("You are a CMF issue assistant. Use only the supplied ticket data and previous AI summary to answer the user's question.");
+        b.AppendLine("Do not invent facts or assume information not present in the data. If the answer is not determinable, say 'Insufficient information to answer'.");
+        b.AppendLine();
+        b.AppendLine("Ticket metadata:");
+        b.AppendLine("Issue ID: " + issueId);
+        b.AppendLine("Title: " + title);
+        b.AppendLine("Submitted Date: " + submittedDate);
+        b.AppendLine("Status: " + status);
+        b.AppendLine("Sysdebug: " + sysdebug);
+        if (!string.IsNullOrWhiteSpace(contextDetails))
+        {
+            b.AppendLine();
+            b.AppendLine("Full Context:");
+            b.AppendLine(contextDetails);
+        }
+
+        if (!string.IsNullOrWhiteSpace(previousSummary))
+        {
+            b.AppendLine();
+            b.AppendLine("Previous AI Summary:");
+            b.AppendLine(previousSummary);
+        }
+
+        b.AppendLine();
+        b.AppendLine("User question: " + question);
+        b.AppendLine();
+        b.AppendLine("Answer in 1-3 short sentences, remain factual and cite the strongest evidence from the ticket context when applicable.");
+        return b.ToString();
+    }
+
+    private static string BuildFallbackFollowUpAnswer(string question, string contextDetails, string previousSummary)
+    {
+        StringBuilder b = new StringBuilder();
+        b.AppendLine("AI provider unavailable; deterministic fallback cannot fully reason like the model.");
+        b.AppendLine("Question: " + question);
+        if (!string.IsNullOrWhiteSpace(previousSummary))
+        {
+            b.AppendLine();
+            b.AppendLine("Previous summary (reference):");
+            b.AppendLine(previousSummary);
+        }
+
+        if (!string.IsNullOrWhiteSpace(contextDetails))
+        {
+            b.AppendLine();
+            b.AppendLine("Ticket context (search this for details):");
+            // include a short snippet of the context to help the user
+            b.AppendLine(BuildContextSnippet(contextDetails));
+        }
+
+        b.AppendLine();
+        b.AppendLine("Insufficient information to generate a confident follow-up answer without the AI provider.");
+        return b.ToString();
     }
 
     public static AiSummaryResponse GenerateIssueDetails(AiSummaryRequest request)
@@ -232,6 +387,15 @@ public static class AiSummaryService
         string status = SafeText(request.Status);
         string sysdebug = SafeText(request.Sysdebug);
         string contextDetails = SafeText(request.ContextDetails);
+
+        // Enrich context with HSD sighting and promoted article details (sysdebug_forum etc.)
+        try
+        {
+            contextDetails = EnrichContextWithHsdArticles(issueId, contextDetails);
+        }
+        catch
+        {
+        }
         int confidence = CalculateSummaryConfidence(status, sysdebug, contextDetails);
         string hash = ComputeHash("issue-details-context-brief-live-v6|" + GetAiProviderCacheSignature() + "|" + issueId + "|" + title + "|" + submittedDate + "|" + status + "|" + sysdebug + "|" + contextDetails);
         string cacheKey = "ai-issue-details:" + hash;
@@ -288,6 +452,15 @@ public static class AiSummaryService
         string status = SafeText(request.Status);
         string sysdebug = SafeText(request.Sysdebug);
         string contextDetails = SafeText(request.ContextDetails);
+
+        // Attempt to enrich context with HSD article info to improve one-line status
+        try
+        {
+            contextDetails = EnrichContextWithHsdArticles(issueId, contextDetails);
+        }
+        catch
+        {
+        }
 
         string hash = ComputeHash("one-line-status-v3|" + GetAiProviderCacheSignature() + "|" + issueId + "|" + title + "|" + status + "|" + sysdebug + "|" + contextDetails);
         string cacheKey = "ai-one-line-status:" + hash;
@@ -1773,6 +1946,72 @@ public static class AiSummaryService
         }
 
         return string.Empty;
+    }
+
+    // Enrich the provided context details by fetching HSD sighting and promoted article data
+    // and appending formatted HSD context (including Sysdebug Forum) when available.
+    private static string EnrichContextWithHsdArticles(string issueId, string contextDetails)
+    {
+        string original = contextDetails ?? string.Empty;
+        Dictionary<string, string> contextMap = ParseContextDetails(original);
+        StringBuilder sb = new StringBuilder(original);
+
+        try
+        {
+            // Fetch sighting/article HSD data for the primary issue ID
+            if (!string.IsNullOrWhiteSpace(issueId))
+            {
+                HsdArticleData sighting = HsdPortalService.FetchArticle(issueId);
+                if (sighting != null && sighting.FetchSuccess)
+                {
+                    string formatted = HsdPortalService.FormatForAiContext(sighting, "Sighting " + issueId);
+                    if (!string.IsNullOrWhiteSpace(formatted) && original.IndexOf(formatted, StringComparison.OrdinalIgnoreCase) < 0)
+                    {
+                        sb.AppendLine();
+                        sb.AppendLine(formatted);
+                    }
+                }
+            }
+
+            // Look for promoted IDs in the existing context and fetch each promoted article
+            string promotedRaw = FirstContextValue(contextMap, "Promoted ID", "Promoted Issue ID", "Promoted IDs", "Promoted Issue IDs", "PromotedID");
+            if (!string.IsNullOrWhiteSpace(promotedRaw))
+            {
+                string[] parts = promotedRaw.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (string part in parts)
+                {
+                    string pid = part.Trim();
+                    if (string.IsNullOrWhiteSpace(pid)) continue;
+                    if (!string.Equals(pid, issueId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            HsdArticleData promoted = HsdPortalService.FetchArticle(pid);
+                            if (promoted != null && promoted.FetchSuccess)
+                            {
+                                string formattedPromoted = HsdPortalService.FormatForAiContext(promoted, "Promoted " + pid);
+                                if (!string.IsNullOrWhiteSpace(formattedPromoted) && original.IndexOf(formattedPromoted, StringComparison.OrdinalIgnoreCase) < 0)
+                                {
+                                    sb.AppendLine();
+                                    sb.AppendLine(formattedPromoted);
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // ignore individual promoted fetch failures
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // best-effort enrichment — swallow any exceptions and return original context
+            return original;
+        }
+
+        return sb.ToString().Trim();
     }
 
     private static bool ContainsAnyToken(string text, params string[] tokens)
