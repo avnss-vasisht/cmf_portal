@@ -4407,7 +4407,7 @@ LEFT JOIN " + designTable + @" AS d
         string title = titleValue == null || titleValue == DBNull.Value ? string.Empty : titleValue.ToString().Trim();
         string status = statusValue == null || statusValue == DBNull.Value ? string.Empty : statusValue.ToString().Trim();
         string sysdebug = sysdebugValue == null || sysdebugValue == DBNull.Value ? string.Empty : sysdebugValue.ToString().Replace("\r", " ").Replace("\n", " ").Trim();
-        string onclick = "openAiSummaryModal(\"" + JsEncode(sightingIdValue) + "\", \"" + JsEncode(titleValue) + "\", \"" + JsEncode(FormatDateOnly(submittedDateValue)) + "\", \"" + JsEncode(status) + "\", \"" + JsEncode(sysdebug) + "\", \"details\")";
+        string onclick = "openAiSummaryModal(\"" + JsEncode(sightingIdValue) + "\", \"" + JsEncode(titleValue) + "\", \"" + JsEncode(FormatDateOnly(submittedDateValue)) + "\", \"" + JsEncode(status) + "\", \"" + JsEncode(sysdebug) + "\", \"AI issue details\")";
 
         StringBuilder sb = new StringBuilder();
         sb.Append("<span class=\"issue-details-cell\">");
@@ -4419,7 +4419,7 @@ LEFT JOIN " + designTable + @" AS d
                 HttpUtility.HtmlAttributeEncode(sightingId),
                 HttpUtility.HtmlEncode(sightingId));
         }
-        sb.Append("<button type=\"button\" class=\"ai-summary-btn ai-summary-btn-inline issue-details-ai-btn\" style=\"padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #7cb5ec; background-color: #f3f9ff; font-size: 11px;\" onclick='" + onclick + "' title=\"AI issue details\" aria-label=\"AI issue details\">? AI Details</button>");
+        sb.Append("<button type=\"button\" class=\"ai-summary-btn ai-summary-btn-inline issue-details-ai-btn\" style=\"padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; border: 1px solid #7cb5ec; background-color: #f3f9ff; font-size: 14px; width: 26px; height: 26px;\" onclick='" + onclick + "' title=\"AI Issue details\" aria-label=\"AI Issue details\">&#10024;</button>");
         sb.Append("</span>");
         sb.AppendFormat("<span class=\"issue-title-text\">{0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(title) ? "Untitled issue" : title));
         sb.Append("</span>");
@@ -4828,7 +4828,7 @@ LEFT JOIN " + designTable + @" AS d
         string oneLineUpdate = BuildOneLineStatusUpdate(status, sysdebug);
         if (string.IsNullOrWhiteSpace(oneLineUpdate)) oneLineUpdate = BuildFallbackStatusSentence(status);
 
-        string onclick = "openAiSummaryModal(\"" + JsEncode(sightingIdValue) + "\", \"" + JsEncode(titleValue) + "\", \"" + JsEncode(FormatDateOnly(submittedDateValue)) + "\", \"" + JsEncode(statusValue) + "\", \"" + JsEncode(sysdebugValue) + "\")";
+        string onclick = "openAiSummaryModal(\"" + JsEncode(sightingIdValue) + "\", \"" + JsEncode(titleValue) + "\", \"" + JsEncode(FormatDateOnly(submittedDateValue)) + "\", \"" + JsEncode(statusValue) + "\", \"" + JsEncode(sysdebugValue) + "\", \"AI Summary\")";
 
         return "<div class=\"status-cell-wrap status-cell-wrap-compact\">" +
             "<div class=\"status-row status-row-primary\">" +
@@ -5073,7 +5073,7 @@ LEFT JOIN " + designTable + @" AS d
                 ContextDetails = issueContext
             };
 
-            if (string.Equals(mode, "details", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(mode, "AI issue details", StringComparison.OrdinalIgnoreCase))
             {
                 return AiSummaryService.GenerateIssueDetails(request);
             }
@@ -5263,7 +5263,7 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @issueId", con))
                         }
                     }
 
-                    // -- Section 2: HSD portal – sighting article ---------------
+                    // -- Section 2: HSD portal ï¿½ sighting article ---------------
                     HsdArticleData hsdSighting =
                         HsdPortalService.FetchArticle(issueId.Trim());
 
@@ -5275,7 +5275,7 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @issueId", con))
                     if (!string.IsNullOrWhiteSpace(hsdSightingContext))
                         builder.AppendLine(hsdSightingContext);
 
-                    // -- Section 3: HSD portal – promoted article (if different) -
+                    // -- Section 3: HSD portal ï¿½ promoted article (if different) -
                     if (!string.IsNullOrWhiteSpace(promotedId)
                         && !string.Equals(promotedId.Trim(), issueId.Trim(), StringComparison.OrdinalIgnoreCase))
                     {

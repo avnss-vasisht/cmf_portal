@@ -55,6 +55,89 @@
                 linear-gradient(180deg, #f4f8fb 0%, var(--portal-bg) 100%);
         }
 
+        /* Skeleton Shimmer */
+        @keyframes shimmer {
+            0% { background-position: -468px 0; }
+            100% { background-position: 468px 0; }
+        }
+        .ai-skeleton-loader {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 10px 0;
+            width: 100%;
+        }
+        .ai-skeleton-line {
+            height: 16px;
+            background: #f6f7f8;
+            background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
+            background-repeat: no-repeat;
+            background-size: 800px 100%;
+            animation-duration: 1.5s;
+            animation-fill-mode: forwards;
+            animation-iteration-count: infinite;
+            animation-name: shimmer;
+            animation-timing-function: linear;
+            border-radius: 4px;
+        }
+        .ai-skeleton-title { width: 40%; height: 20px; }
+        .ai-skeleton-label { width: 25%; }
+        .ai-skeleton-value { width: 85%; }
+        
+        .ai-sk-block {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+        }
+        .ai-sk-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* Semantic Badges */
+        .ai-semantic-badge {
+            display: inline-flex;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: normal;
+            word-wrap: break-word;
+        }
+        .badge-green { background: #E6F4EA; color: #1e5a2f; border: 1px solid #B7DEc5; }
+        .badge-amber { background: #FFF4CE; color: #8F6200; border: 1px solid #FDE08B; }
+        .badge-red { background: #FDE8E9; color: #9A242B; border: 1px solid #F9C3C6; }
+        .badge-neutral { background: #f0f2f5; color: #444; border: 1px solid #e0e2e5; }
+        
+        .issue-details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .issue-details-grid-full {
+            grid-column: 1 / -1;
+        }
+        .idg-label {
+            font-size: 11px;
+            color: #5c7087;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .idg-val {
+            font-size: 13px;
+            color: #19324a;
+            min-width: 0;
+            max-width: 100%;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
+        }
+
         /* Markdown content styles */
         .markdown-content {
             word-wrap: break-word;
@@ -8566,7 +8649,9 @@ td:nth-child(odd), th:nth-child(odd) {
         }
 
         function openAiSummaryModal(issueId, title, submittedDate, status, sysdebug, mode) {
-            mode = mode === 'details' ? 'details' : 'summary';
+            var currentMode = mode || 'AI Summary';
+            var isDetails = currentMode === 'AI issue details';
+            
             var headingNode = document.getElementById('aiSummaryHeadingText');
             var badgesNode = document.getElementById('aiSummaryTitleBadges');
             var metaNode = document.getElementById('aiSummaryMeta');
@@ -8586,9 +8671,9 @@ td:nth-child(odd), th:nth-child(odd) {
                 return;
             }
 
-            if (headingNode) headingNode.textContent = mode === 'details' ? 'Issue Details ✦' : 'AI Summary';
-            if (badgesNode) badgesNode.style.display = mode === 'details' ? 'none' : '';
-            if (metaNode) metaNode.style.display = mode === 'details' ? 'none' : '';
+            if (headingNode) headingNode.textContent = isDetails ? 'AI Issue Details [' + (issueId || 'N/A') + ']' : currentMode;
+            if (badgesNode) badgesNode.style.display = isDetails ? 'none' : '';
+            if (metaNode) metaNode.style.display = isDetails ? 'none' : '';
             if (factsNode) factsNode.style.display = 'none';
             issueIdNode.textContent = issueId || 'N/A';
             if (titleNode) titleNode.textContent = '';
@@ -8599,9 +8684,32 @@ td:nth-child(odd), th:nth-child(odd) {
                 statusBadgeNode.textContent = 'Status: --';
                 statusBadgeNode.className = 'ai-summary-status-value';
             }
-            bodyNode.textContent = mode === 'details' ? 'Building a plain-language issue brief...' : 'Generating debug-focused AI summary...';
-            bodyNode.className = mode === 'details' ? 'ai-summary-body markdown-content issue-details-brief' : 'ai-summary-body markdown-content';
-            if (actionsNode) actionsNode.style.display = 'none';
+            bodyNode.className = isDetails ? 'ai-summary-body issue-details-brief' : 'ai-summary-body markdown-content';
+            
+            if (isDetails) {
+                bodyNode.innerHTML = `
+                    <div class="ai-skeleton-loader">
+                        <div style="font-size: 13px; font-weight: 600; color: #5c7087; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                            &#10024; Generating AI issue details...
+                        </div>
+                        <div class="ai-skeleton-line ai-skeleton-title" style="width: 50%;"></div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                            <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
+                            <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
+                            <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
+                            <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <div class="ai-skeleton-line ai-skeleton-title" style="width: 30%; height: 16px;"></div>
+                            <div class="ai-skeleton-line" style="margin-top: 10px; width: 100%;"></div>
+                            <div class="ai-skeleton-line" style="margin-top: 8px; width: 95%;"></div>
+                            <div class="ai-skeleton-line" style="margin-top: 8px; width: 90%;"></div>
+                        </div>
+                    </div>`;
+            } else {
+                bodyNode.textContent = 'Generating debug-focused AI summary...';
+            }
+            if (actionsNode) actionsNode.style.cssText = 'display: none !important;';
 
             drawerBg.classList.add('show');
             drawer.classList.add('show');
@@ -8613,7 +8721,7 @@ td:nth-child(odd), th:nth-child(odd) {
                 status: status || '',
                 sysdebug: sysdebug || '',
                 platform: getIssuePendingPlatformValue(),
-                mode: mode
+                mode: currentMode
             };
 
             // Store for regenerate / copy
@@ -8637,7 +8745,33 @@ td:nth-child(odd), th:nth-child(odd) {
             if (!actionsNode) actionsNode = document.getElementById('aiSummaryActions');
 
             bodyNode.className = 'ai-summary-body';
-            bodyNode.innerHTML = '<div class="ai-loading-banner">✨ Generating AI summary, please wait...</div>';
+            
+            // Only inject the banner if it's the chat/summary mode; details mode already injected a shimmer.
+            if (payload.mode !== 'AI issue details' || bodyNode.innerHTML.indexOf('ai-skeleton-loader') === -1) {
+                if (payload.mode === 'AI issue details') {
+                    bodyNode.innerHTML = `
+                        <div class="ai-skeleton-loader">
+                            <div style="font-size: 13px; font-weight: 600; color: #5c7087; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                                &#10024; Generating AI issue details...
+                            </div>
+                            <div class="ai-skeleton-line ai-skeleton-title" style="width: 50%;"></div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                                <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
+                                <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
+                                <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
+                                <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
+                            </div>
+                            <div style="margin-top: 20px;">
+                                <div class="ai-skeleton-line ai-skeleton-title" style="width: 30%; height: 16px;"></div>
+                                <div class="ai-skeleton-line" style="margin-top: 10px; width: 100%;"></div>
+                                <div class="ai-skeleton-line" style="margin-top: 8px; width: 95%;"></div>
+                                <div class="ai-skeleton-line" style="margin-top: 8px; width: 90%;"></div>
+                            </div>
+                        </div>`;
+                } else {
+                    bodyNode.innerHTML = '<div class="ai-loading-banner">&#10024; Generating AI summary, please wait...</div>';
+                }
+            }
 
             fetch('CMF_Web_portal.aspx/GetIssueAiSummary', {
                 method: 'POST',
@@ -8648,7 +8782,8 @@ td:nth-child(odd), th:nth-child(odd) {
             .then(function (data) {
                 var result = data && data.d ? data.d : data;
                 if (!result || result.Success !== true) {
-                    bodyNode.textContent = (result && result.Message) ? result.Message : 'Unable to generate summary at this time.';
+                    var errorMsg = (result && result.Message) ? result.Message : 'Unable to generate summary at this time.';
+                    bodyNode.innerHTML = escapeHtml(errorMsg) + ' <a href="#" onclick="regenerateAiSummary(); return false;" style="color:var(--portal-primary); text-decoration:underline;">↻ Retry</a>';
                     bodyNode.className = 'ai-summary-body';
                     return;
                 }
@@ -8670,7 +8805,7 @@ td:nth-child(odd), th:nth-child(odd) {
                 updateIssueListConfidenceBadge(payload.issueId, preparedSummary.confidence);
                 // Build the assistant message that represents the summary (chat-first layout)
                 var assistantSummary = '';
-                if (payload.mode === 'details') {
+                if (payload.mode === 'AI issue details') {
                     assistantSummary = prepareIssueDetailsForDrawer(summary);
                 } else if (preparedSummary.hasDecisionSections) {
                     assistantSummary = preparedSummary.body;
@@ -8678,12 +8813,16 @@ td:nth-child(odd), th:nth-child(odd) {
                     assistantSummary = 'Summary\n\n' + preparedSummary.body + '\n\nFollow up\n' + (preparedSummary.followUp || '- No further action identified from available details.');
                 }
 
-                window._aiSummaryLastText = payload.mode === 'details' ? summary : assistantSummary;
-                if (actionsNode) actionsNode.style.display = '';
+                window._aiSummaryLastText = payload.mode === 'AI issue details' ? summary : assistantSummary;
+                
+                // Hide copy/regen buttons permanently for AI issue details mode
+                if (actionsNode) {
+                    actionsNode.style.cssText = payload.mode === 'AI issue details' ? 'display: none !important;' : 'display: flex; gap: 12px; width: 100%; margin-top: 15px;';
+                }
 
                 // Chat-first UI: hide the standalone body and render the summary as the first assistant message
                 if (!window._aiChatStore) window._aiChatStore = {}; // issueId => [{role,text}, ...]
-                window._aiCurrentIssueId = (payload.issueId || '') + '_' + (payload.mode || 'summary');
+                window._aiCurrentIssueId = (payload.issueId || '') + '_' + (payload.mode || 'AI Summary');
 
                 var chat = document.getElementById('aiSummaryChat');
                 var messages = document.getElementById('aiSummaryChatMessages');
@@ -8718,7 +8857,7 @@ td:nth-child(odd), th:nth-child(odd) {
                 }
             })
             .catch(function () {
-                bodyNode.textContent = 'Error while calling summary service.';
+                bodyNode.innerHTML = 'Error while calling summary service. <a href="#" onclick="regenerateAiSummary(); return false;" style="color:var(--portal-primary); text-decoration:underline;">↻ Retry</a>';
                 bodyNode.className = 'ai-summary-body';
             });
         }
@@ -8734,11 +8873,69 @@ td:nth-child(odd), th:nth-child(odd) {
         }
 
         function prepareIssueDetailsForDrawer(summary) {
-            var text = String(summary || '').replace(/\r/g, '\n');
-            text = text.replace(/^\s*\*\*\s*Issue Details(?:\s*\(\s*Confidence\s*:\s*[0-9]{1,3}%?\s*\))?\s*\*\*\s*\n?/im, '');
-            text = text.replace(/^\s*Issue Details(?:\s*\(\s*Confidence\s*:\s*[0-9]{1,3}%?\s*\))?\s*:?\s*\n?/im, '');
-            text = text.replace(/^\s*\*\*\s*Linked HSD \/ CMF Data\s*\*\*\s*$/gim, '## Linked HSD / CMF Data');
-            return text.trim();
+            var text = String(summary || '').replace(/\r/g, '\n').replace(/\*\*/g, '');
+            var getField = function(label) {
+                var m = text.match(new RegExp('^(?:-\\s*)?' + label + '\\s*[:\\-]\\s*(.*)$', 'im'));
+                return m ? escapeHtml(m[1].trim()) : 'N/A';
+            };
+
+            var html = '<div class="issue-details-grid">';
+            
+            // Build badges based on values to colorize them semantically
+            var colorBadge = function(val, type) {
+                var v = String(val).toLowerCase();
+                if (v === 'n/a' || v === 'none' || v === 'no' || v === 'unknown' || v === '' || v === 'tbd') return `<span class="ai-semantic-badge badge-neutral">${val}</span>`;
+                if (v.includes('not actioned') || v.includes('no promoted ticket yet')) return `<span class="ai-semantic-badge badge-neutral">${val}</span>`;
+                if (v.includes('must fix') || v.includes('must_fix') || v.includes('blocker') || v.includes('critical')) return `<span class="ai-semantic-badge badge-red">${val}</span>`;
+                
+                if (type === 'repro') {
+                    if (v.includes('100%') || v.includes('always')) return `<span class="ai-semantic-badge badge-red">${val}</span>`;
+                    return `<span class="ai-semantic-badge badge-amber">${val}</span>`;
+                }
+                if (type === 'state') {
+                    if (v.includes('rejected') || v.includes('won\'t fix')) return `<span class="ai-semantic-badge badge-neutral">${val}</span>`;
+                    if (v.includes('approved') || v.includes('fixed')) return `<span class="ai-semantic-badge badge-green">${val}</span>`;
+                }
+                if (type === 'workaround') return `<span class="ai-semantic-badge badge-green">${val}</span>`;
+                return val;
+            };
+
+            html += `<div class="ai-sk-block"><div class="idg-label">Problem / Issue</div><div class="idg-val">${colorBadge(getField('(?:Problem|Issue).*?'), 'problem')}</div></div>`;
+            html += `<div class="ai-sk-block"><div class="idg-label">Current State</div><div class="idg-val">${colorBadge(getField('Current State'), 'state')}</div></div>`;
+            html += `<div class="ai-sk-block"><div class="idg-label">Scenario / Trigger</div><div class="idg-val">${getField('Scenario.*?')}</div></div>`;
+            html += `<div class="ai-sk-block"><div class="idg-label">Reproduction</div><div class="idg-val">${colorBadge(getField('Reproduction'), 'repro')}</div></div>`;
+            
+            html += `<div class="ai-sk-block issue-details-grid-full"><div class="idg-label">Affected Platform / System</div><div class="idg-val">${getField('Affected Platform.*?')}</div></div>`;
+            html += `<div class="ai-sk-block issue-details-grid-full"><div class="idg-label">Environment</div><div class="idg-val">${getField('Environment.*?')}</div></div>`;
+            html += `<div class="ai-sk-block issue-details-grid-full"><div class="idg-label">Current Investigation</div><div class="idg-val">${getField('Current Investigation')}</div></div>`;
+            
+            html += `<div class="ai-sk-block"><div class="idg-label">Suspected Root Cause</div><div class="idg-val">${getField('Suspected Root Cause')}</div></div>`;
+            html += `<div class="ai-sk-block"><div class="idg-label">Workaround</div><div class="idg-val">${colorBadge(getField('Workaround'), 'workaround')}</div></div>`;
+            html += `<div class="ai-sk-block issue-details-grid-full"><div class="idg-label">Evidence / Logs</div><div class="idg-val">${getField('Evidence.*?')}</div></div>`;
+            
+            html +=`</div>`; // end grid
+            
+            // Check for promoted ticket presence before blindly yielding N/A
+            var promotedId = getField('Promoted ID');
+            var isPromoted = promotedId !== 'N/A' && promotedId.toLowerCase() !== 'missing' && promotedId.toLowerCase() !== 'none' && promotedId !== '';
+            
+            var owner = isPromoted ? getField('Owner') : 'No promoted ticket yet';
+            var fixedVer = isPromoted ? getField('(?:Fixed Version|Closure).*?') : 'No promoted ticket yet';
+            var lastAct = isPromoted ? getField('Latest Activity') : 'No promoted ticket yet';
+            if (!isPromoted) promotedId = 'No promoted ticket yet';
+
+            html += `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e2e5;">`;
+            html += `<h4 style="font-size:12px; margin-bottom: 10px; color:#5c7087;">LINKED HSD / CMF DATA</h4>`;
+            html += `<div class="issue-details-grid">`;
+            html += `<div class="ai-sk-block"><div class="idg-label">Promoted ID</div><div class="idg-val">${promotedId}</div></div>`;
+            html += `<div class="ai-sk-block"><div class="idg-label">Owner</div><div class="idg-val">${owner}</div></div>`;
+            html += `<div class="ai-sk-block issue-details-grid-full"><div class="idg-label">Fixed Version / Closure</div><div class="idg-val">${fixedVer}</div></div>`;
+            html += `<div class="ai-sk-block issue-details-grid-full"><div class="idg-label">Latest Activity</div><div class="idg-val">${lastAct}</div></div>`;
+            html += `</div></div>`;
+            
+            html += `<div style="text-align: right; margin-top: 15px; padding-top: 10px;"><a href="#" onclick="regenerateAiSummary(); return false;" style="color: #0f5ea8; font-size: 11px; font-weight: 600; text-decoration: none;">&#8635; Retry / Regenerate</a></div>`;
+
+            return html;
         }
 
         function cssEscapeValue(value) {
@@ -8807,7 +9004,14 @@ td:nth-child(odd), th:nth-child(odd) {
             msg.className = 'ai-chat-message ai-chat-' + (role === 'user' ? 'user' : 'assistant');
             var inner = document.createElement('div');
             inner.className = 'ai-chat-message-body';
-            inner.innerHTML = renderMarkdown(escapeHtml(text).replace(/\n/g, '\n'));
+            
+            // Check if text already contains our injected structured HTML wrappers (e.g. from prepareIssueDetailsForDrawer)
+            if (text.indexOf('class="issue-details-grid"') > -1) {
+                inner.innerHTML = text; // Inject raw HTML
+            } else {
+                inner.innerHTML = renderMarkdown(escapeHtml(text).replace(/\n/g, '\n'));
+            }
+            
             msg.appendChild(inner);
             container.appendChild(msg);
             
@@ -8974,7 +9178,7 @@ td:nth-child(odd), th:nth-child(odd) {
             var headingNode = document.getElementById('cmfRecHeading');
             if (headingNode) headingNode.textContent = 'AI Recommendation';
             
-            if (recNode) recNode.innerHTML = '<div class="ai-loading-banner">✨ Generating AI recommendation, please wait...</div>';
+            if (recNode) recNode.innerHTML = '<div class="ai-loading-banner">&#10024; Generating AI recommendation, please wait...</div>';
             if (evidenceNode) evidenceNode.textContent = '-';
             if (qualityNode) qualityNode.textContent = 'Evidence Quality: --';
 
@@ -9234,7 +9438,7 @@ td:nth-child(odd), th:nth-child(odd) {
         }
 
         function renderCmfDecisionDetailsLoading(cpId) {
-            return '<div class="cmf-decision-details-shell"><div class="cmf-decision-header"><span class="cmf-decision-sighting">' + escapeHtml(cpId || 'N/A') + '</span></div><div class="cmf-decision-card"><h4>Context</h4><div class="ai-loading-banner">✨ Generating CMF decision details, please wait...</div></div></div>';
+            return '<div class="cmf-decision-details-shell"><div class="cmf-decision-header"><span class="cmf-decision-sighting">' + escapeHtml(cpId || 'N/A') + '</span></div><div class="cmf-decision-card"><h4>Context</h4><div class="ai-loading-banner">&#10024; Generating CMF decision details, please wait...</div></div></div>';
         }
 
         function renderCmfDecisionDetails(rawText, cpId) {

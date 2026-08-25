@@ -421,7 +421,7 @@ public static class AiSummaryService
             "You write plain-language issue briefs for iDST users. Stay factual, concise, and useful for quickly understanding the issue before opening HSD.");
 
         string details = hasModelDetails
-            ? CleanupSummarySpacing(modelDetails, 260)
+            ? CleanupSummarySpacing(modelDetails, 800)
             : BuildFallbackIssueDetails(issueId, submittedDate, title, status, sysdebug, contextDetails, Math.Max(40, confidence - 8));
 
         AiSummaryResponse result = new AiSummaryResponse
@@ -1013,22 +1013,22 @@ public static class AiSummaryService
         builder.AppendLine("3. For 'Debug signal' and 'Latest Activity', extract the strongest signal in one crisp sentence.");
         builder.AppendLine();
         builder.AppendLine("### EXPECTED OUTPUT FORMAT ###");
-        builder.AppendLine("| Field | Value |");
-        builder.AppendLine("|---|---|");
-        builder.AppendLine("| **ID** | " + issueId + " |");
-        builder.AppendLine("| **Title** | [Issue Title] |");
-        builder.AppendLine("| **Priority** | [Priority] |");
-        builder.AppendLine("| **Repro Rate** | [Repro Rate/Reproducibility] |");
-        builder.AppendLine("| **Customer** | [Affected Customer] |");
-        builder.AppendLine();
-        builder.AppendLine("### Additional Details ###");
-        builder.AppendLine("[1-2 brief paragraphs describing what is happening and the hardware/OS it shows up on.]");
+        builder.AppendLine("- Problem / Issue: [value]");
+        builder.AppendLine("- Scenario / Trigger: [value]");
+        builder.AppendLine("- Affected Platform / System: [value]");
+        builder.AppendLine("- Reproduction: [value]");
+        builder.AppendLine("- Environment / Build / BIOS / Driver: [value]");
+        builder.AppendLine("- Current Investigation: [value]");
+        builder.AppendLine("- Suspected Root Cause: [value or N/A]");
+        builder.AppendLine("- Workaround: [value or N/A]");
+        builder.AppendLine("- Evidence / Logs: [value]");
+        builder.AppendLine("- Current State: [value]");
         builder.AppendLine();
         builder.AppendLine("### Linked HSD / CMF Data ###");
-        builder.AppendLine("- **Promoted ID:** [id or N/A]");
-        builder.AppendLine("- **Owner:** [owner or N/A]");
-        builder.AppendLine("- **Fixed Version / Closure:** [version/closed reason or N/A]");
-        builder.AppendLine("- **Latest Activity:** [one short sentence or N/A]");
+        builder.AppendLine("- Promoted ID: [id or N/A]");
+        builder.AppendLine("- Owner: [owner or N/A]");
+        builder.AppendLine("- Fixed Version / Closure: [version/closed reason or N/A]");
+        builder.AppendLine("- Latest Activity: [one short sentence or N/A]");
         builder.AppendLine();
         builder.AppendLine("### TICKET DATA ###");
         builder.AppendLine("Issue ID: " + issueId);
@@ -1071,14 +1071,18 @@ public static class AiSummaryService
 
         StringBuilder builder = new StringBuilder();
         builder.AppendLine("**Issue Details**");
-        builder.AppendLine("- What is happening: " + BuildShortPhrase(symptom, 140) + ".");
-        builder.AppendLine("- Where it shows up: " + BuildDisplayValue(component) + " / " + BuildDisplayValue(operatingSystem) + ".");
-        builder.AppendLine("- Who is affected: " + BuildDisplayValue(impact) + ".");
-        builder.AppendLine("- Current state: " + stateDetail);
-        builder.AppendLine("- Debug signal: " + debugSignal);
+        builder.AppendLine("- Problem / Issue: " + BuildShortPhrase(symptom, 140) + ".");
+        builder.AppendLine("- Scenario / Trigger: Not identified from available details.");
+        builder.AppendLine("- Affected Platform / System: " + BuildDisplayValue(component) + " / " + BuildDisplayValue(operatingSystem) + ".");
+        builder.AppendLine("- Reproduction: " + BuildDisplayValue(reproducibility));
+        builder.AppendLine("- Environment / Build / BIOS / Driver: Not identified from available details.");
+        builder.AppendLine("- Current Investigation: " + BuildDisplayValue(impact) + ".");
+        builder.AppendLine("- Suspected Root Cause: Not identified from available details.");
+        builder.AppendLine("- Workaround: Not identified from available details.");
+        builder.AppendLine("- Evidence / Logs: " + debugSignal);
+        builder.AppendLine("- Current State: " + stateDetail);
         builder.AppendLine();
-        builder.AppendLine("**Linked HSD / CMF Data**");
-        builder.AppendLine("- Sighting ID: " + BuildDisplayValue(issueId));
+        builder.AppendLine("Linked HSD / CMF Data");
         builder.AppendLine("- Promoted ID: " + BuildDisplayValue(FirstContextValue(contextMap, "Promoted ID", "Promoted Issue ID")));
         builder.AppendLine("- Owner: " + BuildDisplayValue(FirstContextValue(contextMap, "Owner", "Promoted Issue Owner")));
         builder.AppendLine("- Fixed Version / Closure: " + BuildDisplayValue(FirstNonEmpty(fixedVersion, closedReason)));
