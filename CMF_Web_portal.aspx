@@ -2354,8 +2354,11 @@
 
 .ai-summary-chat {
     border-top: 1px solid rgba(205,217,229,0.8);
-    margin-top: 12px;
-    padding-top: 12px;
+    background: #fff;
+    padding: 12px 24px;
+    position: sticky;
+    bottom: 0;
+    margin: 0 -24px -24px -24px;
 }
 .ai-chat-messages {
     /* make the chat area take most of the drawer height to feel like a chatbot */
@@ -2365,7 +2368,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 24px;
 }
 .ai-chat-message { display:flex; flex-direction:column; margin-bottom:12px; font-size:14px; line-height:1.5; }
 .ai-chat-message.ai-chat-assistant .ai-chat-message-body { background:#f1f5f9; color:#1a202c; padding:14px 16px; border-radius:12px; max-width:96%; border-left: 4px solid #005A9E; box-shadow: 0 4px 6px rgba(0,0,0,0.05); align-self: flex-start; }
@@ -2374,9 +2377,10 @@
 .ai-chat-input { display:flex; gap:10px; align-items:flex-end; margin-top:10px; }
 .ai-chat-input-box { flex:1; min-height:45px; max-height:140px; padding:10px 14px; border-radius:12px; border:1px solid #cbd5e0; resize:vertical; font-size: 14px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); transition: border-color 0.2s; }
 .ai-chat-input-box:focus { border-color: #005A9E; outline: none; }
-.ai-chat-send { background:#005A9E; color:#fff; border:none; padding:10px 16px; border-radius:12px; cursor:pointer; font-weight:600; min-height: 45px; transition: background-color 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-.ai-chat-send:hover { background: #004680; }
-.ai-chat-send:disabled { background: #a0aec0; cursor: not-allowed; }
+.ai-chat-send { background:transparent; border:none; padding:10px 10px; border-radius:50%; cursor:pointer; min-height: 45px; transition: transform 0.1s ease, color 0.2s; color: #0071c5; display: flex; align-items: center; justify-content: center; }
+.ai-chat-send:active { transform: scale(0.95); }
+.ai-chat-send:hover { color: #005A9E; background: rgba(0, 113, 197, 0.1); }
+.ai-chat-send:disabled { color: #a0aec0; cursor: not-allowed; background: transparent; box-shadow: none; }
 
 .ai-summary-drawer-close {
     position: absolute;
@@ -8588,6 +8592,19 @@ td:nth-child(odd), th:nth-child(odd) {
             source = source.replace(/^\s*Reproducibility\s*:\s*.*$/gim, '');
             source = source.replace(/^\s*Logs\(sysdebug(?:\/debug details)?\)\s*:\s*.*$/gim, '');
             source = source.replace(/^\s*RVP platform debug details\s*:\s*.*$/gim, '');
+            
+            // For the new prompt format with headings ### Debug Summary and ### Next Steps
+            var debugSummaryMatch = source.match(/(?:###\s*)?Debug Summary(?:\*\*)?\s*:?([\s\S]*?)(?=(?:###\s*)?Next Steps(?:\*\*)?\s*:?|$)/i);
+            var nextStepsMatch = source.match(/(?:###\s*)?Next Steps(?:\*\*)?\s*:?([\s\S]*)$/i);
+            
+            if (debugSummaryMatch || nextStepsMatch) {
+                 return {
+                     summary: debugSummaryMatch && debugSummaryMatch[1] ? debugSummaryMatch[1].trim() : '',
+                     followUp: nextStepsMatch && nextStepsMatch[1] ? nextStepsMatch[1].trim() : '- No further action identified from available details.',
+                     hasDecisionSections: false
+                 }
+            }
+
             var decisionMatch = source.match(/(?:\*\*)?Issue Summary(?:\*\*)?\s*:?([\s\S]*)$/i);
             if (decisionMatch && decisionMatch[1]) {
                 return {
@@ -8599,8 +8616,8 @@ td:nth-child(odd), th:nth-child(odd) {
             var summaryMatch = source.match(/(?:\*\*)?(?:Summary|Key points)(?:\*\*)?\s*:?([\s\S]*?)(?=(?:\*\*)?(?:Follow up|Next action)(?:\*\*)?\s*:?|$)/i);
             var followMatch = source.match(/(?:\*\*)?(?:Follow up|Next action)(?:\*\*)?\s*:?([\s\S]*)$/i);
             return {
-                summary: compactAiBulletText(summaryMatch && summaryMatch[1] ? summaryMatch[1] : source, 3, 0),
-                followUp: compactAiBulletText(followMatch && followMatch[1] ? followMatch[1] : '', 1, 0),
+                summary: compactAiBulletText(summaryMatch && summaryMatch[1] ? summaryMatch[1] : source, 10, 0), // Allow up to 10 bullets instead of 3
+                followUp: compactAiBulletText(followMatch && followMatch[1] ? followMatch[1] : '', 5, 0),
                 hasDecisionSections: false
             };
         }
@@ -8671,11 +8688,24 @@ td:nth-child(odd), th:nth-child(odd) {
                 return;
             }
 
-            if (headingNode) headingNode.textContent = isDetails ? 'AI Issue Details [' + (issueId || 'N/A') + ']' : currentMode;
+            if (headingNode) {
+                if (isDetails) {
+                    // Inject sighting ID directly into the heading as requested, and reset original issueId node to not replicate it
+                    headingNode.innerHTML = 'Issue Details <span style="font-size: 14px; font-weight: 500; color: #5c7087; margin-left: 20px;">Sighting ID: ' + (issueId || 'N/A') + '</span>';
+                } else if (currentMode === 'AI Debug Summary') {
+                    headingNode.textContent = 'AI Debug Summary';
+                } else {
+                    headingNode.textContent = currentMode;
+                }
+            }
             if (badgesNode) badgesNode.style.display = isDetails ? 'none' : '';
             if (metaNode) metaNode.style.display = isDetails ? 'none' : '';
             if (factsNode) factsNode.style.display = 'none';
-            issueIdNode.textContent = issueId || 'N/A';
+            // Clear or format the meta string depending on mode
+            issueIdNode.textContent = isDetails ? '' : (issueId || 'N/A');
+            
+            // Revert stylize override since it's now in the header itself
+            issueIdNode.style.cssText = '';
             if (titleNode) titleNode.textContent = '';
             if (titleRow) titleRow.style.display = 'none';
             dateNode.textContent = submittedDate || 'N/A';
@@ -8686,11 +8716,11 @@ td:nth-child(odd), th:nth-child(odd) {
             }
             bodyNode.className = isDetails ? 'ai-summary-body issue-details-brief' : 'ai-summary-body markdown-content';
             
-            if (isDetails) {
+            if (isDetails || currentMode === 'AI Summary') {
                 bodyNode.innerHTML = `
                     <div class="ai-skeleton-loader">
                         <div style="font-size: 13px; font-weight: 600; color: #5c7087; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                            &#10024; Generating AI issue details...
+                            &#10024; Generating ` + (isDetails ? 'AI issue details' : 'Debug Summary') + `...
                         </div>
                         <div class="ai-skeleton-line ai-skeleton-title" style="width: 50%;"></div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
@@ -8707,7 +8737,7 @@ td:nth-child(odd), th:nth-child(odd) {
                         </div>
                     </div>`;
             } else {
-                bodyNode.textContent = 'Generating debug-focused AI summary...';
+                bodyNode.textContent = 'Generating AI summary...';
             }
             if (actionsNode) actionsNode.style.cssText = 'display: none !important;';
 
@@ -8748,11 +8778,11 @@ td:nth-child(odd), th:nth-child(odd) {
             
             // Only inject the banner if it's the chat/summary mode; details mode already injected a shimmer.
             if (payload.mode !== 'AI issue details' || bodyNode.innerHTML.indexOf('ai-skeleton-loader') === -1) {
-                if (payload.mode === 'AI issue details') {
+                if (payload.mode === 'AI issue details' || payload.mode === 'AI Summary') {
                     bodyNode.innerHTML = `
                         <div class="ai-skeleton-loader">
                             <div style="font-size: 13px; font-weight: 600; color: #5c7087; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                                &#10024; Generating AI issue details...
+                                &#10024; Generating ` + (payload.mode === 'AI issue details' ? 'AI issue details' : 'Debug Summary') + `...
                             </div>
                             <div class="ai-skeleton-line ai-skeleton-title" style="width: 50%;"></div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
@@ -8810,14 +8840,14 @@ td:nth-child(odd), th:nth-child(odd) {
                 } else if (preparedSummary.hasDecisionSections) {
                     assistantSummary = preparedSummary.body;
                 } else {
-                    assistantSummary = 'Summary\n\n' + preparedSummary.body + '\n\nFollow up\n' + (preparedSummary.followUp || '- No further action identified from available details.');
+                    assistantSummary = '### Debug Summary\n\n' + preparedSummary.body + '\n\n### Next Steps\n' + (preparedSummary.followUp || '- No further action identified from available details.');
                 }
 
                 window._aiSummaryLastText = payload.mode === 'AI issue details' ? summary : assistantSummary;
                 
-                // Hide copy/regen buttons permanently for AI issue details mode
+                // Hide heavy fixed copy/regen buttons permanently when in chat
                 if (actionsNode) {
-                    actionsNode.style.cssText = payload.mode === 'AI issue details' ? 'display: none !important;' : 'display: flex; gap: 12px; width: 100%; margin-top: 15px;';
+                    actionsNode.style.cssText = 'display: none !important;';
                 }
 
                 // Chat-first UI: hide the standalone body and render the summary as the first assistant message
@@ -8932,8 +8962,6 @@ td:nth-child(odd), th:nth-child(odd) {
             html += `<div class="ai-sk-block issue-details-grid-full"><div class="idg-label">Fixed Version / Closure</div><div class="idg-val">${fixedVer}</div></div>`;
             html += `<div class="ai-sk-block issue-details-grid-full"><div class="idg-label">Latest Activity</div><div class="idg-val">${lastAct}</div></div>`;
             html += `</div></div>`;
-            
-            html += `<div style="text-align: right; margin-top: 15px; padding-top: 10px;"><a href="#" onclick="regenerateAiSummary(); return false;" style="color: #0f5ea8; font-size: 11px; font-weight: 600; text-decoration: none;">&#8635; Retry / Regenerate</a></div>`;
 
             return html;
         }
@@ -9012,6 +9040,62 @@ td:nth-child(odd), th:nth-child(odd) {
                 inner.innerHTML = renderMarkdown(escapeHtml(text).replace(/\n/g, '\n'));
             }
             
+            if (role === 'assistant' && window._aiSummaryLastPayload) {
+                var isAI_IssueDetails = window._aiSummaryLastPayload.mode === 'AI issue details';
+                var isAI_Summary = window._aiSummaryLastPayload.mode === 'AI Summary';
+                
+                if (isAI_IssueDetails || isAI_Summary) {
+                    var actionRibbon = document.createElement('div');
+                    actionRibbon.className = 'ai-chat-msg-actions';
+                    actionRibbon.style.cssText = 'display: flex; gap: 12px; margin-top: 8px; justify-content: flex-end; align-items: center; color: #5c7087; font-size: 13px;';
+                    
+                    var retryLink = document.createElement('a');
+                    retryLink.href = '#';
+                    retryLink.onclick = function(e) {
+                         e.preventDefault();
+                         if (storeMessage === false && window._aiSummaryLastText === text) {
+                            regenerateAiSummary();
+                         } else {
+                             // Just regenerating follow-up if applicable, or fallback to main
+                             regenerateAiSummary();
+                         }
+                    };
+                    retryLink.textContent = '↻ Retry/Regenerate';
+                    retryLink.style.cssText = 'color: #0071c5; text-decoration: none; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.1s;';
+                    retryLink.title = 'Regenerate this response';
+                    retryLink.onmouseover = function() { this.style.color = '#005A9E'; };
+                    retryLink.onmouseout = function() { this.style.color = '#0071c5'; };
+                    
+                    var copyIcon = document.createElement('a');
+                    copyIcon.href = '#';
+                    copyIcon.onclick = function(e) {
+                        e.preventDefault();
+                        if (!navigator.clipboard) return;
+                        // strip html tags for clean copy
+                        var tmp = document.createElement('div');
+                        tmp.innerHTML = inner.innerHTML;
+                        // Remove action ribbon text itself during copy
+                        var ribbonCopy = tmp.querySelector('.ai-chat-msg-actions');
+                        if(ribbonCopy) tmp.removeChild(ribbonCopy);
+                        
+                        navigator.clipboard.writeText(tmp.textContent || tmp.innerText).then(function() {
+                            var o = copyIcon.innerHTML;
+                            copyIcon.innerHTML = '&#10003;';
+                            setTimeout(function(){ copyIcon.innerHTML = o; }, 2000);
+                        });
+                    };
+                    copyIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+                    copyIcon.style.cssText = 'color: #5c7087; margin-left: 5px; text-decoration: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.1s;';
+                    copyIcon.title = 'Copy response text';
+                    copyIcon.onmouseover = function() { this.style.color = '#0071c5'; };
+                    copyIcon.onmouseout = function() { this.style.color = '#5c7087'; };
+                    
+                    actionRibbon.appendChild(retryLink);
+                    actionRibbon.appendChild(copyIcon);
+                    inner.appendChild(actionRibbon);
+                }
+            }
+
             msg.appendChild(inner);
             container.appendChild(msg);
             
@@ -9176,10 +9260,20 @@ td:nth-child(odd), th:nth-child(odd) {
             var qualityNode = document.getElementById('cmfRecQuality');
             setCmfDrawerMode('recommendation');
             var headingNode = document.getElementById('cmfRecHeading');
-            if (headingNode) headingNode.textContent = 'AI Recommendation';
+            if (headingNode) headingNode.textContent = 'CMF Recommendation';
             
-            if (recNode) recNode.innerHTML = '<div class="ai-loading-banner">&#10024; Generating AI recommendation, please wait...</div>';
-            if (evidenceNode) evidenceNode.textContent = '-';
+            if (recNode) recNode.style.display = 'none';
+            if (evidenceNode) evidenceNode.innerHTML = `
+                <div class="ai-skeleton-loader">
+                    <div style="font-size: 13px; font-weight: 600; color: #5c7087; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                        &#10024; Generating CMF Recommendation...
+                    </div>
+                    <div class="ai-skeleton-line ai-skeleton-title" style="width: 50%;"></div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                        <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
+                        <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
+                    </div>
+                </div>`;
             if (qualityNode) qualityNode.textContent = 'Evidence Quality: --';
 
             drawerBg.classList.add('show');
@@ -9218,8 +9312,9 @@ td:nth-child(odd), th:nth-child(odd) {
                     return;
                 }
 
-                // Display recommendation
+            // Display recommendation
                 if (recNode) {
+                    recNode.style.display = 'inline-block';
                     recNode.textContent = result.Recommendation || 'No recommendation returned.';
                     recNode.className = 'cmf-rec-decision-badge';
                 }
@@ -9265,9 +9360,27 @@ td:nth-child(odd), th:nth-child(odd) {
             cpIdNode.textContent = cpId || 'N/A';
             if (titleNode) titleNode.textContent = title || 'N/A';
             componentNode.textContent = component || 'N/A';
-            if (recNode) recNode.textContent = 'Review details';
+            if (recNode) recNode.style.display = 'none';
             if (qualityNode) qualityNode.textContent = 'CMF-focused issue brief';
-            if (detailsBodyNode) detailsBodyNode.innerHTML = renderCmfDecisionDetailsLoading(cpId);
+            if (detailsBodyNode) detailsBodyNode.innerHTML = `
+                <div class="ai-skeleton-loader">
+                    <div style="font-size: 13px; font-weight: 600; color: #5c7087; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                        &#10024; Generating CMF Decision Details...
+                    </div>
+                    <div class="ai-skeleton-line ai-skeleton-title" style="width: 50%;"></div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                        <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
+                        <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
+                        <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
+                        <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <div class="ai-skeleton-line ai-skeleton-title" style="width: 30%; height: 16px;"></div>
+                        <div class="ai-skeleton-line" style="margin-top: 10px; width: 100%;"></div>
+                        <div class="ai-skeleton-line" style="margin-top: 8px; width: 95%;"></div>
+                        <div class="ai-skeleton-line" style="margin-top: 8px; width: 90%;"></div>
+                    </div>
+                </div>`;
 
             drawerBg.classList.add('show');
             drawer.classList.add('show');
@@ -9398,32 +9511,34 @@ td:nth-child(odd), th:nth-child(odd) {
             if (!cpId) return;
             var selector = '.pending-ai-rec-btn[data-cmf-rec-id="' + cssEscapeValue(cpId) + '"]';
             var nodes = document.querySelectorAll(selector);
-            var label = normalizeCmfRecommendationLabel(recommendation);
             var scoreText = score ? score + '% Confidence' : 'AI generated';
             for (var i = 0; i < nodes.length; i++) {
-                var labelNode = nodes[i].querySelector('.pending-ai-rec-label');
                 var confidenceNode = nodes[i].querySelector('.pending-ai-rec-confidence');
-                if (labelNode) labelNode.textContent = label;
-                if (confidenceNode) confidenceNode.textContent = scoreText;
+                if (confidenceNode) {
+                    confidenceNode.textContent = scoreText;
+                    confidenceNode.style.display = 'block';
+                }
                 nodes[i].classList.add('pending-ai-rec-ready');
             }
         }
 
         function renderCmfRecommendationHighlights(reasoningText) {
-            var text = String(reasoningText || '').replace(/\r/g, ' ').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+            var text = String(reasoningText || '').trim();
             if (!text) return '<ul class="cmf-rec-impact-list"><li class="cmf-rec-impact-item">No AI reasoning provided.</li></ul>';
-            var sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
-            var highlights = [];
-            for (var i = 0; i < sentences.length && highlights.length < 4; i++) {
+            
+            // If the model already returned correctly formatted markdown/bullets, render it directly
+            if (text.indexOf('\n-') > -1 || text.indexOf('\n*') > -1 || text.indexOf('###') > -1) {
+                return renderMarkdown(escapeHtml(text).replace(/\n/g, '\n'));
+            }
+            
+            // Otherwise fallback to basic sentence splitting
+            var cleanText = text.replace(/\r/g, ' ').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+            var sentences = cleanText.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [cleanText];
+            var html = '<ul class="cmf-rec-impact-list">';
+            for (var i = 0; i < sentences.length; i++) {
                 var sentence = sentences[i].trim();
                 if (!sentence) continue;
-                if (sentence.length > 260) sentence = trimToCompleteSentence(sentence, 260);
-                if (!sentence) continue;
-                highlights.push(sentence);
-            }
-            var html = '<ul class="cmf-rec-impact-list">';
-            for (var j = 0; j < highlights.length; j++) {
-                html += '<li class="cmf-rec-impact-item">' + escapeHtml(highlights[j]) + '</li>';
+                html += '<li class="cmf-rec-impact-item">' + escapeHtml(sentence) + '</li>';
             }
             return html + '</ul>';
         }
@@ -11298,7 +11413,12 @@ Submit
                         <div id="aiSummaryChatMessages" class="ai-chat-messages" aria-live="polite"></div>
                         <div class="ai-chat-input">
                             <textarea id="aiSummaryChatInput" class="ai-chat-input-box" placeholder="Ask about this defect... (Enter to send, Shift+Enter for newline)"></textarea>
-                            <button type="button" id="aiSummaryChatSend" class="ai-chat-send" onclick="sendAiFollowUp();">Send</button>
+                            <button type="button" id="aiSummaryChatSend" class="ai-chat-send" onclick="sendAiFollowUp();" aria-label="Send" title="Send" style="background: transparent; border: none; padding: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #0071c5; transition: transform 0.1s ease;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </aside>
@@ -11310,7 +11430,7 @@ Submit
                     <div id="cmfRecTitleRow" class="ai-summary-meta-row cmf-rec-title-row"><strong>Issue Title:</strong> <span id="cmfRecTitle" class="cmf-rec-title-text">-</span><span id="cmfRecRecommendation" class="cmf-rec-decision-badge">Generating...</span></div>
                     <div id="cmfRecSightingRow" class="ai-summary-meta-row"><strong>Sighting ID:</strong> <span id="cmfRecCpId">-</span></div>
                     <span id="cmfRecComponent" style="display:none">-</span>
-                    <div id="cmfRecQuality" class="ai-summary-meta-row">Evidence quality: --</div>
+                    <div id="cmfRecQuality" class="ai-summary-meta-row" style="display:none">Evidence quality: --</div>
                     
                     <div id="cmfRecReasoningSection" class="cmf-rec-section">
                         <h3>Reasoning</h3>
@@ -11627,7 +11747,7 @@ Submit
 
         <asp:TemplateField HeaderText="Status" ItemStyle-CssClass="field-status" HeaderStyle-CssClass="field-status">
             <ItemTemplate>
-                <%# RenderStatusWithAiSummaryButton(Eval("IssueStatus"), Eval("Status"), Eval("SightingID"), Eval("title"), Eval("SubmittedDate"), Eval("sysdebug")) %>
+                <%# RenderStatusWithAiSummaryButton(Eval("IssueStatus"), Eval("Status"), Eval("SightingID"), Eval("title"), Eval("SubmittedDate"), Eval("sysdebug"), Container.DataItem) %>
             </ItemTemplate>
         </asp:TemplateField>
 
@@ -11952,7 +12072,7 @@ Submit
                                             <ItemTemplate><%# RenderPendingAskImpact(Eval("cp_id"), Eval("title"), Eval("component"), Eval("date_cmf_ask"), Eval("cmf_request"), Eval("impact"), Eval("idst"), Eval("repro_on_rvp"), Eval("reproducibility"), Eval("customer_detail"), Eval("customer_owner")) %></ItemTemplate>
                                         </asp:TemplateField>
 
-                                        <asp:TemplateField HeaderText="AI Recommendation" ItemStyle-Width="150px" HeaderStyle-Width="150px">
+                                        <asp:TemplateField HeaderText="CMF Recommendation" ItemStyle-Width="150px" HeaderStyle-Width="150px">
                                             <ItemTemplate><%# RenderPendingRecommendationCell(Eval("cp_id"), Eval("title"), Eval("component"), Eval("cmf_request"), Eval("impact"), Eval("idst"), Eval("repro_on_rvp"), Eval("reproducibility"), Eval("customer_detail"), Eval("customer_owner")) %></ItemTemplate>
                                         </asp:TemplateField>
 

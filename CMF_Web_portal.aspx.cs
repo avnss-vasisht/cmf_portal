@@ -4475,7 +4475,7 @@ LEFT JOIN " + designTable + @" AS d
     protected string RenderPendingDecisionDetailsButton(object cpIdValue, object titleValue, object componentValue, object cmfRequestValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
     {
         return string.Format(
-            "<button type=\"button\" class=\"pending-recommendation-btn pending-decision-details-btn\" onclick='openCmfPendingDetailsModal(\"{0}\", \"{1}\", \"{2}\", \"{3}\", \"{4}\", \"{5}\", \"{6}\", \"{7}\", \"{8}\", \"{9}\")' title=\"AI CMF decision details\" aria-label=\"AI CMF decision details\"><i class=\"fas fa-magic\" aria-hidden=\"true\"></i></button>",
+            "<button type=\"button\" class=\"pending-recommendation-btn pending-decision-details-btn\" onclick='openCmfPendingDetailsModal(\"{0}\", \"{1}\", \"{2}\", \"{3}\", \"{4}\", \"{5}\", \"{6}\", \"{7}\", \"{8}\", \"{9}\")' title=\"AI CMF decision details\" aria-label=\"AI CMF decision details\">&#10024;</button>",
             JsEncode(cpIdValue),
             JsEncode(titleValue),
             JsEncode(componentValue),
@@ -4542,9 +4542,6 @@ LEFT JOIN " + designTable + @" AS d
         sb.AppendFormat("<span class=\"pending-chip\">Date: {0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(dateCmfAsk) ? "N/A" : dateCmfAsk));
         sb.Append("</span>");
         sb.AppendFormat("<span class=\"pending-mini-label\">Impact</span><span>{0}</span>", HttpUtility.HtmlEncode(string.IsNullOrWhiteSpace(impact) ? "Impact not specified" : impact));
-        sb.Append("<span class=\"pending-issue-action-row\">");
-        sb.Append(RenderPendingImpactDetailsButton(cpIdValue, titleValue, componentValue, cmfRequestValue, impactValue, idstValue, reproOnRvpValue, reproducibilityValue, customerDetailValue, customerOwnerValue));
-        sb.Append("</span>");
         sb.Append("</span>");
         return sb.ToString();
     }
@@ -4569,7 +4566,7 @@ LEFT JOIN " + designTable + @" AS d
     {
         string cpId = cpIdValue == null || cpIdValue == DBNull.Value ? string.Empty : cpIdValue.ToString();
         return string.Format(
-            "<button type=\"button\" class=\"pending-recommendation-btn pending-ai-rec-btn\" data-cmf-rec-id=\"{10}\" onclick='openCmfPendingRecommendationModal(\"{0}\", \"{1}\", \"{2}\", \"{3}\", \"{4}\", \"{5}\", \"{6}\", \"{7}\", \"{8}\", \"{9}\")' title=\"Run AI recommendation\" aria-label=\"Run AI recommendation\"><span class=\"pending-ai-rec-label\">Run AI</span><span class=\"pending-ai-rec-confidence\">Not generated</span></button>",
+            "<button type=\"button\" class=\"pending-recommendation-btn pending-ai-rec-btn\" data-cmf-rec-id=\"{10}\" onclick='openCmfPendingRecommendationModal(\"{0}\", \"{1}\", \"{2}\", \"{3}\", \"{4}\", \"{5}\", \"{6}\", \"{7}\", \"{8}\", \"{9}\")' title=\"Run AI recommendation\" aria-label=\"Run AI recommendation\"><span class=\"pending-ai-rec-label\">&#10024;</span><span class=\"pending-ai-rec-confidence\"></span></button>",
             JsEncode(cpIdValue),
             JsEncode(titleValue),
             JsEncode(componentValue),
@@ -4814,31 +4811,56 @@ LEFT JOIN " + designTable + @" AS d
             HttpUtility.HtmlEncode(promotedText));
     }
 
-    protected string RenderStatusWithAiSummaryButton(object statusValue, object rawStatusValue, object sightingIdValue, object titleValue, object submittedDateValue, object sysdebugValue)
+    protected string GetSysdebugForumValue(object sysdebugForumValue)
+    {
+        return sysdebugForumValue != null && sysdebugForumValue != DBNull.Value ? sysdebugForumValue.ToString().Trim() : "";
+    }
+
+    protected string RenderStatusWithAiSummaryButton(object statusValue, object rawStatusValue, object sightingIdValue, object titleValue, object submittedDateValue, object sysdebugValue, object dataItemObj = null)
     {
         string status = statusValue == null || statusValue == DBNull.Value ? string.Empty : statusValue.ToString().Trim();
         string rawStatus = rawStatusValue == null || rawStatusValue == DBNull.Value ? string.Empty : rawStatusValue.ToString().Trim();
 
-        if (string.IsNullOrWhiteSpace(status) && !string.IsNullOrWhiteSpace(rawStatus))
-        {
-            status = rawStatus;
-        }
+        string sysdebugForum = "";
+        try {
+            if (dataItemObj != null) {
+                var drv = dataItemObj as System.Data.DataRowView;
+                if (drv != null) {
+                    if (drv.Row.Table.Columns.Contains("sysdebug_forum")) {
+                         var val = drv["sysdebug_forum"];
+                         if (val != null && val != DBNull.Value && !string.IsNullOrWhiteSpace(val.ToString())) {
+                             sysdebugForum = val.ToString().Trim();
+                         }
+                    } 
+                    else if (drv.Row.Table.Columns.Contains("cmf_status")) {
+                         var val = drv["cmf_status"];
+                         if (val != null && val != DBNull.Value && !string.IsNullOrWhiteSpace(val.ToString())) {
+                             sysdebugForum = val.ToString().Trim();
+                         }
+                    }
+                }
+            }
+        } catch { }
+
+        // Determine main status to display in pill - prioritize sysdebugForum, then rawStatus, then statusValue (IssueStatus)
+        string primaryStatusToDisplay = string.Empty;
+        if (!string.IsNullOrWhiteSpace(sysdebugForum)) primaryStatusToDisplay = sysdebugForum;
+        else if (!string.IsNullOrWhiteSpace(rawStatus)) primaryStatusToDisplay = rawStatus;
+        else primaryStatusToDisplay = status;
+        
         string sysdebug = sysdebugValue == null || sysdebugValue == DBNull.Value ? string.Empty : sysdebugValue.ToString().Replace("\r", " ").Replace("\n", " ").Trim();
         string sightingId = sightingIdValue == null || sightingIdValue == DBNull.Value ? string.Empty : sightingIdValue.ToString();
-        string oneLineUpdate = BuildOneLineStatusUpdate(status, sysdebug);
-        if (string.IsNullOrWhiteSpace(oneLineUpdate)) oneLineUpdate = BuildFallbackStatusSentence(status);
-
         string onclick = "openAiSummaryModal(\"" + JsEncode(sightingIdValue) + "\", \"" + JsEncode(titleValue) + "\", \"" + JsEncode(FormatDateOnly(submittedDateValue)) + "\", \"" + JsEncode(statusValue) + "\", \"" + JsEncode(sysdebugValue) + "\", \"AI Summary\")";
-
+        
         return "<div class=\"status-cell-wrap status-cell-wrap-compact\">" +
             "<div class=\"status-row status-row-primary\">" +
                 "<span class=\"status-label-group\">" +
-                "<span class=\"status-pill\">" + HttpUtility.HtmlEncode(status) + "</span>" +
-                "<span class=\"status-confidence-pill status-confidence-empty\" data-ai-confidence-issue=\"" + HttpUtility.HtmlAttributeEncode(sightingId) + "\">AI not run</span>" +
+                "<span class=\"status-pill\" style=\"margin-right: 6px;\">" + HttpUtility.HtmlEncode(status) + "</span>" +
+                "<button type=\"button\" class=\"ai-summary-btn ai-summary-btn-inline issue-details-ai-btn\" style=\"padding: 2px 8px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; border: 1px solid #7cb5ec; background-color: #f3f9ff; font-size: 14px; width: 26px; height: 26px; margin-right: 6px;\" onclick='" + onclick + "' title=\"AI Debug Summary\" aria-label=\"AI Debug Summary\">&#10024;</button>" +
                 "</span>" +
-                "<button type=\"button\" class=\"ai-summary-btn ai-summary-btn-inline\" onclick='" + onclick + "' title=\"AI Summary\" aria-label=\"AI Summary\">?</button>" +
+                "<span class=\"status-confidence-pill status-confidence-empty\" data-ai-confidence-issue=\"" + HttpUtility.HtmlAttributeEncode(sightingId) + "\">AI not run</span>" +
             "</div>" +
-            "<div class=\"status-one-line\">" + HttpUtility.HtmlEncode(oneLineUpdate) + "</div>" +
+            "<div class=\"status-one-line\">" + HttpUtility.HtmlEncode(primaryStatusToDisplay) + "</div>" +
             "</div>";
     }
 

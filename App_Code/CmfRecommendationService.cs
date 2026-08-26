@@ -1137,7 +1137,7 @@ threshold_for_cmf_tag: 0.70";
             {
                 currentSection = "EVIDENCE";
                 if (trimmed.StartsWith("DECISION IMPACT:", StringComparison.OrdinalIgnoreCase)) {
-                    if (evidenceBuilder.Length > 0) evidenceBuilder.Append(" ");
+                    if (evidenceBuilder.Length > 0) evidenceBuilder.AppendLine();
                     evidenceBuilder.Append("Decision Impact: ");
                 }
                 continue;
@@ -1168,8 +1168,11 @@ threshold_for_cmf_tag: 0.70";
             {
                 if (!trimmed.StartsWith("RULE", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (evidenceBuilder.Length > 0) evidenceBuilder.Append(" ");
-                    evidenceBuilder.Append(trimmed);
+                    if (evidenceBuilder.Length > 0 && !evidenceBuilder.ToString().EndsWith("\n") && !evidenceBuilder.ToString().EndsWith("Decision Impact: ")) 
+                    {
+                        evidenceBuilder.AppendLine();
+                    }
+                    evidenceBuilder.AppendLine(trimmed);
                 }
             }
             else if (currentSection == "RULES" && trimmed.Contains("|"))
@@ -1232,6 +1235,7 @@ threshold_for_cmf_tag: 0.70";
         prompt.AppendLine("2. If a high-weight rule explicitly fails based on the data, the recommendation must account for it (leading to CMF_REJECT or CMF_INCOMPLETE).");
         prompt.AppendLine("3. Calculate the OVERALL QUALITY SCORE as an integer from 0-100 indicating confidence.");
         prompt.AppendLine("4. DO NOT explain field names. Reason naturally.");
+        prompt.AppendLine("5. The reasoning YOU generate MUST be very natural, meaningful and easy for a human user to understand. Assess the issue's severity, impact on customer/user, the reproduction rate, and progress so far, and explain why this particular CMF decision (cmf_ok, cmf_reject, or cmf_incomplete) applies.");
         prompt.AppendLine();
         prompt.AppendLine("### ADMIN POLICY RULES ###");
         prompt.AppendLine(string.IsNullOrWhiteSpace(rules) ? DefaultRulesText : rules);

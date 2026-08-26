@@ -209,7 +209,7 @@ public static class AiSummaryService
         }
 
         // Post-process the model output to clean up spacing and ensure word limit
-        string concise = CleanupSummarySpacing(modelSummary, 220);
+        string concise = CleanupSummarySpacing(modelSummary, 800);
 
         // Save the raw model output for follow-up chat interactions keyed by issueId
         try
@@ -963,28 +963,23 @@ public static class AiSummaryService
 
         StringBuilder builder = new StringBuilder();
         builder.AppendLine("### INSTRUCTIONS ###");
-        builder.AppendLine("Review all ticket information and write a summary for an iDST/CCE lead needing the current debug position and closure/escalation decision.");
+        builder.AppendLine("Review all ticket information (especially focusing on all linked sightings, duplicated IDs, and promoted fields).");
+        builder.AppendLine("Extract the latest comments, status updates, and investigation notes from the HSD context to build a brief, concise Debug Summary and Next steps list.");
         builder.AppendLine("You are an expert engineering analyst. Analyze this as an engineering investigation, not just a collection of database fields.");
         builder.AppendLine();
         builder.AppendLine("### RULES ###");
-        builder.AppendLine("1. Reconstruct the issue progression. Distinguish between symptom, investigation finding, root cause, fix, and final disposition.");
-        builder.AppendLine("2. Do not just repeat field values. Explain what those values mean contextually.");
+        builder.AppendLine("1. Make sure to consider all linked or duplicate IDs provided in the context, and extract their latest states, comments, and promoted data.");
+        builder.AppendLine("2. Synthesize all findings into proper grammar, bullet points, and accurate language.");
         builder.AppendLine("3. Give weight to detailed investigation updates over generic metadata. When multiple updates exist, prioritize the latest information.");
         builder.AppendLine("4. DO NOT invent root cause, fix, validation result, owner action, or technical findings.");
-        builder.AppendLine("5. If unresolved or unconfirmed, state it explicitly.");
-        builder.AppendLine("6. Answer implicitly: Can this be closed, escalated, or kept in debug?");
-        builder.AppendLine("7. Keep each section to a crisp, natural sentence under 25 words.");
-        builder.AppendLine("8. Escalation Warning MUST be exactly 'None.' if no signal exists.");
+        builder.AppendLine("5. Keep it VERY BRIEF (maximum 1 to 2 bullet points for summary, 1 bullet point for next steps). Omit obvious noise, duplicate statements, and fluff.");
         builder.AppendLine();
         builder.AppendLine("### EXPECTED OUTPUT FORMAT ###");
-        builder.AppendLine("**Current/Latest Status**");
-        builder.AppendLine("- [Summarize the latest status update]");
+        builder.AppendLine("### Debug Summary");
+        builder.AppendLine("- [Summarize the sysdebug data, findings from all linked tickets, and logs in bullet points]");
         builder.AppendLine();
-        builder.AppendLine("**Debug Summary**");
-        builder.AppendLine("- [Summarize the sysdebug data and logs]");
-        builder.AppendLine();
-        builder.AppendLine("**Next Steps**");
-        builder.AppendLine("- [Action required]");
+        builder.AppendLine("### Next Steps");
+        builder.AppendLine("- [Action required and next steps in bullet points]");
         builder.AppendLine();
         builder.AppendLine("### TICKET DATA ###");
         builder.AppendLine("Issue ID: " + issueId);
