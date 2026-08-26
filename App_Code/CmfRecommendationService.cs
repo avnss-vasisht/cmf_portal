@@ -114,7 +114,7 @@ threshold_for_cmf_tag: 0.70";
         }
 
         string hsdContext = SafeText(request.HsdContext);
-        string hash = ComputeHash("cmf-recommendation-live-context-v9|" + GetAiProviderCacheSignature() + "|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + rules + "|" + hsdContext);
+        string hash = ComputeHash("cmf-recommendation-live-context-v10|" + GetAiProviderCacheSignature() + "|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + rules + "|" + hsdContext);
         string cacheKey = "cmf-recommendation:" + hash;
 
         CmfRecommendationResponse cached = TryGetCached(cacheKey);
@@ -1133,12 +1133,12 @@ threshold_for_cmf_tag: 0.70";
             if (trimmed.StartsWith("EVIDENCE:", StringComparison.OrdinalIgnoreCase) ||
                 trimmed.StartsWith("REASONING:", StringComparison.OrdinalIgnoreCase) ||
                 trimmed.StartsWith("AI REASONING:", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.StartsWith("DECISION IMPACT:", StringComparison.OrdinalIgnoreCase))
+                trimmed.StartsWith("ISSUE IMPACT:", StringComparison.OrdinalIgnoreCase))
             {
                 currentSection = "EVIDENCE";
-                if (trimmed.StartsWith("DECISION IMPACT:", StringComparison.OrdinalIgnoreCase)) {
+                if (trimmed.StartsWith("ISSUE IMPACT:", StringComparison.OrdinalIgnoreCase)) {
                     if (evidenceBuilder.Length > 0) evidenceBuilder.AppendLine();
-                    evidenceBuilder.Append("Decision Impact: ");
+                    evidenceBuilder.Append("Issue Impact: ");
                 }
                 continue;
             }
@@ -1168,7 +1168,7 @@ threshold_for_cmf_tag: 0.70";
             {
                 if (!trimmed.StartsWith("RULE", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (evidenceBuilder.Length > 0 && !evidenceBuilder.ToString().EndsWith("\n") && !evidenceBuilder.ToString().EndsWith("Decision Impact: ")) 
+                    if (evidenceBuilder.Length > 0 && !evidenceBuilder.ToString().EndsWith("\n") && !evidenceBuilder.ToString().EndsWith("Issue Impact: ")) 
                     {
                         evidenceBuilder.AppendLine();
                     }
@@ -1234,8 +1234,10 @@ threshold_for_cmf_tag: 0.70";
         prompt.AppendLine("1. The admin rules are policy gates. Apply them strictly.");
         prompt.AppendLine("2. If a high-weight rule explicitly fails based on the data, the recommendation must account for it (leading to CMF_REJECT or CMF_INCOMPLETE).");
         prompt.AppendLine("3. Calculate the OVERALL QUALITY SCORE as an integer from 0-100 indicating confidence.");
-        prompt.AppendLine("4. DO NOT explain field names. Reason naturally.");
-        prompt.AppendLine("5. The reasoning YOU generate MUST be very natural, meaningful and easy for a human user to understand. Assess the issue's severity, impact on customer/user, the reproduction rate, and progress so far, and explain why this particular CMF decision (cmf_ok, cmf_reject, or cmf_incomplete) applies.");
+        prompt.AppendLine("4. Write for a customer-facing reviewer. Do not rely on internal field names as the explanation.");
+        prompt.AppendLine("5. Reason naturally from the evidence: what was observed, why it matters, what risk it creates, and what is still missing if the issue is incomplete.");
+        prompt.AppendLine("6. Avoid template phrases such as request intent is explicit, fields are populated, or rule gates are met. Translate reproducibility, RVP repro, cmf_request, and impact into plain-language meaning.");
+        prompt.AppendLine("7. If multiple evidence points matter, use short bullets under REASONING. Each bullet must be understandable without knowing the database field names.");
         prompt.AppendLine();
         prompt.AppendLine("### ADMIN POLICY RULES ###");
         prompt.AppendLine(string.IsNullOrWhiteSpace(rules) ? DefaultRulesText : rules);
@@ -1264,10 +1266,10 @@ threshold_for_cmf_tag: 0.70";
         prompt.AppendLine("EVIDENCE QUALITY: [0-100 integer]");
         prompt.AppendLine();
         prompt.AppendLine("REASONING:");
-        prompt.AppendLine("[Provide grammatically complete sentences explaining the situation and rule adherence]");
+        prompt.AppendLine("[- 2 to 4 concise bullets. Start each bullet with the practical evidence or risk, not a field name. Explain what the evidence means for the CMF decision.]");
         prompt.AppendLine();
-        prompt.AppendLine("DECISION IMPACT:");
-        prompt.AppendLine("[Provide the downstream impact of this recommendation]");
+        prompt.AppendLine("ISSUE IMPACT:");
+        prompt.AppendLine("[One complete sentence describing customer/user impact and urgency in normal words.]");
         prompt.AppendLine();
         prompt.AppendLine("RULE SCORES:");
         prompt.AppendLine("Rule ID | Rule Name | Score | Evaluation");

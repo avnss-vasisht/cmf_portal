@@ -105,7 +105,7 @@ public static class AiSummaryService
         string prompt = "Read the supplied current CMF workload and predict the most likely blockers the program may face next. " +
             "Return exactly 1 to 3 short bullet lines. Each bullet must be one plain-English sentence under 120 characters. " +
             "Do not repeat issue titles verbatim; infer the blocker from priority, impact, milestone, status, and issue wording. " +
-            "Do not invent customers, owners, dates, or counts.\n\n" +
+            "Do not invent customers, owners, dates, or counts. Do not include Program readiness/Portal Readiness as a blocker here.\n\n" +
             "Platform: " + platformLabel + "\n\n" + contextDetails;
 
         string modelSummary;

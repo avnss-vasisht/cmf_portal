@@ -237,6 +237,18 @@
             margin: 12px 0;
         }
 
+            .cmf-rec-reason-list {
+                margin: 6px 0 8px;
+                padding-left: 18px;
+                display: grid;
+                gap: 5px;
+            }
+
+            .cmf-rec-reason-list li {
+                color: #24364a;
+                line-height: 1.45;
+            }
+
         header {
             z-index: 100;
             min-height: 88px;
@@ -2094,7 +2106,7 @@
 
 .cmf-rec-impact-list {
     display: grid;
-    gap: 10px;
+    gap: 8px;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -2133,6 +2145,23 @@
 .cmf-rec-impact-item:nth-child(3)::before { background: #f59e0b; }
 .cmf-rec-impact-item:nth-child(4)::before { background: #dc2626; }
 
+.cmf-rec-reasoning-card {
+    display: grid;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    background: #f8fbff;
+    color: #24364a;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.cmf-rec-reasoning-card strong {
+    color: #143f6b;
+    font-weight: 800;
+}
+
 .cmf-rec-section .ai-summary-body {
     width: 100%;
     box-sizing: border-box;
@@ -2166,6 +2195,20 @@
 
 .cmf-rec-hidden {
     display: none !important;
+}
+
+#cmfRecDrawer {
+    overflow-y: auto !important;
+}
+
+.cmf-rec-heading-sighting {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 12px;
+    color: #5d7289;
+    font-size: 13px;
+    font-weight: 750;
+    vertical-align: middle;
 }
 
 .cmf-decision-details-shell {
@@ -2343,9 +2386,11 @@
     transform: translateX(100%);
     transition: transform 0.28s ease;
     z-index: 1061;
-    overflow-y: auto;
+    overflow: hidden;
     padding: 24px;
     border-left: 1px solid rgba(205, 217, 229, 0.9);
+    display: flex;
+    flex-direction: column;
 }
 
 .ai-summary-drawer.show {
@@ -2356,13 +2401,17 @@
     border-top: 1px solid rgba(205,217,229,0.8);
     background: #fff;
     padding: 12px 24px;
-    position: sticky;
-    bottom: 0;
     margin: 0 -24px -24px -24px;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 .ai-chat-messages {
     /* make the chat area take most of the drawer height to feel like a chatbot */
-    max-height: calc(100vh - 300px);
+    flex: 1 1 auto;
+    min-height: calc(100vh - 330px);
+    max-height: none;
     overflow-y: auto;
     padding: 8px;
     display: flex;
@@ -2696,35 +2745,36 @@ body {
 .ccip-dashboard {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 9px;
 }
 
 .ccip-dash-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 6px 2px 2px;
+    gap: 10px;
+    padding: 2px 2px 0;
     flex-wrap: wrap;
 }
 
 .ccip-dash-greeting {
     margin: 0;
-    font-size: 34px;
+    font-size: 26px;
     line-height: 1.05;
     font-weight: 800;
     color: #101828;
 }
 
 .ccip-dash-sub {
-    margin: 6px 0 0;
+    margin: 3px 0 0;
     color: #475467;
-    font-size: 14px;
+    font-size: 12px;
 }
 
 .ccip-dash-updated {
     display: inline-flex;
     align-items: center;
+    gap: 6px;
     min-height: 36px;
     border: 1px solid #d9e1ec;
     background: #ffffff;
@@ -2734,6 +2784,10 @@ body {
     font-size: 12px;
     font-weight: 700;
     box-shadow: 0 4px 14px rgba(16, 24, 40, 0.06);
+}
+
+.ccip-updated-value {
+    margin-left: 4px;
 }
 
 .ccip-link-btn {
@@ -2753,16 +2807,16 @@ body {
 
 .ccip-kpi-row {
     display: grid;
-    grid-template-columns: repeat(5, minmax(170px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    gap: 8px;
 }
 
 .ccip-kpi {
     background: #ffffff;
     border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    padding: 12px 14px;
-    box-shadow: 0 8px 18px rgba(16, 24, 40, 0.04);
+    border-radius: 10px;
+    padding: 8px 10px;
+    box-shadow: 0 5px 12px rgba(16, 24, 40, 0.035);
 }
 
 .ccip-kpi-head {
@@ -2774,18 +2828,18 @@ body {
 
 .ccip-kpi-title {
     color: #1f2937;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
 }
 
 .ccip-kpi-icon {
-    width: 34px;
-    height: 34px;
+    width: 26px;
+    height: 26px;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
+    font-size: 12px;
 }
 
 .ccip-kpi.kpi-red .ccip-kpi-icon { background: #fee2e2; color: #dc2626; }
@@ -2795,10 +2849,10 @@ body {
 .ccip-kpi.kpi-purple .ccip-kpi-icon { background: #ede9fe; color: #7c3aed; }
 
 .ccip-kpi-value {
-    font-size: 44px;
+    font-size: 32px;
     font-weight: 900;
     line-height: 1;
-    margin: 8px 0;
+    margin: 5px 0 3px;
 }
 
 .ccip-kpi.kpi-red .ccip-kpi-value { color: #dc2626; }
@@ -2808,7 +2862,7 @@ body {
 .ccip-kpi.kpi-purple .ccip-kpi-value { color: #7c3aed; }
 
 .ccip-kpi-note {
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 700;
     color: #667085;
 }
@@ -2872,29 +2926,31 @@ body {
 
 .ccip-main-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.9fr);
-    gap: 12px;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.82fr);
+    gap: 8px;
     align-items: stretch;
 }
 
 .ccip-dashboard-overview {
     display: grid;
-    grid-template-columns: minmax(0, 1.45fr) minmax(360px, 0.95fr);
+    grid-template-columns: minmax(520px, 0.92fr) minmax(430px, 1.08fr);
     gap: 12px;
-    align-items: start;
+    align-items: stretch;
+    min-height: 455px;
 }
 
 .ccip-dashboard-left {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     min-width: 0;
+    overflow: hidden;
 }
 
 .ccip-dashboard-overview .ccip-dashboard-left {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.28fr);
-    gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     align-items: stretch;
 }
 
@@ -2909,36 +2965,41 @@ body {
 .ccip-dashboard-right-stack {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 0;
     min-width: 0;
+    height: 100%;
+    overflow: hidden;
 }
 
 .ccip-trend-card-inline {
-    min-height: 360px;
+    min-height: 230px;
+    flex: 1 1 auto;
 }
 
 .dashboard-kpis-left {
-    grid-template-columns: repeat(4, minmax(190px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
 }
 
 .dashboard-kpis-left .ccip-kpi {
-    min-height: 118px;
-    padding: 20px 22px;
+    min-height: 78px;
+    padding: 9px 12px;
 }
 
 .dashboard-kpis-left .ccip-kpi-value {
-    font-size: 34px;
+    font-size: 28px;
 }
 
 .ccip-ai-health-card {
     background: #ffffff;
     border: 2px solid #ff6b1a;
     border-radius: 8px;
-    box-shadow: 0 12px 28px rgba(16, 24, 40, 0.08);
-    padding: 12px;
+    box-shadow: 0 7px 16px rgba(16, 24, 40, 0.06);
+    padding: 9px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
+    height: 100%;
 }
 
 .ccip-ai-health-head {
@@ -2947,38 +3008,68 @@ body {
     justify-content: space-between;
     gap: 10px;
     color: #2140a8;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 900;
     text-transform: uppercase;
-    margin-bottom: 10px;
+    margin-bottom: 4px;
 }
 
-.ccip-ai-beta {
+/* .ccip-ai-beta {
     border-radius: 999px;
     background: #f3e8ff;
     color: #7e22ce;
     padding: 2px 8px;
     font-size: 10px;
     font-weight: 900;
-}
+} */
 
 .ccip-ai-health-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    grid-template-columns: minmax(112px, 0.44fr) minmax(0, 1fr) minmax(0, 1.1fr);
+    grid-template-rows: minmax(132px, auto) minmax(172px, auto);
+    gap: 6px;
+    flex: 1 1 auto;
+    min-height: 0;
+    align-content: start;
+}
+
+.ccip-health-score {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.ccip-health-risk-compact {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.ccip-health-weekly {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.ccip-health-blockers {
+    grid-column: 3;
+    grid-row: 1;
+}
+
+.ccip-ai-health-grid .ccip-ai-health-summary {
+    grid-column: 2 / 4;
+    grid-row: 2;
 }
 
 .ccip-ai-health-grid > div {
     border: 1px solid #e4e7ec;
     border-radius: 8px;
     background: #fbfcff;
-    padding: 10px;
-    min-height: 92px;
+    padding: 7px;
+    min-height: 70px;
+    min-width: 0;
 }
 
 .ccip-health-score-value {
-    width: 74px;
-    height: 74px;
+    width: 54px;
+    height: 54px;
     border-radius: 999px;
     display: flex;
     align-items: center;
@@ -2986,9 +3077,9 @@ body {
     margin: 0 auto 6px;
     background: conic-gradient(#22c55e 0 70%, #f59e0b 70% 88%, #ef4444 88% 100%);
     color: #111827;
-    font-size: 25px;
+    font-size: 19px;
     font-weight: 900;
-    box-shadow: inset 0 0 0 9px #ffffff;
+    box-shadow: inset 0 0 0 7px #ffffff;
 }
 
 .ccip-health-score-label,
@@ -3014,50 +3105,61 @@ body {
 
 .ccip-health-value.large {
     color: #4f46e5;
-    font-size: 28px;
+    font-size: 20px;
 }
 
 .ccip-health-list {
-    margin: 6px 0 0;
+    margin: 4px 0 0;
     padding-left: 16px;
     color: #111827;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
 }
 
 .ccip-ai-health-summary {
-    border-top: 1px solid #e4e7ec;
-    padding-top: 12px;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    background: #fbfcff;
+    padding: 10px;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ccip-ai-health-summary .ccip-cmf-summary-title {
+    margin: 0;
 }
 
 .ccip-summary-facts {
     display: grid;
     grid-template-columns: repeat(8, minmax(96px, 1fr));
-    gap: 8px;
+    gap: 6px;
 }
 
 .ccip-summary-fact {
     background: #ffffff;
     border: 1px solid #e4e7ec;
     border-radius: 8px;
-    padding: 10px;
+    padding: 7px 8px;
     text-align: center;
 }
 
 .ccip-cmf-summary-section {
-    margin-top: 12px;
+    margin-top: 4px;
     border: 1px solid #d0e4ff;
     border-radius: 8px;
     background: #f8fbff;
-    padding: 12px;
+    padding: 8px;
 }
 
 .ccip-cmf-summary-title {
     color: #12315f;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 900;
     letter-spacing: 0;
-    margin: 0 0 10px;
+    margin: 0 0 6px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -3069,9 +3171,12 @@ body {
 
 .ccip-executive-summary-body {
     color: #344054;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
-    line-height: 1.55;
+    line-height: 1.38;
+    flex: 1 1 auto;
+    max-height: 168px;
+    overflow: auto;
 }
 
 .ccip-executive-summary-body strong {
@@ -3094,10 +3199,10 @@ body {
 
 .ccip-summary-fact-value {
     color: #111827;
-    font-size: 28px;
+    font-size: 20px;
     font-weight: 900;
     line-height: 1.05;
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
 .ccip-summary-fact-note {
@@ -3109,7 +3214,49 @@ body {
 }
 
 .ccip-dashboard-tables-grid {
-    grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.9fr);
+    grid-template-columns: minmax(290px, 0.62fr) minmax(0, 1.38fr);
+    align-items: stretch;
+    grid-auto-rows: 1fr;
+}
+
+.ccip-dashboard-tables-grid .ccip-col-center {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.ccip-dashboard-tables-grid .ccip-col-right {
+    gap: 8px;
+    height: 100%;
+    min-height: 0;
+}
+
+.ccip-dashboard-tables-grid .ccip-col-center .ccip-card {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.ccip-dashboard-tables-grid .ccip-col-center .ccip-live-table-wrap {
+    flex: 1 1 auto;
+    max-height: none;
+}
+
+.ccip-dashboard-tables-grid .ccip-col-right .ccip-card {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.ccip-dashboard-tables-grid .ccip-col-right .ccip-live-table-wrap {
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 0;
+}
+
+.ccip-dashboard-tables-grid .ccip-col-right .ccip-live-table,
+.ccip-dashboard-tables-grid .ccip-col-center .ccip-live-table {
+    height: 100%;
 }
 
 .ccip-dashboard-charts-grid {
@@ -3118,13 +3265,13 @@ body {
 
 .ccip-live-table-wrap {
     overflow: auto;
-    max-height: 360px;
+    max-height: 210px;
 }
 
 .ccip-live-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 11px;
 }
 
 .ccip-live-table th {
@@ -3133,14 +3280,14 @@ body {
     z-index: 1;
     background: #244aaf;
     color: #ffffff;
-    padding: 8px;
+    padding: 5px 6px;
     text-align: left;
     white-space: nowrap;
 }
 
 .ccip-live-table td {
     border: 1px solid #e4e7ec;
-    padding: 8px;
+    padding: 5px 6px;
     color: #111827;
     background: #ffffff;
 }
@@ -3167,16 +3314,16 @@ body {
 .ccip-col {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     min-width: 0;
 }
 
 .ccip-card {
     background: #ffffff;
     border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    box-shadow: 0 8px 20px rgba(16, 24, 40, 0.04);
-    padding: 14px;
+    border-radius: 10px;
+    box-shadow: 0 5px 14px rgba(16, 24, 40, 0.035);
+    padding: 9px;
     min-width: 0;
 }
 
@@ -3185,7 +3332,7 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
 }
 
 .ccip-card-title {
@@ -3205,7 +3352,7 @@ body {
 .ccip-card-mini-title {
     margin: 0;
     color: #111827;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 800;
 }
 
@@ -3311,7 +3458,11 @@ body {
 }
 
 .ccip-trend-chart {
-    height: 218px;
+    height: 202px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .ccip-priority-table {
@@ -3473,16 +3624,16 @@ body {
 .ccip-quick-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
 }
 
 .ccip-quick-btn {
-    min-height: 40px;
-    border-radius: 10px;
+    min-height: 32px;
+    border-radius: 8px;
     border: 1px solid #d9e1ec;
     background: #ffffff;
     color: #344054;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
 }
 
@@ -3525,14 +3676,46 @@ body {
         grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.9fr);
     }
 
+    .ccip-dashboard-tables-grid {
+        grid-template-columns: minmax(280px, 0.62fr) minmax(0, 1.38fr);
+    }
+
     .ccip-dashboard-overview {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(470px, 0.9fr) minmax(380px, 1.1fr);
     }
 
     .ccip-main-grid .ccip-col-right {
         grid-column: auto;
         display: flex;
         flex-direction: column;
+    }
+}
+
+@media (max-width: 1180px) {
+    .ccip-dashboard-overview,
+    .ccip-dashboard-tables-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ccip-dashboard-tables-grid .ccip-col-center {
+        display: flex;
+    }
+
+    .ccip-ai-health-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ccip-health-score,
+    .ccip-health-risk-compact,
+    .ccip-health-weekly,
+    .ccip-health-blockers,
+    .ccip-ai-health-grid .ccip-ai-health-summary {
+        grid-column: auto;
+        grid-row: auto;
+    }
+
+    .ccip-dashboard-overview {
+        min-height: 0;
     }
 }
 
@@ -3568,15 +3751,22 @@ body {
 /* Issue List + CMF Pending interactive modernization */
 .issue-tab-shell,
 .pending-tab-shell {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 290px;
-    gap: 12px;
-    align-items: start;
+    width: 100% !important;
+    max-width: none !important;
+}
+
+#issueTabShell[style*="display:none"],
+#issueTabShell[style*="display: none"],
+#pendingTabShell[style*="display:none"],
+#pendingTabShell[style*="display: none"] {
+    display: none !important;
 }
 
 .issue-tab-main,
 .pending-tab-main {
     min-width: 0;
+    width: 100% !important;
+    max-width: none !important;
 }
 
 .issue-tab-shell.side-hidden,
@@ -3727,6 +3917,8 @@ body {
     padding: 8px;
     background: #ffffff;
     box-shadow: 0 10px 24px rgba(16, 24, 40, 0.05);
+    width: 100% !important;
+    max-width: none !important;
 }
 
 .issue-grid-inner #overall_request_details {
@@ -7994,30 +8186,53 @@ td:nth-child(odd), th:nth-child(odd) {
     }
 
     .issue-top-filter-panel {
+        display: flex !important;
+        align-items: flex-end !important;
+        gap: 8px !important;
         margin: 0 0 10px !important;
-        padding: 0 !important;
-        border: none !important;
-        background: transparent !important;
-        box-shadow: none !important;
+        padding: 10px !important;
+        border: 1px solid #e3e9f2 !important;
+        border-radius: 12px !important;
+        background: #ffffff !important;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
     }
 
     .issue-filter-section-header {
+        display: flex !important;
+        order: 2 !important;
+        align-items: flex-end !important;
+        justify-content: flex-end !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+    }
+
+    .issue-filter-title {
         display: none !important;
     }
 
     #issueTopFilterBody {
-        padding: 10px !important;
-        margin-bottom: 10px !important;
-        background: #ffffff !important;
-        border: 1px solid #e3e9f2 !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+        display: flex !important;
+        order: 1 !important;
+        flex: 1 1 auto !important;
+        align-items: flex-end !important;
+        gap: 8px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+
+    #issueTopFilterBody.is-collapsed {
+        display: none !important;
     }
 
     .issue-top-filter-grid {
         display: flex !important;
         align-items: end !important;
         gap: 8px !important;
+        flex: 1 1 auto !important;
         overflow-x: auto !important;
         padding-bottom: 2px !important;
     }
@@ -8040,11 +8255,12 @@ td:nth-child(odd), th:nth-child(odd) {
     }
 
     .issue-top-filter-buttons {
-        margin-top: 8px !important;
+        flex: 0 0 auto !important;
+        margin: 0 !important;
     }
 
     .issue-user-toolbar {
-        margin-bottom: 9px !important;
+        display: none !important;
     }
 
     .issue-view-note {
@@ -8132,6 +8348,26 @@ td:nth-child(odd), th:nth-child(odd) {
 
     .pending-tab-shell {
         grid-template-columns: minmax(0, 1fr) 250px !important;
+    }
+
+    #issueTabShell.issue-tab-shell,
+    #pendingTabShell.pending-tab-shell,
+    #issueTabShell.issue-tab-shell.side-hidden,
+    #pendingTabShell.pending-tab-shell.side-hidden {
+        grid-template-columns: minmax(0, 1fr) !important;
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    #issueTabShell .issue-tab-main,
+    #pendingTabShell .pending-tab-main {
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    #issueTabShell .issue-side-panel,
+    #pendingTabShell .pending-side-panel {
+        display: none !important;
     }
 
     .pending-tab-main .issue-top-filter-panel,
@@ -9356,7 +9592,7 @@ td:nth-child(odd), th:nth-child(odd) {
             }
 
             setCmfDrawerMode('details');
-            if (headingNode) headingNode.textContent = 'AI CMF Decision Details';
+            if (headingNode) headingNode.innerHTML = 'CMF Decision Details <span class="cmf-rec-heading-sighting">Sighting ID: ' + escapeHtml(cpId || 'N/A') + '</span>';
             cpIdNode.textContent = cpId || 'N/A';
             if (titleNode) titleNode.textContent = title || 'N/A';
             componentNode.textContent = component || 'N/A';
@@ -9496,6 +9732,10 @@ td:nth-child(odd), th:nth-child(odd) {
             if (actionsNode) actionsNode.classList.toggle('cmf-rec-hidden', isDetails);
             if (detailsBody) detailsBody.classList.toggle('cmf-rec-hidden', !isDetails);
             if (!isDetails && detailsBody) detailsBody.innerHTML = '';
+            if (!isDetails) {
+                var headingNode = document.getElementById('cmfRecHeading');
+                if (headingNode) headingNode.textContent = 'CMF Recommendation';
+            }
         }
 
         function normalizeCmfRecommendationLabel(value) {
@@ -9524,23 +9764,38 @@ td:nth-child(odd), th:nth-child(odd) {
 
         function renderCmfRecommendationHighlights(reasoningText) {
             var text = String(reasoningText || '').trim();
-            if (!text) return '<ul class="cmf-rec-impact-list"><li class="cmf-rec-impact-item">No AI reasoning provided.</li></ul>';
-            
-            // If the model already returned correctly formatted markdown/bullets, render it directly
-            if (text.indexOf('\n-') > -1 || text.indexOf('\n*') > -1 || text.indexOf('###') > -1) {
-                return renderMarkdown(escapeHtml(text).replace(/\n/g, '\n'));
+            if (!text) return '<div class="cmf-rec-reasoning-card">No AI reasoning provided.</div>';
+
+            var normalized = text.replace(/\r/g, '\n').replace(/\n{2,}/g, '\n').trim();
+            var impactMatch = normalized.match(/(?:^|\n)\s*(?:ISSUE\s+IMPACT|DECISION\s+IMPACT)\s*:\s*([\s\S]*)$/i);
+            var impactText = impactMatch ? impactMatch[1].replace(/^[-*]\s*/gm, '').trim() : '';
+            var reasonText = impactMatch ? normalized.substring(0, impactMatch.index).trim() : normalized;
+            reasonText = reasonText.replace(/^\s*(?:REASONING|AI\s+REASONING)\s*:\s*/i, '').replace(/^[-*]\s*/gm, '').trim();
+
+            var bullets = reasonText.split(/\n+|(?:^|\s)[-•]\s+/).map(function (item) {
+                return item.replace(/^\d+[\.)]\s*/, '').trim();
+            }).filter(function (item) { return item.length > 0; }).slice(0, 4);
+            if (bullets.length === 0 && reasonText) bullets = [firstCompleteSentence(reasonText, 420)];
+            var firstImpact = firstCompleteSentence(impactText, 260);
+
+            var html = '<div class="cmf-rec-reasoning-card">';
+            html += '<div><strong>Reason:</strong></div>';
+            html += '<ul class="cmf-rec-reason-list">';
+            for (var i = 0; i < bullets.length; i++) {
+                html += '<li>' + escapeHtml(trimToCompleteSentence(bullets[i], 240)) + '</li>';
             }
-            
-            // Otherwise fallback to basic sentence splitting
-            var cleanText = text.replace(/\r/g, ' ').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
-            var sentences = cleanText.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [cleanText];
-            var html = '<ul class="cmf-rec-impact-list">';
-            for (var i = 0; i < sentences.length; i++) {
-                var sentence = sentences[i].trim();
-                if (!sentence) continue;
-                html += '<li class="cmf-rec-impact-item">' + escapeHtml(sentence) + '</li>';
-            }
-            return html + '</ul>';
+            html += '</ul>';
+            if (firstImpact) html += '<div><strong>Impact:</strong> ' + escapeHtml(firstImpact) + '</div>';
+            return html + '</div>';
+        }
+
+        function firstCompleteSentence(text, maxLength) {
+            var value = String(text || '').replace(/\s+/g, ' ').trim();
+            if (!value) return '';
+            var sentences = value.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [value];
+            var sentence = sentences[0].trim();
+            if (sentence.length <= maxLength) return sentence;
+            return trimToCompleteSentence(sentence, maxLength);
         }
 
         function trimToCompleteSentence(text, maxLength) {
@@ -9553,7 +9808,7 @@ td:nth-child(odd), th:nth-child(odd) {
         }
 
         function renderCmfDecisionDetailsLoading(cpId) {
-            return '<div class="cmf-decision-details-shell"><div class="cmf-decision-header"><span class="cmf-decision-sighting">' + escapeHtml(cpId || 'N/A') + '</span></div><div class="cmf-decision-card"><h4>Context</h4><div class="ai-loading-banner">&#10024; Generating CMF decision details, please wait...</div></div></div>';
+            return '<div class="cmf-decision-details-shell"><div class="cmf-decision-card"><h4>Context</h4><div class="ai-loading-banner">&#10024; Generating CMF decision details, please wait...</div></div></div>';
         }
 
         function renderCmfDecisionDetails(rawText, cpId) {
@@ -9561,7 +9816,6 @@ td:nth-child(odd), th:nth-child(odd) {
             var score = parsed.score;
             var scoreText = typeof score === 'number' ? score + '%' : '--';
             return '<div class="cmf-decision-details-shell">' +
-                '<div class="cmf-decision-header"><span class="cmf-decision-sighting">' + escapeHtml(cpId || 'N/A') + '</span></div>' +
                 '<section class="cmf-decision-card"><h4>Context</h4>' + renderCmfBriefList(parsed.context) + '</section>' +
                 '<section class="cmf-decision-card"><h4>HSD Information Quality</h4>' +
                     '<div class="cmf-quality-meter-row"><div class="cmf-quality-score-ring" style="--score:' + escapeHtml(typeof score === 'number' ? score : 0) + '"><span>' + escapeHtml(scoreText) + '</span></div><div class="cmf-quality-caption">Quality score reflects how complete the HSD and row details are for a CMF decision.</div></div>' +
@@ -9981,8 +10235,8 @@ td:nth-child(odd), th:nth-child(odd) {
                 issueFilters: {
                     bodyId: 'issueTopFilterBody',
                     buttonId: 'issueFiltersToggleBtn',
-                    storageKey: 'cmf.collapsible.issueFilters',
-                    defaultCollapsed: true
+                    storageKey: 'cmf.collapsible.issueFilters.inline',
+                    defaultCollapsed: false
                 }
             };
         }
@@ -10037,6 +10291,12 @@ td:nth-child(odd), th:nth-child(odd) {
 
             if (reopenButton) {
                 reopenButton.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            }
+
+            if (sectionName === 'mainMenu' && window.CMF_PORTAL && window.CMF_PORTAL.homeTrendChart) {
+                setTimeout(function () {
+                    try { window.CMF_PORTAL.homeTrendChart.resize(); } catch (ignore) { }
+                }, 220);
             }
 
             if (persistState) {
@@ -10195,42 +10455,74 @@ td:nth-child(odd), th:nth-child(odd) {
                     top: 0,
                     left: 0,
                     icon: 'circle',
-                    itemWidth: 8,
-                    itemHeight: 8,
-                    textStyle: { color: '#475467', fontSize: 11 }
+                    itemWidth: 7,
+                    itemHeight: 7,
+                    textStyle: { color: '#475467', fontSize: 10 }
                 },
-                grid: { left: 36, right: 14, top: 30, bottom: 26 },
+                grid: { left: 56, right: 34, top: 52, bottom: 42, containLabel: true },
                 xAxis: {
                     type: 'category',
-                    data: trend.map(function (item) { return item.WeekLabel; }),
+                    name: 'Work Week',
+                    nameLocation: 'middle',
+                    nameGap: 24,
+                    data: trend.map(function (item) {
+                        return item.WeekLabel;
+                    }),
                     boundaryGap: false,
-                    axisLine: { lineStyle: { color: '#e4e7ec' } },
-                    axisLabel: { color: '#667085', fontSize: 11 }
+                    axisLine: {
+                        lineStyle: {
+                            color: '#e4e7ec'
+                        }
+                    },
+                    axisLabel: {
+                        color: '#667085',
+                        fontSize: 10
+                    },
+                    nameTextStyle: {
+                        fontSize: 10,
+                        fontWeight: 600
+                    }
                 },
                 yAxis: {
                     type: 'value',
-                    axisLine: { show: false },
-                    splitLine: { lineStyle: { color: '#eef2f7' } },
-                    axisLabel: { color: '#667085', fontSize: 11 }
+                    name: 'Number of Issues',
+                    nameLocation: 'middle',
+                    nameGap: 42,
+                    axisLine: {
+                        show: false
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: '#eef2f7'
+                        }
+                    },
+                    axisLabel: {
+                        color: '#667085',
+                        fontSize: 10
+                    },
+                    nameTextStyle: {
+                        fontSize: 10,
+                        fontWeight: 600
+                    }
                 },
                 series: [
                     {
-                        name: 'Open',
+                        name: 'Open Issues',
                         type: 'line',
                         smooth: true,
                         data: trend.map(function (item) { return item.NewIssues; }),
-                        lineStyle: { width: 3 },
+                        lineStyle: { width: 2 },
                         symbol: 'circle',
-                        symbolSize: 6
+                        symbolSize: 4
                     },
                     {
-                        name: 'Closed',
+                        name: 'Closed Issues',
                         type: 'line',
                         smooth: true,
                         data: trend.map(function (item) { return item.ResolvedIssues; }),
-                        lineStyle: { width: 3 },
+                        lineStyle: { width: 2 },
                         symbol: 'circle',
-                        symbolSize: 6,
+                        symbolSize: 4,
                         areaStyle: { color: 'rgba(22,163,74,0.12)' }
                     }
                 ]
@@ -11028,7 +11320,7 @@ Submit
                                         <p class="ccip-dash-sub">Here is what is happening with your critical issues today on <%: HomeDashboardPlatformLabel %> in <asp:Label ID="lblWelcomeMode" runat="server" /> mode.</p>
                                     </div>
                                     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                                        <div class="ccip-dash-updated">Updated  <asp:Label ID="lblHomeDashboardGeneratedAt" runat="server" /></div>
+                                        <div class="ccip-dash-updated">Updated <span class="ccip-updated-value"><asp:Label ID="lblHomeDashboardGeneratedAt" runat="server" /></span></div>
                                         <asp:HyperLink ID="lnkPlatformDashboardHome" runat="server" Target="_blank" CssClass="ccip-link-btn" Visible="false">Open platform dashboard</asp:HyperLink>
                                     </div>
                                 </div>
@@ -11089,16 +11381,16 @@ Submit
                                     </div>
                                     <div class="ccip-dashboard-right-stack">
                                         <aside class="ccip-ai-health-card">
-                                            <div class="ccip-ai-health-head"><span><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> AI Program Health</span><span class="ccip-ai-beta">Beta</span></div>
+                                            <div class="ccip-ai-health-head"><span><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> AI Program Health</span></div>
                                             <div class="ccip-ai-health-grid">
                                                 <div class="ccip-health-score"><div id="homePortalHealthScore" class="ccip-health-score-value">--</div><div class="ccip-health-score-label">Program Readiness</div><div id="homePortalHealthRisk" class="ccip-health-risk">--</div></div>
-                                                <div><div class="ccip-health-label">What Changed This Week?</div><ul id="homeWeeklyChanges" class="ccip-health-list"></ul></div>
-                                                <div><div class="ccip-health-label">Risks Concentrated In</div><div id="homePortalRiskConcentration" class="ccip-health-value large">-</div></div>
-                                                <div><div class="ccip-health-label">Predicted Blockers</div><ul id="homePortalBlockers" class="ccip-health-list"></ul></div>
-                                            </div>
-                                            <div class="ccip-ai-health-summary">
-                                                <h3 class="ccip-cmf-summary-title"><i class="fas fa-file-lines" aria-hidden="true"></i> AI Executive Summary</h3>
-                                                <div id="homeExecutiveSummary" class="ccip-executive-summary-body">Building executive summary...</div>
+                                                <div class="ccip-health-weekly"><div class="ccip-health-label">What Changed This Week?</div><ul id="homeWeeklyChanges" class="ccip-health-list"></ul></div>
+                                                <div class="ccip-health-risk-compact"><div class="ccip-health-label">Risks Concentrated In</div><div id="homePortalRiskConcentration" class="ccip-health-value large">-</div></div>
+                                                <div class="ccip-health-blockers"><div class="ccip-health-label">Predicted Blockers</div><ul id="homePortalBlockers" class="ccip-health-list"></ul></div>
+                                                <div class="ccip-ai-health-summary">
+                                                    <h3 class="ccip-cmf-summary-title"><i class="fas fa-file-lines" aria-hidden="true"></i> AI Executive Summary</h3>
+                                                    <div id="homeExecutiveSummary" class="ccip-executive-summary-body">Building executive summary...</div>
+                                                </div>
                                             </div>
                                         </aside>
 
@@ -11121,30 +11413,18 @@ Submit
 
                                         <section class="ccip-card">
                                             <div class="ccip-card-head">
-                                                <h3 class="ccip-card-mini-title"><i class="fas fa-layer-group" aria-hidden="true" style="color:#f97316; margin-right:6px;"></i>Component CMF Summary</h3>
+                                                <h3 class="ccip-card-mini-title"><i class="fas fa-clipboard-list" aria-hidden="true" style="color:#0f766e; margin-right:6px;"></i>CMF Pending Count</h3>
                                             </div>
-                                            <div id="homeComponentSummaryTable" class="ccip-live-table-wrap"></div>
+                                            <div id="homePendingSummaryTable" class="ccip-live-table-wrap"></div>
                                         </section>
                                     </div>
 
                                     <div class="ccip-col ccip-col-right">
                                         <section class="ccip-card">
                                             <div class="ccip-card-head">
-                                                <h3 class="ccip-card-mini-title"><i class="fas fa-clipboard-list" aria-hidden="true" style="color:#0f766e; margin-right:6px;"></i>CMF Pending Count</h3>
+                                                <h3 class="ccip-card-mini-title"><i class="fas fa-layer-group" aria-hidden="true" style="color:#f97316; margin-right:6px;"></i>Component CMF Summary</h3>
                                             </div>
-                                            <div id="homePendingSummaryTable" class="ccip-live-table-wrap"></div>
-                                        </section>
-
-                                        <section class="ccip-card">
-                                            <div class="ccip-card-head"><h3 class="ccip-card-mini-title"><i class="fas fa-bolt" aria-hidden="true" style="color:#f59e0b; margin-right:6px;"></i>Quick Actions</h3></div>
-                                            <div class="ccip-quick-grid">
-                                                <button type="button" class="ccip-quick-btn" onclick="focusFirstRowAiSummary(); return false;">AI Debug Summary</button>
-                                                <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Analyze debug logs and current issue risk signals across all CMF data'); return false;">Analyze Logs</button>
-                                                <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Generate RCA-style report for current CMF issues'); return false;">Generate RCA</button>
-                                                <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Draft a customer update for active high-risk CMF issues'); return false;">Customer Update</button>
-                                                <button type="button" class="ccip-quick-btn" onclick="focusReportsAssistant('Find similar issue clusters by component, customer, and debug signal'); return false;">Search Similar Cases</button>
-                                                <button type="button" class="ccip-quick-btn" onclick="focusFirstPendingRecommendation(); return false;">AI Recommendation</button>
-                                            </div>
+                                            <div id="homeComponentSummaryTable" class="ccip-live-table-wrap"></div>
                                         </section>
                                     </div>
                                 </div>
@@ -11433,7 +11713,6 @@ Submit
                     <div id="cmfRecQuality" class="ai-summary-meta-row" style="display:none">Evidence quality: --</div>
                     
                     <div id="cmfRecReasoningSection" class="cmf-rec-section">
-                        <h3>Reasoning</h3>
                         <div id="cmfRecEvidence" class="ai-summary-body">-</div>
                     </div>
                     <div id="cmfDecisionDetailsBody" class="cmf-rec-hidden"></div>
@@ -11999,35 +12278,7 @@ Submit
                                 <asp:Label ID="lblIssuePageStatus" runat="server" />
                             </div>
                         </asp:Panel>
-
-                    <aside class="issue-side-panel" aria-label="Issue tab assistant panel">
-                        <section class="interactive-side-card">
-                            <div class="interactive-side-head">
-                                <h3 class="interactive-side-title"><i class="fas fa-robot" aria-hidden="true" style="color:#4f46e5; margin-right:6px;"></i>AI Assistant</h3>
-                            </div>
-                            <p class="interactive-side-sub">Ask anything about your active issues and triage signals.</p>
-                            <button type="button" class="interactive-side-btn" onclick="focusReportsAssistant('Summarize active issues and debug risks across all CMF data'); return false;">Ask AI</button>
-                        </section>
-
-                        <section class="interactive-side-card">
-                            <div class="interactive-side-head"><h3 class="interactive-side-title">Quick Insights</h3></div>
-                            <ul class="interactive-chip-list">
-                                <li><span>Total visible issues</span><span class="interactive-chip" id="issueSideTotal">0</span></li>
-                                <li><span>In progress signals</span><span class="interactive-chip" id="issueSideProgress">0</span></li>
-                                <li><span>Implemented issues</span><span class="interactive-chip" id="issueSideStale">0</span></li>
-                            </ul>
-                        </section>
-
-                        <section class="interactive-side-card">
-                            <div class="interactive-side-head"><h3 class="interactive-side-title">Shortcuts</h3></div>
-                            <div class="interactive-shortcuts">
-                                <button type="button" class="interactive-shortcut-btn" onclick="document.getElementById('issueFiltersToggleBtn').click()">Toggle Filters</button>
-                                <button type="button" class="interactive-shortcut-btn" onclick="showAllColumns()">Show Columns</button>
-                                <button type="button" class="interactive-shortcut-btn" onclick="focusFirstRowAiSummary(); return false;">AI Summary</button>
-                                <button type="button" class="interactive-shortcut-btn" onclick="focusReportsAssistant('Generate an export-ready issue report for all CMF data'); return false;">Export View</button>
-                            </div>
-                        </section>
-                    </aside>
+                    </div>
                     </div>
 
                     <!-- CMF PENDING LIST HEADER PANEL - INSIDE mainDataWrapper -->
@@ -12080,45 +12331,6 @@ Submit
                                 </asp:GridView>
                             </div>
                         </div>
-                        
-                        <aside class="pending-side-panel" aria-label="CMF pending assistant panel">
-                            <section class="interactive-side-card">
-                                <div class="interactive-side-head">
-                                    <h3 class="interactive-side-title"><i class="fas fa-brain" aria-hidden="true" style="color:#7c3aed; margin-right:6px;"></i>Pending AI Queue</h3>
-                                </div>
-                                <p class="interactive-side-sub">Recommendation engine snapshots for current platform selection.</p>
-                                <button type="button" class="interactive-side-btn" onclick="focusFirstPendingRecommendation(); return false;">Open Recommendation Flow</button>
-                            </section>
-
-                            <section class="interactive-side-card">
-                                <div class="interactive-side-head"><h3 class="interactive-side-title">Quick Insights</h3></div>
-                                <ul class="interactive-chip-list">
-                                    <li><span>Qualification candidates</span><span class="interactive-chip" id="pendingSideQualify">0</span></li>
-                                    <li><span>Potential duplicates</span><span class="interactive-chip" id="pendingSideDup">0</span></li>
-                                    <li><span>Missing debug evidence</span><span class="interactive-chip" id="pendingSideMissing">0</span></li>
-                                </ul>
-                            </section>
-
-                            <section class="interactive-side-card">
-                                <div class="interactive-side-head"><h3 class="interactive-side-title">Shortcuts</h3></div>
-                                <div class="interactive-shortcuts">
-                                    <button type="button" class="interactive-shortcut-btn" onclick="focusFirstPendingRecommendation(); return false;">Top Priority First</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="showPortalToast('Use shared platform dropdown above to switch context.')">Switch Platform</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="focusFirstPendingRecommendation(); return false;">Review Scores</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="focusReportsAssistant('Generate a CMF pending backlog report for all platforms'); return false;">Export Pending</button>
-                                </div>
-                            </section>
-
-                            <section class="interactive-side-card">
-                                <div class="interactive-side-head"><h3 class="interactive-side-title">Actions</h3></div>
-                                <div class="interactive-shortcuts">
-                                    <button type="button" class="interactive-shortcut-btn" onclick="focusFirstPendingRecommendation(); return false;">Prioritize High Score</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="focusFirstPendingRecommendation(); return false;">Commit Auto-fill</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="focusReportsAssistant('Generate a CMF backlog sharing report for all platforms'); return false;">Export Backlog</button>
-                                    <button type="button" class="interactive-shortcut-btn" onclick="showPortalToast('Switch platform in the shared filter bar.')">Switch Platform</button>
-                                </div>
-                            </section>
-                        </aside>
                     </div>
 
                     </div>

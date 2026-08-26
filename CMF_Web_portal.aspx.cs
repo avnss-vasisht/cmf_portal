@@ -780,6 +780,17 @@ public partial class CMF_Web_portal : System.Web.UI.Page
     private void ApplyIssuePendingPlatformContext()
     {
         selectedPlatform = GetIssuePendingPlatform();
+        Session["selectedPlatform"] = selectedPlatform;
+        Session[IssuePendingPlatformSessionKey] = selectedPlatform;
+        if (ddlTables != null)
+        {
+            ListItem item = ddlTables.Items.FindByValue(selectedPlatform);
+            if (item != null)
+            {
+                ddlTables.ClearSelection();
+                item.Selected = true;
+            }
+        }
     }
 
     private void ResetIssueFiltersToAll()
@@ -1319,20 +1330,54 @@ WITH weeks AS (
     UNION ALL SELECT 5
 ),
 new_issues AS (
-    SELECT DATEDIFF(WEEK, TRY_CAST(date_cmf_ask AS DATE), CAST(GETDATE() AS DATE)) AS week_offset, COUNT(*) AS count_value
+    SELECT
+        DATEDIFF(
+            WEEK,
+            TRY_CAST(date_cmf_ask AS DATE),
+            CAST(GETDATE() AS DATE)
+        ) AS week_offset,
+
+        COUNT(*) AS count_value
     FROM " + dashboardSourceSql + @"
     WHERE TRY_CAST(date_cmf_ask AS DATE) IS NOT NULL
-      AND DATEDIFF(WEEK, TRY_CAST(date_cmf_ask AS DATE), CAST(GETDATE() AS DATE)) BETWEEN 0 AND 5
-            AND LOWER(LTRIM(RTRIM(ISNULL(status, '')))) = 'open'
-    GROUP BY DATEDIFF(WEEK, TRY_CAST(date_cmf_ask AS DATE), CAST(GETDATE() AS DATE))
+      AND DATEDIFF(
+            WEEK,
+            TRY_CAST(date_cmf_ask AS DATE),
+            CAST(GETDATE() AS DATE)
+          ) BETWEEN 0 AND 5
+    GROUP BY DATEDIFF(
+        WEEK,
+        TRY_CAST(date_cmf_ask AS DATE),
+        CAST(GETDATE() AS DATE)
+    )
 ),
 resolved_issues AS (
-    SELECT DATEDIFF(WEEK, TRY_CAST(implemented_date AS DATE), CAST(GETDATE() AS DATE)) AS week_offset, COUNT(*) AS count_value
+    SELECT
+        DATEDIFF(
+            WEEK,
+            TRY_CAST(implemented_date AS DATE),
+            CAST(GETDATE() AS DATE)
+        ) AS week_offset,
+        COUNT(*) AS count_value
     FROM " + dashboardSourceSql + @"
     WHERE TRY_CAST(implemented_date AS DATE) IS NOT NULL
-      AND DATEDIFF(WEEK, TRY_CAST(implemented_date AS DATE), CAST(GETDATE() AS DATE)) BETWEEN 0 AND 5
-            AND LOWER(LTRIM(RTRIM(ISNULL(status, '')))) IN ('complete', 'rejected')
-    GROUP BY DATEDIFF(WEEK, TRY_CAST(implemented_date AS DATE), CAST(GETDATE() AS DATE))
+      AND DATEDIFF(
+            WEEK,
+            TRY_CAST(implemented_date AS DATE),
+            CAST(GETDATE() AS DATE)
+          ) BETWEEN 0 AND 5
+      AND LOWER(
+            LTRIM(
+                RTRIM(
+                    ISNULL(status,'')
+                )
+            )
+          ) IN ('complete','rejected')
+    GROUP BY DATEDIFF(
+        WEEK,
+        TRY_CAST(implemented_date AS DATE),
+        CAST(GETDATE() AS DATE)
+    )
 )
 SELECT
     DATEADD(WEEK, -w.week_offset, CAST(GETDATE() AS DATE)) AS week_date,
@@ -1604,51 +1649,7 @@ ORDER BY LTRIM(RTRIM(drivers))", con))
                 }
             }
 
-            using (SqlCommand componentCommand = new SqlCommand(@"
-SELECT
-    CASE WHEN ISNULL(component_group, '') = '' THEN 'Unassigned' ELSE component_group END AS Component,
-    SUM(CASE WHEN status = 'open' AND cmf_request NOT IN ('cmf_duplicate','cmf_reject') THEN 1 ELSE 0 END) AS OpenCount,
-    SUM(CASE WHEN status = 'open' AND los = 'Yes' THEN 1 ELSE 0 END) AS LosCount,
-    SUM(CASE WHEN status = 'open' AND cmf_request = 'cmf_duplicate' THEN 1 ELSE 0 END) AS DuplicateCount,
-    SUM(CASE WHEN status IN ('implemented','verified') AND cmf_request = 'cmf_ok' THEN 1 ELSE 0 END) AS ImplementedCount
-FROM " + platformTable + @"
-WHERE status IN ('open','implemented','verified')
-  AND sysdebug LIKE '%customer_must_fix%'
-  AND cmf_request NOT IN ('cmf_reject')
-GROUP BY CASE WHEN ISNULL(component_group, '') = '' THEN 'Unassigned' ELSE component_group END
-ORDER BY Component", con))
-            using (SqlDataReader reader = componentCommand.ExecuteReader())
-            {
-                int totalOpen = 0;
-                int totalLos = 0;
-                int totalDuplicates = 0;
-                int totalImplemented = 0;
-                while (reader.Read())
-                {
-                    int open = ReadInt(reader, 1);
-                    int los = ReadInt(reader, 2);
-                    int duplicates = ReadInt(reader, 3);
-                    int implemented = ReadInt(reader, 4);
-                    totalOpen += open;
-                    totalLos += los;
-                    totalDuplicates += duplicates;
-                    totalImplemented += implemented;
-                    snapshot.ComponentSummary.Rows.Add(new List<string>
-                    {
-                        ReadString(reader, 0),
-                        open.ToString(CultureInfo.InvariantCulture) + "(" + los.ToString(CultureInfo.InvariantCulture) + ")",
-                        implemented.ToString(CultureInfo.InvariantCulture)
-                    });
-                }
-                snapshot.ComponentSummary.Rows.Add(new List<string>
-                {
-                    "Total (LOS) + Duplicates + Implemented",
-                    totalOpen.ToString(CultureInfo.InvariantCulture) + "(" + totalLos.ToString(CultureInfo.InvariantCulture) + ") + " + totalDuplicates.ToString(CultureInfo.InvariantCulture) + " Dups",
-                    totalImplemented.ToString(CultureInfo.InvariantCulture)
-                });
-                SetHomeDashboardFact(snapshot.SummaryFacts, "Open", totalOpen.ToString(CultureInfo.InvariantCulture), "from component summary");
-                SetHomeDashboardFact(snapshot.SummaryFacts, "Implemented", totalImplemented.ToString(CultureInfo.InvariantCulture), "from component summary");
-            }
+            PopulateMilestoneWiseComponentSummary(snapshot, con, platformTable);
 
             if (SqlTableExists(con, pendingTable))
             {
@@ -1675,6 +1676,108 @@ ORDER BY component_group", con))
                 }
             }
         }
+    }
+
+    private void PopulateMilestoneWiseComponentSummary(HomeDashboardSnapshot snapshot, SqlConnection con, string platformTable)
+    {
+        if (snapshot == null || con == null) return;
+
+        List<string> drivers = new List<string>();
+        using (SqlCommand driverCommand = new SqlCommand(@"
+SELECT DISTINCT LTRIM(RTRIM(drivers)) AS Driver
+FROM " + platformTable + @"
+WHERE ISNULL(LTRIM(RTRIM(drivers)), '') <> ''
+  AND status IN ('open','implemented','verified')
+  AND sysdebug LIKE '%customer_must_fix%'
+  AND cmf_request NOT IN ('cmf_reject')
+ORDER BY LTRIM(RTRIM(drivers))", con))
+        using (SqlDataReader reader = driverCommand.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                string driver = ReadString(reader, 0);
+                if (!string.IsNullOrWhiteSpace(driver)) drivers.Add(driver);
+            }
+        }
+
+        if (drivers.Count == 0)
+        {
+            snapshot.ComponentSummary = NewDashboardTable("Component", "Open (LOS)", "Impl/Verified");
+            return;
+        }
+
+        List<string> columns = new List<string>();
+        columns.Add("Component");
+        foreach (string driver in drivers)
+        {
+            columns.Add(driver + " Open (LOS)");
+            columns.Add(driver + " Impl/Verified");
+        }
+
+        snapshot.ComponentSummary = NewDashboardTable(columns.ToArray());
+
+        StringBuilder query = new StringBuilder();
+        query.Append("SELECT Component");
+        for (int index = 0; index < drivers.Count; index++)
+        {
+            query.Append(", SUM(CASE WHEN drivers = @driver").Append(index).Append(" AND status = 'open' AND cmf_request NOT IN ('cmf_duplicate','cmf_reject') THEN 1 ELSE 0 END) AS OpenCount").Append(index);
+            query.Append(", SUM(CASE WHEN drivers = @driver").Append(index).Append(" AND status = 'open' AND los = 'Yes' THEN 1 ELSE 0 END) AS LosCount").Append(index);
+            query.Append(", SUM(CASE WHEN drivers = @driver").Append(index).Append(" AND status = 'open' AND cmf_request = 'cmf_duplicate' THEN 1 ELSE 0 END) AS DuplicateCount").Append(index);
+            query.Append(", SUM(CASE WHEN drivers = @driver").Append(index).Append(" AND status IN ('implemented','verified') AND cmf_request = 'cmf_ok' THEN 1 ELSE 0 END) AS ImplementedCount").Append(index);
+        }
+        query.Append(" FROM (SELECT CASE WHEN ISNULL(component_group, '') = '' THEN 'Unassigned' ELSE component_group END AS Component, LTRIM(RTRIM(drivers)) AS drivers, status, cmf_request, los FROM ").Append(platformTable).Append(" WHERE status IN ('open','implemented','verified') AND sysdebug LIKE '%customer_must_fix%' AND cmf_request NOT IN ('cmf_reject')) AS SourceRows GROUP BY Component ORDER BY Component");
+
+        int[] totalOpen = new int[drivers.Count];
+        int[] totalLos = new int[drivers.Count];
+        int[] totalDuplicates = new int[drivers.Count];
+        int[] totalImplemented = new int[drivers.Count];
+
+        using (SqlCommand componentCommand = new SqlCommand(query.ToString(), con))
+        {
+            for (int index = 0; index < drivers.Count; index++)
+            {
+                componentCommand.Parameters.AddWithValue("@driver" + index.ToString(CultureInfo.InvariantCulture), drivers[index]);
+            }
+
+            using (SqlDataReader reader = componentCommand.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    List<string> row = new List<string>();
+                    row.Add(ReadString(reader, 0));
+                    for (int index = 0; index < drivers.Count; index++)
+                    {
+                        int baseIndex = 1 + (index * 4);
+                        int open = ReadInt(reader, baseIndex);
+                        int los = ReadInt(reader, baseIndex + 1);
+                        int duplicates = ReadInt(reader, baseIndex + 2);
+                        int implemented = ReadInt(reader, baseIndex + 3);
+                        totalOpen[index] += open;
+                        totalLos[index] += los;
+                        totalDuplicates[index] += duplicates;
+                        totalImplemented[index] += implemented;
+                        row.Add(open.ToString(CultureInfo.InvariantCulture) + "(" + los.ToString(CultureInfo.InvariantCulture) + ")");
+                        row.Add(implemented.ToString(CultureInfo.InvariantCulture));
+                    }
+                    snapshot.ComponentSummary.Rows.Add(row);
+                }
+            }
+        }
+
+        List<string> totalRow = new List<string>();
+        totalRow.Add("Total (LOS) + Duplicates + Implemented");
+        int allOpen = 0;
+        int allImplemented = 0;
+        for (int index = 0; index < drivers.Count; index++)
+        {
+            allOpen += totalOpen[index];
+            allImplemented += totalImplemented[index];
+            totalRow.Add(totalOpen[index].ToString(CultureInfo.InvariantCulture) + "(" + totalLos[index].ToString(CultureInfo.InvariantCulture) + ") + " + totalDuplicates[index].ToString(CultureInfo.InvariantCulture) + " Dups");
+            totalRow.Add(totalImplemented[index].ToString(CultureInfo.InvariantCulture));
+        }
+        snapshot.ComponentSummary.Rows.Add(totalRow);
+        SetHomeDashboardFact(snapshot.SummaryFacts, "Open", allOpen.ToString(CultureInfo.InvariantCulture), "from component summary");
+        SetHomeDashboardFact(snapshot.SummaryFacts, "Implemented", allImplemented.ToString(CultureInfo.InvariantCulture), "from component summary");
     }
 
     private static void SetHomeDashboardFact(List<HomeDashboardFact> facts, string label, string value, string note)
