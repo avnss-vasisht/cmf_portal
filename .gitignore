@@ -9,6 +9,7 @@ others/
 Web.config
 *.user
 *.suo
+command.txt
 
 # Generated diagnostics and captures
 page500_ai_confidence.html

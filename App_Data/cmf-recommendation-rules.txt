@@ -1,22 +1,20 @@
-﻿rules:
-    - id: R1
-        name: Minimum replication / reproducibility evidence
-        condition: reproducibility is meaningful OR RVP repro is yes
-        weight: high
-    - id: R2
-        name: User or customer impact severity
-        condition: impact contains High, Critical, customer blocker, data loss, hang, crash, or certification risk
-        weight: high
-    - id: R3
-        name: Clear CMF request intent
-        condition: cmf_request is cmf_ok, requested, pending, or otherwise asks for CMF review
-        weight: medium
-    - id: R4
-        name: Enough issue context
-        condition: title, component, and impact/justification are populated
-        weight: medium
-    - id: R5
-        name: Not obviously low signal
-        condition: impact is not empty and does not indicate no customer/user impact
-        weight: medium
-threshold_for_cmf_tag: 0.70
+﻿CMF Recommendation Scoring Policy
+
+Score only from available evidence. Do not infer absent facts. Missing decision-critical evidence routes to CMF_INCOMPLETE.
+
+S | Severity | Weight 30 | 5=cannot power/boot, unrecoverable, damage, data loss/corruption, spec/cert failure; 4=BSOD, hang, black screen, shutdown/reboot, major feature/I/O/network loss, >150% spec; 3=specific function/driver lost, app hang, lag, <=150% spec; 2=warnings, event-log errors, wrong LED, limited unexpected behavior; 1=wrong status/description/typo, almost no customer impact.
+O | Occurrence | Weight 20 | 5=>=1/10 cycles or hourly SW or >=0.34% HW; 4=frequent but below score 5; 3=<1/100 cycles or less than once per 8 hours SW or <0.255% HW; 2=<1/1000 cycles or less than once per 40 hours SW or <0.17% HW; 1=<1/5000 cycles SW or <0.085% HW.
+D | Detection | Weight 15 | 5=normal use or idle, immediately visible; 4=daily core operation such as login, S0i3, AC attach/detach; 3=OOBE, AFT, S4/S5, restart, or specific customer feature; 2=non-frequent operation, stress, or corner case; 1=specific steps/settings/device, non-preloaded app, or unique MFG process.
+R | Recovery | Weight 15 | 5=no acceptable workaround/recovery; 4=workaround blocks validation or severely impacts usability; 3=reboot, BIOS change, reconnect, reflash, or repeated intervention; 2=simple reliable user action with minor inconvenience; 1=fully effective workaround with negligible impact.
+B | Business Impact | Weight 20 | 5=production/launch gate, executive escalation, financial impact, brand risk, competitive disadvantage; 4=customer milestone at risk, validation blocked, or multiple escalations likely; 3=customer dissatisfaction, support burden, returns, or warranty exposure possible; 2=limited exposure or single customer observation; 1=internal-only issue with no customer/business impact.
+
+Auto-CMF triggers: production halt, launch gate, validation block, Gerber/customer web-update gate, cannot power/boot, loss/corruption, damage risk, certification failure, active/expected escalation, financial impact, returns, warranty, brand or competitive risk.
+
+RVP Repro Debug Indicator: RVP repro guides debug routing only and must not change CMF qualification.
+
+threshold_for_cmf_tag: 4.00
+classification:
+CMF_OK = weighted score >= 4.00 or supported auto-trigger with complete evidence.
+CMF_REVIEW = weighted score 3.00-3.99 or conflicting/borderline evidence.
+CMF_REJECT = weighted score < 3.00 with complete evidence and no supported CMF-level trigger.
+CMF_INCOMPLETE = decision-critical evidence is missing.

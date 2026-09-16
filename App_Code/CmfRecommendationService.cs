@@ -57,28 +57,26 @@ public static class CmfRecommendationService
     private static readonly object CacheSync = new object();
     private static readonly Dictionary<string, CmfRecommendationCacheEntry> Cache = new Dictionary<string, CmfRecommendationCacheEntry>(StringComparer.Ordinal);
         private const string RulesRelativePath = "~/App_Data/cmf-recommendation-rules.txt";
-        private const string DefaultRulesText = @"rules:
-    - id: R1
-        name: Minimum replication / reproducibility evidence
-        condition: reproducibility is meaningful OR RVP repro is yes
-        weight: high
-    - id: R2
-        name: User or customer impact severity
-        condition: impact contains High, Critical, customer blocker, data loss, hang, crash, or certification risk
-        weight: high
-    - id: R3
-        name: Clear CMF request intent
-        condition: cmf_request is cmf_ok, requested, pending, or otherwise asks for CMF review
-        weight: medium
-    - id: R4
-        name: Enough issue context
-        condition: title, component, and impact/justification are populated
-        weight: medium
-    - id: R5
-        name: Not obviously low signal
-        condition: impact is not empty and does not indicate no customer/user impact
-        weight: medium
-threshold_for_cmf_tag: 0.70";
+        private const string DefaultRulesText = @"CMF Recommendation Scoring Policy
+
+    Score only from available evidence. Do not infer absent facts. Missing decision-critical evidence routes to CMF_INCOMPLETE.
+
+    S | Severity | Weight 30 | 5=cannot power/boot, unrecoverable, damage, data loss/corruption, spec/cert failure; 4=BSOD, hang, black screen, shutdown/reboot, major feature/I/O/network loss, >150% spec; 3=specific function/driver lost, app hang, lag, <=150% spec; 2=warnings, event-log errors, wrong LED, limited unexpected behavior; 1=wrong status/description/typo, almost no customer impact.
+    O | Occurrence | Weight 20 | 5=>=1/10 cycles or hourly SW or >=0.34% HW; 4=frequent but below score 5; 3=<1/100 cycles or less than once per 8 hours SW or <0.255% HW; 2=<1/1000 cycles or less than once per 40 hours SW or <0.17% HW; 1=<1/5000 cycles SW or <0.085% HW.
+    D | Detection | Weight 15 | 5=normal use or idle, immediately visible; 4=daily core operation such as login, S0i3, AC attach/detach; 3=OOBE, AFT, S4/S5, restart, or specific customer feature; 2=non-frequent operation, stress, or corner case; 1=specific steps/settings/device, non-preloaded app, or unique MFG process.
+    R | Recovery | Weight 15 | 5=no acceptable workaround/recovery; 4=workaround blocks validation or severely impacts usability; 3=reboot, BIOS change, reconnect, reflash, or repeated intervention; 2=simple reliable user action with minor inconvenience; 1=fully effective workaround with negligible impact.
+    B | Business Impact | Weight 20 | 5=production/launch gate, executive escalation, financial impact, brand risk, competitive disadvantage; 4=customer milestone at risk, validation blocked, or multiple escalations likely; 3=customer dissatisfaction, support burden, returns, or warranty exposure possible; 2=limited exposure or single customer observation; 1=internal-only issue with no customer/business impact.
+
+    Auto-CMF triggers: production halt, launch gate, validation block, Gerber/customer web-update gate, cannot power/boot, loss/corruption, damage risk, certification failure, active/expected escalation, financial impact, returns, warranty, brand or competitive risk.
+
+    RVP Repro Debug Indicator: RVP repro guides debug routing only and must not change CMF qualification.
+
+    threshold_for_cmf_tag: 4.00
+    classification:
+    CMF_OK = weighted score >= 4.00 or supported auto-trigger with complete evidence.
+    CMF_REVIEW = weighted score 3.00-3.99 or conflicting/borderline evidence.
+    CMF_REJECT = weighted score < 3.00 with complete evidence and no supported CMF-level trigger.
+    CMF_INCOMPLETE = decision-critical evidence is missing.";
 
     public class CmfRecommendationCacheEntry
     {
@@ -114,7 +112,7 @@ threshold_for_cmf_tag: 0.70";
         }
 
         string hsdContext = SafeText(request.HsdContext);
-        string hash = ComputeHash("cmf-recommendation-live-context-v10|" + GetAiProviderCacheSignature() + "|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + rules + "|" + hsdContext);
+        string hash = ComputeHash("cmf-recommendation-live-context-v12|" + GetAiProviderCacheSignature() + "|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + rules + "|" + hsdContext);
         string cacheKey = "cmf-recommendation:" + hash;
 
         CmfRecommendationResponse cached = TryGetCached(cacheKey);
@@ -126,7 +124,7 @@ threshold_for_cmf_tag: 0.70";
         string modelRecommendation;
         string modelError;
         string deterministicRecommendation = BuildFallbackRecommendation(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules);
-        bool hasModelRecommendation = TryGenerateWithGitHubModel(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, deterministicRecommendation, out modelRecommendation, out modelError, BuildCmfRecommendationPrompt(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, deterministicRecommendation, hsdContext));
+        bool hasModelRecommendation = TryGenerateWithGitHubModel(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, deterministicRecommendation, out modelRecommendation, out modelError, BuildCmfRecommendationPrompt(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, deterministicRecommendation, hsdContext), "You are a senior CMF disposition reviewer. Use only the supplied issue data, HSD context, and admin scoring policy. Write fluent, grammatical English. Return only the requested structured fields. Do not invent evidence, owners, dates, customers, or impacts.");
 
         if (!hasModelRecommendation)
         {
@@ -137,6 +135,7 @@ threshold_for_cmf_tag: 0.70";
 
         // Parse structured response
         CmfRecommendationResponse result = ParseStructuredRecommendation(modelRecommendation);
+        SanitizeRecommendationResponse(result);
         result.Success = true;
         result.CpId = cpId;
         result.Title = title;
@@ -603,47 +602,24 @@ threshold_for_cmf_tag: 0.70";
         string safeComponent = string.IsNullOrWhiteSpace(component) ? "Unknown" : component.Trim();
         string safeRequest = string.IsNullOrWhiteSpace(cmfRequest) ? "Unknown" : cmfRequest.Trim();
         string safeImpact = BuildImpactSnippet(impact);
-        bool hasContext = !string.IsNullOrWhiteSpace(title) && !string.IsNullOrWhiteSpace(component) && !string.IsNullOrWhiteSpace(impact);
-        bool hasRequestIntent = ContainsAny(cmfRequest, new string[] { "cmf_ok", "cmf ask", "cmf_ask", "request", "pending", "review" });
-        bool strongRequestIntent = ContainsAny(cmfRequest, new string[] { "cmf_ok", "approved", "requested" });
-        bool negativeRepro = ContainsAny(reproducibility, new string[] { "not reproduced", "not reproduce", "no repro", "cannot reproduce", "unable to reproduce", "not able to reproduce" })
-            || ContainsAny(reproOnRvp, new string[] { "no", "false", "n/a", "not reproduced", "not reproduce" });
-        bool meaningfulRepro = !negativeRepro && (ContainsAny(reproducibility, new string[] { "yes", "reproduces", "reproduced", "always", "consistent", "100", "high" })
-            || ContainsAny(reproOnRvp, new string[] { "yes", "y", "true", "reproduces", "reproduced" }));
-        bool highImpact = ContainsAny(impact, new string[] { "critical", "high", "blocker", "showstopper", "hang", "crash", "data loss", "certification", "sla" });
-        bool lowImpact = ContainsAny(impact, new string[] { "no impact", "low", "minor", "cosmetic", "informational", "unable to reproduce" });
-        bool hasSysScopeEvidence = !string.IsNullOrWhiteSpace(idst) || !string.IsNullOrWhiteSpace(reproducibility) || !string.IsNullOrWhiteSpace(reproOnRvp);
-        string decision;
-        string ruleSummary;
-
-        if (hasContext && hasRequestIntent && meaningfulRepro && highImpact && hasSysScopeEvidence && !lowImpact)
-        {
-            decision = "Tag as CMF";
-            ruleSummary = "R1-R5 are satisfied: reproducibility/SysScope evidence exists, the issue has high impact, CMF request intent is clear, context is complete, and no low-signal language is present.";
-        }
-        else if (!hasContext || lowImpact || !hasRequestIntent)
-        {
-            decision = "Do not tag as CMF";
-            ruleSummary = "One or more mandatory rules are not satisfied. The available data does not support an automatic CMF tag.";
-        }
-        else
-        {
-            decision = "Do not tag as CMF";
-            ruleSummary = "Some signals are present, but the available evidence is not strong enough to recommend a CMF tag.";
-        }
+        List<CmfRecommendationRuleScore> ruleScores = BuildDeterministicRuleScores(title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, string.Empty);
+        int overallQualityScore = CalculateOverallQualityScore(ruleScores);
+        int thresholdScore = GetThresholdScore(rules);
+        string decision = ResolveCmfDisposition(overallQualityScore, thresholdScore, ruleScores);
+        string ruleSummary = BuildReasoningFromScores(decision, overallQualityScore, thresholdScore, ruleScores);
 
         StringBuilder builder = new StringBuilder();
         builder.AppendLine("## " + decision);
         builder.AppendLine();
         builder.AppendLine("- Decision: " + ruleSummary);
         builder.AppendLine("- Evidence: request \"" + safeRequest + "\"; RVP \"" + SafeDisplay(reproOnRvp) + "\"; reproducibility \"" + SafeDisplay(reproducibility) + "\"; impact " + safeImpact + ".");
-        if (decision == "Tag as CMF")
+        if (decision == "CMF_OK")
         {
-            builder.Append("- Next: approve the tag after owner ETA is confirmed.");
+            builder.Append("- Next: approve the CMF recommendation after owner ETA and latest HSD evidence are confirmed.");
         }
         else
         {
-            builder.Append("- Next: collect missing rule evidence before approving the tag.");
+            builder.Append("- Next: collect missing criterion evidence before approving CMF classification.");
         }
         return builder.ToString();
     }
@@ -691,32 +667,11 @@ threshold_for_cmf_tag: 0.70";
 
     private static CmfRecommendationResponse BuildFallbackRecommendationResponse(string cpId, string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string rules, string hsdContext, string modelError)
     {
-        bool hasContext = !string.IsNullOrWhiteSpace(title) && !string.IsNullOrWhiteSpace(component) && !string.IsNullOrWhiteSpace(impact);
-        bool hasRequestIntent = ContainsAny(cmfRequest, new string[] { "cmf_ok", "cmf ask", "cmf_ask", "request", "pending", "review" });
-        bool strongRequestIntent = ContainsAny(cmfRequest, new string[] { "cmf_ok", "approved", "requested" });
-        bool negativeRepro = ContainsAny(reproducibility, new string[] { "not reproduced", "not reproduce", "no repro", "cannot reproduce", "unable to reproduce", "not able to reproduce" })
-            || ContainsAny(reproOnRvp, new string[] { "no", "false", "n/a", "not reproduced", "not reproduce" });
-        bool meaningfulRepro = !negativeRepro && (ContainsAny(reproducibility, new string[] { "yes", "reproduces", "reproduced", "always", "consistent", "100", "high" })
-            || ContainsAny(reproOnRvp, new string[] { "yes", "y", "true", "reproduces", "reproduced" }));
-        bool highImpact = ContainsAny(impact, new string[] { "critical", "high", "blocker", "showstopper", "hang", "crash", "data loss", "certification", "sla" });
-        bool lowImpact = ContainsAny(impact, new string[] { "no impact", "low", "minor", "cosmetic", "informational", "unable to reproduce" });
-        bool hasSysScopeEvidence = !string.IsNullOrWhiteSpace(idst) || !string.IsNullOrWhiteSpace(reproducibility) || !string.IsNullOrWhiteSpace(reproOnRvp);
-
-        var ruleScores = new List<CmfRecommendationRuleScore>
-        {
-            new CmfRecommendationRuleScore { RuleId = "R1", RuleName = "Minimum replication / reproducibility evidence", Score = meaningfulRepro ? "100" : (hasSysScopeEvidence ? "55" : "0"), Evaluation = meaningfulRepro ? "PASS - Reproducibility/RVP repro evidence is present." : (hasSysScopeEvidence ? "PARTIAL - SysScope/iDST context exists, but direct reproducibility evidence is incomplete." : "FAIL - Reproducibility and RVP repro evidence are missing.") },
-            new CmfRecommendationRuleScore { RuleId = "R2", RuleName = "User or customer impact severity", Score = highImpact ? "100" : (lowImpact ? "0" : "50"), Evaluation = highImpact ? "PASS - Impact text indicates high customer/user severity: " + SafeDisplay(impact) : (lowImpact ? "FAIL - Impact appears low or explicitly non-blocking: " + SafeDisplay(impact) : "PARTIAL - Impact exists but does not clearly show high severity: " + SafeDisplay(impact)) },
-            new CmfRecommendationRuleScore { RuleId = "R3", RuleName = "Clear CMF request intent", Score = strongRequestIntent ? "100" : (hasRequestIntent ? "60" : "0"), Evaluation = strongRequestIntent ? "PASS - CMF request intent is clear from request status: " + SafeDisplay(cmfRequest) : (hasRequestIntent ? "PARTIAL - CMF request is present but needs PM confirmation: " + SafeDisplay(cmfRequest) : "FAIL - CMF request intent is missing or unclear.") },
-            new CmfRecommendationRuleScore { RuleId = "R4", RuleName = "Enough issue context", Score = hasContext ? "100" : "20", Evaluation = hasContext ? "PASS - Title, component, and impact context are available for " + SafeDisplay(component) + "." : "FAIL - Required issue context is incomplete." },
-            new CmfRecommendationRuleScore { RuleId = "R5", RuleName = "Not obviously low signal", Score = lowImpact ? "0" : "100", Evaluation = lowImpact ? "FAIL - Low/no-impact language was detected." : "PASS - No obvious low-signal language was detected." }
-        };
+        var ruleScores = BuildDeterministicRuleScores(title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, hsdContext);
 
         int overallQualityScore = CalculateOverallQualityScore(ruleScores);
         int thresholdScore = GetThresholdScore(rules);
-        bool hasHighWeightFailure = !meaningfulRepro || !highImpact;
-        string decision = overallQualityScore >= thresholdScore && !hasHighWeightFailure && hasContext && hasRequestIntent && !lowImpact
-            ? "Tag as CMF"
-            : "Do not tag as CMF";
+        string decision = ResolveCmfDisposition(overallQualityScore, thresholdScore, ruleScores);
         string evidence = BuildContextGroundedReasoning(decision, overallQualityScore, thresholdScore, ruleScores, title, component, impact, reproducibility, reproOnRvp, hsdContext);
 
         return new CmfRecommendationResponse
@@ -748,8 +703,9 @@ threshold_for_cmf_tag: 0.70";
             int score;
             if (rule != null && int.TryParse((rule.Score ?? string.Empty).Replace("%", string.Empty).Trim(), out score))
             {
-                int weight = IsHighWeightRule(rule.RuleId) ? 2 : 1;
-                weightedTotal += Math.Max(0, Math.Min(100, score)) * weight;
+                int normalizedScore = score <= 5 ? score * 20 : score;
+                int weight = GetRuleWeight(rule.RuleId);
+                weightedTotal += Math.Max(0, Math.Min(100, normalizedScore)) * weight;
                 weightTotal += weight;
             }
         }
@@ -757,10 +713,56 @@ threshold_for_cmf_tag: 0.70";
         return weightTotal == 0 ? 0 : (int)Math.Round(weightedTotal / (double)weightTotal);
     }
 
+    private static void SanitizeRecommendationResponse(CmfRecommendationResponse response)
+    {
+        if (response == null) return;
+
+        response.Recommendation = SafeText(response.Recommendation);
+        response.Evidence = CleanRecommendationDisplayText(response.Evidence);
+
+        if (response.RuleScores == null) return;
+        foreach (CmfRecommendationRuleScore rule in response.RuleScores)
+        {
+            if (rule == null) continue;
+            rule.RuleId = SafeText(rule.RuleId);
+            rule.RuleName = SafeText(rule.RuleName);
+            rule.Score = NormalizeNumericScore(rule.Score);
+            rule.Evaluation = CleanRecommendationDisplayText(rule.Evaluation);
+        }
+    }
+
+    private static string CleanRecommendationDisplayText(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+
+        string cleaned = value.Replace("\r", " ").Replace("\n", " ").Trim();
+        while (cleaned.IndexOf("  ", StringComparison.Ordinal) >= 0)
+        {
+            cleaned = cleaned.Replace("  ", " ");
+        }
+
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\b(indicating|including|because|with|and|or|that)\s*\.$", ".", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s+([,.;:!?])", "$1");
+        return cleaned.Trim();
+    }
+
+    private static int GetRuleWeight(string ruleId)
+    {
+        string id = SafeText(ruleId).ToUpperInvariant();
+        if (id == "S") return 30;
+        if (id == "O") return 20;
+        if (id == "D") return 15;
+        if (id == "R") return 15;
+        if (id == "B") return 20;
+        return IsHighWeightRule(ruleId) ? 2 : 1;
+    }
+
     private static bool IsHighWeightRule(string ruleId)
     {
         return string.Equals(ruleId, "R1", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(ruleId, "R2", StringComparison.OrdinalIgnoreCase);
+            || string.Equals(ruleId, "R2", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(ruleId, "R4", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(ruleId, "R5", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasFailedHighWeightRule(List<CmfRecommendationRuleScore> ruleScores)
@@ -785,8 +787,7 @@ threshold_for_cmf_tag: 0.70";
 
     private static bool IsGatingRule(string ruleId)
     {
-        return IsHighWeightRule(ruleId)
-            || string.Equals(ruleId, "R3", StringComparison.OrdinalIgnoreCase);
+        return IsHighWeightRule(ruleId);
     }
 
     private static bool HasBlockingRuleFailure(List<CmfRecommendationRuleScore> ruleScores)
@@ -825,10 +826,10 @@ threshold_for_cmf_tag: 0.70";
 
     private static int GetThresholdScore(string rules)
     {
-        if (string.IsNullOrWhiteSpace(rules)) return 70;
+        if (string.IsNullOrWhiteSpace(rules)) return 80;
         string marker = "threshold_for_cmf_tag:";
         int index = rules.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-        if (index < 0) return 70;
+        if (index < 0) return 80;
 
         string tail = rules.Substring(index + marker.Length).Trim();
         string[] parts = tail.Split(new[] { '\r', '\n', ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
@@ -838,10 +839,11 @@ threshold_for_cmf_tag: 0.70";
         if (double.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out threshold))
         {
             if (threshold <= 1) return (int)Math.Round(threshold * 100);
+            if (threshold <= 5) return (int)Math.Round(threshold * 20);
             return (int)Math.Round(threshold);
         }
 
-        return 70;
+        return 80;
     }
 
     private static string BuildReasoningFromScores(string recommendation, int overallQualityScore, int thresholdScore, List<CmfRecommendationRuleScore> ruleScores)
@@ -865,7 +867,8 @@ threshold_for_cmf_tag: 0.70";
             }
         }
 
-        bool shouldTag = string.Equals(recommendation, "Tag as CMF", StringComparison.OrdinalIgnoreCase);
+        bool shouldTag = string.Equals(recommendation, "CMF_OK", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(recommendation, "Tag as CMF", StringComparison.OrdinalIgnoreCase);
         StringBuilder reasoning = new StringBuilder();
         if (shouldTag)
         {
@@ -882,6 +885,55 @@ threshold_for_cmf_tag: 0.70";
             reasoning.Append("Until those gaps are resolved, approving the CMF tag would be premature.");
         }
         return reasoning.ToString();
+    }
+
+    private static List<CmfRecommendationRuleScore> BuildDeterministicRuleScores(string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string hsdContext)
+    {
+        string combined = string.Join(" ", new string[] { title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, hsdContext });
+        bool hasIssueContext = !string.IsNullOrWhiteSpace(title) || !string.IsNullOrWhiteSpace(component) || !string.IsNullOrWhiteSpace(impact);
+        bool lowImpact = ContainsAny(combined, new string[] { "no impact", "non impact", "not customer visible", "not user visible", "cosmetic", "minor", "informational", "works as designed", "waived", "duplicate only" });
+        bool customerRequest = ContainsAny(combined, new string[] { "launch gating", "gating", "halts production", "halt production", "blocks customer validation", "customer validation", "gerber", "web update", "milestone", "launch readiness", "immediate engagement", "customer ask", "customer request", "cmf_ok", "customer_must_fix" });
+        bool productImpact = ContainsAny(combined, new string[] { "key customer functionality", "platform stability", "validation execution", "launch readiness", "feature loss", "feature degradation", "functional failure", "data loss", "data corruption", "hang", "reset", "crash", "performance degradation", "perf degradation", "permanent damage", "certification failure", "certification", "customer visible" });
+        bool likelihood = ContainsAny(combined, new string[] { "reproducible", "reproduced", "reproduces", "easily observable", "observable", "always", "consistent", "high repro", "failure rate", "sporadic", "multiple systems", "multiple configurations", "multiple users", "multiple customers" });
+        bool partialLikelihood = !likelihood && (!string.IsNullOrWhiteSpace(reproducibility) || !string.IsNullOrWhiteSpace(reproOnRvp));
+        bool recovery = ContainsAny(combined, new string[] { "no workaround", "no acceptable workaround", "no recovery", "restart", "reboot", "bios recovery", "os reinstall", "reinstallation", "reflash", "device reconnect", "repeated intervention", "user intervention", "workaround impacts", "workaround materially impacts", "validation efficiency", "customer experience" });
+        bool partialRecovery = !recovery && ContainsAny(combined, new string[] { "workaround", "recovery", "recover" });
+        bool businessExposure = ContainsAny(combined, new string[] { "multiple customers", "reported by customer", "customer reported", "escalation", "support call", "warranty", "return", "rma", "service action", "dissatisfaction", "negative perception", "competitive disadvantage", "financial impact", "quality claim", "end-user complaint" });
+        bool partialBusinessExposure = !businessExposure && !string.IsNullOrWhiteSpace(customerDetail);
+
+        bool severeSymptom = productImpact || ContainsAny(combined, new string[] { "bsod", "black screen", "shutdown", "reboot", "crash", "hang", "data loss", "corruption", "cannot boot", "cannot power" });
+        bool customerVisible = ContainsAny(combined, new string[] { "normal use", "daily", "customer visible", "oobe", "s0", "s4", "s5", "restart", "idle" });
+
+        var ruleScores = new List<CmfRecommendationRuleScore>
+        {
+            BuildRuleScore("S", "Severity", severeSymptom, hasIssueContext, lowImpact, "S4/S5 symptom severity is supported by the available failure description.", "Symptom exists, but customer severity is not fully clear.", "No symptom or customer severity evidence was found."),
+            BuildRuleScore("O", "Occurrence", likelihood, partialLikelihood, false, "O3/O4 occurrence is supported by repro, rate, or multi-system evidence.", "Some repro signal exists, but cycle rate or frequency is unclear.", "No occurrence, cycle rate, or reproducibility evidence was found."),
+            BuildRuleScore("D", "Detection", customerVisible, hasIssueContext, false, "D3/D4 detection is supported by customer-visible usage evidence.", "Usage context exists, but customer encounter likelihood is unclear.", "No usage trigger or customer detection evidence was found."),
+            BuildRuleScore("R", "Recovery", recovery, partialRecovery, false, "R3/R5 recovery impact is supported by workaround or intervention evidence.", "Recovery/workaround is mentioned but acceptability is unclear.", "No recovery or workaround impact evidence was found."),
+            BuildRuleScore("B", "Business Impact", customerRequest || businessExposure, partialBusinessExposure, lowImpact, "B4/B5 milestone, escalation, or business exposure evidence is clear.", "Customer context exists, but milestone/business exposure is not fully described.", "No milestone or business exposure evidence was found.")
+        };
+
+        return ruleScores;
+    }
+
+    private static CmfRecommendationRuleScore BuildRuleScore(string ruleId, string ruleName, bool pass, bool partial, bool forceFail, string passText, string partialText, string failText)
+    {
+        if (forceFail)
+        {
+            return new CmfRecommendationRuleScore { RuleId = ruleId, RuleName = ruleName, Score = "1", Evaluation = "SCORE 1 - Low/no-impact language contradicts this CMF criterion." };
+        }
+
+        if (pass)
+        {
+            return new CmfRecommendationRuleScore { RuleId = ruleId, RuleName = ruleName, Score = "4", Evaluation = "SCORE 4 - " + passText };
+        }
+
+        if (partial)
+        {
+            return new CmfRecommendationRuleScore { RuleId = ruleId, RuleName = ruleName, Score = "3", Evaluation = "SCORE 3 - " + partialText };
+        }
+
+        return new CmfRecommendationRuleScore { RuleId = ruleId, RuleName = ruleName, Score = "1", Evaluation = "SCORE 1 - " + failText };
     }
 
     private static List<string> TakeFirstReasons(List<string> reasons, int maxCount)
@@ -929,35 +981,37 @@ threshold_for_cmf_tag: 0.70";
 
         if (text.IndexOf("R1", StringComparison.OrdinalIgnoreCase) >= 0)
         {
-            if (upper.Contains("FAIL")) return "there is no clear reproduction or RVP validation evidence yet";
-            if (upper.Contains("PARTIAL")) return "there is some debug or iDST context, but not enough direct reproduction proof";
-            return "the issue has reproduction or RVP evidence that makes the failure credible";
+            if (upper.Contains("FAIL")) return "there is no clear customer request or launch-readiness blocking signal yet";
+            if (upper.Contains("PARTIAL")) return "customer request evidence exists, but the milestone or validation impact is still unclear";
+            return "the issue has customer request or launch-readiness evidence that supports CMF review";
         }
 
         if (text.IndexOf("R2", StringComparison.OrdinalIgnoreCase) >= 0)
         {
-            if (upper.Contains("FAIL")) return "the described impact looks low or non-blocking" + detail;
-            if (upper.Contains("PARTIAL")) return "impact is present, but it does not clearly show a severe customer or user consequence" + detail;
-            return "the impact description is severe enough to justify CMF attention" + detail;
+            if (upper.Contains("FAIL")) return "the described product or functional impact does not reach CMF-level severity" + detail;
+            if (upper.Contains("PARTIAL")) return "functional impact is present, but severity is not fully clear" + detail;
+            return "the product or functional impact is severe enough to justify CMF attention" + detail;
         }
 
         if (text.IndexOf("R3", StringComparison.OrdinalIgnoreCase) >= 0)
         {
-            if (upper.Contains("FAIL")) return "the record does not show a clear CMF request or acceptance intent";
-            if (upper.Contains("PARTIAL")) return "the CMF request is present but still needs PM confirmation" + detail;
-            return "the request state already shows clear CMF intent" + detail;
+            if (upper.Contains("FAIL")) return "the record does not show enough likelihood or reproducibility evidence";
+            if (upper.Contains("PARTIAL")) return "some reproducibility signal exists, but failure rate or customer observability is unclear" + detail;
+            return "likelihood, sporadicity, or reproducibility evidence supports the CMF case" + detail;
         }
 
         if (text.IndexOf("R4", StringComparison.OrdinalIgnoreCase) >= 0)
         {
-            if (upper.Contains("FAIL")) return "basic issue context such as title, component, or impact is incomplete";
-            return "the issue has enough component and impact context for a decision" + detail;
+            if (upper.Contains("FAIL")) return "workaround or recovery impact is not described";
+            if (upper.Contains("PARTIAL")) return "a workaround or recovery path is mentioned, but acceptability is unclear" + detail;
+            return "recovery or workaround evidence supports CMF urgency" + detail;
         }
 
         if (text.IndexOf("R5", StringComparison.OrdinalIgnoreCase) >= 0)
         {
-            if (upper.Contains("FAIL")) return "the wording suggests this may be low signal or low impact";
-            return "there is no obvious low-signal wording blocking the recommendation";
+            if (upper.Contains("FAIL")) return "customer or business exposure is not established";
+            if (upper.Contains("PARTIAL")) return "customer context exists, but escalation or business risk is not fully described" + detail;
+            return "customer or business exposure supports CMF attention";
         }
 
         return string.IsNullOrWhiteSpace(detail) ? "the available evidence was checked against the active rules" : detail.TrimStart(' ', '-', ':');
@@ -1148,10 +1202,11 @@ threshold_for_cmf_tag: 0.70";
             {
                 int score;
                 string searchKey = trimmed.StartsWith("EVIDENCE QUALITY:", StringComparison.OrdinalIgnoreCase) ? "EVIDENCE QUALITY:" : "OVERALL QUALITY SCORE:";
-                string scoreText = trimmed.Substring(searchKey.Length).Replace("/100", string.Empty).Replace("%", string.Empty).Trim();
-                if (int.TryParse(scoreText, out score))
+                string scoreText = trimmed.Substring(searchKey.Length).Replace("/100", string.Empty).Replace("/5", string.Empty).Replace("%", string.Empty).Trim();
+                double scoreValue;
+                if (double.TryParse(scoreText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out scoreValue))
                 {
-                    response.OverallQualityScore = Math.Max(0, Math.Min(100, score));
+                    response.OverallQualityScore = scoreValue <= 5 ? Math.Max(0, Math.Min(100, (int)Math.Round(scoreValue * 20))) : Math.Max(0, Math.Min(100, (int)Math.Round(scoreValue)));
                 }
                 continue;
             }
@@ -1210,17 +1265,18 @@ threshold_for_cmf_tag: 0.70";
     private static string NormalizeNumericScore(string scoreText)
     {
         if (string.IsNullOrWhiteSpace(scoreText)) return "0";
-        string normalized = scoreText.Replace("/100", string.Empty).Replace("%", string.Empty).Trim();
+        string normalized = scoreText.Replace("/100", string.Empty).Replace("/5", string.Empty).Replace("%", string.Empty).Trim();
         int score;
         if (int.TryParse(normalized, out score))
         {
-            return Math.Max(0, Math.Min(100, score)).ToString();
+            if (score >= 1 && score <= 5) return score.ToString();
+            return Math.Max(1, Math.Min(5, (int)Math.Round(score / 20.0))).ToString();
         }
 
-        if (scoreText.Equals("PASS", StringComparison.OrdinalIgnoreCase)) return "100";
-        if (scoreText.Equals("PARTIAL", StringComparison.OrdinalIgnoreCase)) return "50";
-        if (scoreText.Equals("FAIL", StringComparison.OrdinalIgnoreCase)) return "0";
-        return "0";
+        if (scoreText.Equals("PASS", StringComparison.OrdinalIgnoreCase)) return "4";
+        if (scoreText.Equals("PARTIAL", StringComparison.OrdinalIgnoreCase)) return "3";
+        if (scoreText.Equals("FAIL", StringComparison.OrdinalIgnoreCase)) return "1";
+        return "1";
     }
 
     private static string BuildCmfRecommendationPrompt(string cpId, string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string rules, string deterministicRecommendation, string hsdContext)
@@ -1231,13 +1287,15 @@ threshold_for_cmf_tag: 0.70";
         prompt.AppendLine("Provide a precise recommendation using the admin-defined rules and the gathered issue context.");
         prompt.AppendLine();
         prompt.AppendLine("### RULES ###");
-        prompt.AppendLine("1. The admin rules are policy gates. Apply them strictly.");
-        prompt.AppendLine("2. If a high-weight rule explicitly fails based on the data, the recommendation must account for it (leading to CMF_REJECT or CMF_INCOMPLETE).");
-        prompt.AppendLine("3. Calculate the OVERALL QUALITY SCORE as an integer from 0-100 indicating confidence.");
-        prompt.AppendLine("4. Write for a customer-facing reviewer. Do not rely on internal field names as the explanation.");
-        prompt.AppendLine("5. Reason naturally from the evidence: what was observed, why it matters, what risk it creates, and what is still missing if the issue is incomplete.");
-        prompt.AppendLine("6. Avoid template phrases such as request intent is explicit, fields are populated, or rule gates are met. Translate reproducibility, RVP repro, cmf_request, and impact into plain-language meaning.");
-        prompt.AppendLine("7. If multiple evidence points matter, use short bullets under REASONING. Each bullet must be understandable without knowing the database field names.");
+        prompt.AppendLine("1. The admin scoring policy is the source of truth. Score S/O/D/R/B only from 1-5. Do not output 0-100 dimension scores.");
+        prompt.AppendLine("2. Never invent absent facts. If symptom, customer impact, occurrence/repro evidence, usage trigger, workaround/recovery, or milestone/business impact is missing and can change the disposition, recommend CMF_INCOMPLETE.");
+        prompt.AppendLine("3. Replicable on RVP is a debug ownership indicator only; do not let it raise or lower CMF qualification.");
+        prompt.AppendLine("4. Calculate EVIDENCE QUALITY as the weighted CMF score on the 1-5 scale: (S*0.30)+(O*0.20)+(D*0.15)+(R*0.15)+(B*0.20). Use two decimals.");
+        prompt.AppendLine("5. Use the classification bands from the admin policy: CMF_OK, CMF_REVIEW, CMF_REJECT, or CMF_INCOMPLETE.");
+        prompt.AppendLine("6. Every score must cite either a short exact field excerpt or the phrase 'missing evidence'. Do not use vague phrases such as 'appears', 'likely', or 'may indicate' unless the input itself is ambiguous.");
+        prompt.AppendLine("7. If evidence conflicts, name the conflict in plain English and recommend CMF_REVIEW.");
+        prompt.AppendLine("8. Write for an iDST reviewer: concise, evidence-grounded, grammatical, and sequenced by issue facts, scoring, impact, and reviewer action.");
+        prompt.AppendLine("9. Do not mention this prompt, hidden policy, AI limitations, or generic CMF definitions. Do not repeat raw field labels as sentences.");
         prompt.AppendLine();
         prompt.AppendLine("### ADMIN POLICY RULES ###");
         prompt.AppendLine(string.IsNullOrWhiteSpace(rules) ? DefaultRulesText : rules);
@@ -1261,19 +1319,29 @@ threshold_for_cmf_tag: 0.70";
         }
         prompt.AppendLine();
         prompt.AppendLine("### EXPECTED OUTPUT FORMAT ###");
-        prompt.AppendLine("RECOMMENDATION: [Exactly one of: CMF_OK, CMF_REJECT, CMF_INCOMPLETE]");
+        prompt.AppendLine("RECOMMENDATION: [Exactly one of: CMF_OK, CMF_REVIEW, CMF_REJECT, CMF_INCOMPLETE]");
         prompt.AppendLine();
-        prompt.AppendLine("EVIDENCE QUALITY: [0-100 integer]");
+        prompt.AppendLine("EVIDENCE QUALITY: [weighted score from 1.00 to 5.00]");
         prompt.AppendLine();
         prompt.AppendLine("REASONING:");
-        prompt.AppendLine("[- 2 to 4 concise bullets. Start each bullet with the practical evidence or risk, not a field name. Explain what the evidence means for the CMF decision.]");
+        prompt.AppendLine("- [Sentence 1: state the strongest concrete issue fact from the title, component, impact, reproducibility, or HSD context.]");
+        prompt.AppendLine("- [Sentence 2: explain why the S/O/D/R/B scores support or block the disposition.]");
+        prompt.AppendLine("- [Sentence 3: state the missing or conflicting evidence, or say that no decision-critical gaps are visible.]");
+        prompt.AppendLine("- [Optional sentence 4: give the reviewer action needed next.]");
         prompt.AppendLine();
         prompt.AppendLine("ISSUE IMPACT:");
-        prompt.AppendLine("[One complete sentence describing customer/user impact and urgency in normal words.]");
+        prompt.AppendLine("[One complete sentence describing customer/user impact and urgency in normal words. If impact is not supplied, say exactly what impact evidence is missing.]");
         prompt.AppendLine();
         prompt.AppendLine("RULE SCORES:");
         prompt.AppendLine("Rule ID | Rule Name | Score | Evaluation");
-        prompt.AppendLine("... (Ensure Score is exactly 100 for PASS, 50-70 for PARTIAL, 0 for FAIL. Start Evaluation with PASS, PARTIAL, or FAIL)");
+        prompt.AppendLine("S | Severity | [1-5 only] | [Complete sentence with S1-S5 rationale and exact excerpt or missing evidence.]");
+        prompt.AppendLine("O | Occurrence | [1-5 only] | [Complete sentence with O1-O5 rationale and exact excerpt or missing evidence.]");
+        prompt.AppendLine("D | Detection | [1-5 only] | [Complete sentence with D1-D5 rationale and exact excerpt or missing evidence.]");
+        prompt.AppendLine("R | Recovery | [1-5 only] | [Complete sentence with R1-R5 rationale and exact excerpt or missing evidence.]");
+        prompt.AppendLine("B | Business Impact | [1-5 only] | [Complete sentence with B1-B5 rationale and exact excerpt or missing evidence.]");
+        prompt.AppendLine();
+        prompt.AppendLine("### QUALITY BAR ###");
+        prompt.AppendLine("Before returning, verify that each reasoning bullet is a complete grammatical sentence, each score is justified by supplied evidence, and the recommendation matches the weighted score plus any missing decision-critical evidence.");
         
         return prompt.ToString();
     }
@@ -1472,9 +1540,10 @@ threshold_for_cmf_tag: 0.70";
     private static string ResolveCmfDisposition(string modelRecommendation, int overallQualityScore, int thresholdScore, List<CmfRecommendationRuleScore> ruleScores)
     {
         string normalized = SafeText(modelRecommendation).ToUpperInvariant();
+        if (normalized.Contains("CMF_REVIEW") || normalized.Contains("CONFLICT")) return "CMF_REVIEW";
         if (overallQualityScore >= thresholdScore && !HasBlockingRuleFailure(ruleScores)) return "CMF_OK";
-        if (normalized.Contains("CMF_REJECT") && !HasAnyPartialRule(ruleScores) && overallQualityScore <= 0) return "CMF_REJECT";
-        if (normalized.Contains("CMF_INCOMPLETE") || HasAnyPartialRule(ruleScores) || overallQualityScore > 0) return "CMF_INCOMPLETE";
+        if (normalized.Contains("CMF_REJECT") && !HasAnyPartialRule(ruleScores) && overallQualityScore < 40) return "CMF_REJECT";
+        if (normalized.Contains("CMF_INCOMPLETE") || HasAnyPartialRule(ruleScores) || overallQualityScore >= 40) return "CMF_INCOMPLETE";
         if (normalized.Contains("CMF_OK")) return "CMF_INCOMPLETE";
         return "CMF_REJECT";
     }
@@ -1482,7 +1551,8 @@ threshold_for_cmf_tag: 0.70";
     private static string ResolveCmfDisposition(int overallQualityScore, int thresholdScore, List<CmfRecommendationRuleScore> ruleScores)
     {
         if (overallQualityScore >= thresholdScore && !HasBlockingRuleFailure(ruleScores)) return "CMF_OK";
-        if (HasAnyPartialRule(ruleScores) || overallQualityScore > 0) return "CMF_INCOMPLETE";
+        if (overallQualityScore >= 60) return "CMF_REVIEW";
+        if (HasAnyPartialRule(ruleScores) || overallQualityScore >= 40) return "CMF_INCOMPLETE";
         return "CMF_REJECT";
     }
 

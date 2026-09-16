@@ -629,6 +629,10 @@ public partial class CMF_Web_portal : System.Web.UI.Page
     protected override void OnPreRender(EventArgs e)
     {
         ApplyFocusedPortalMode();
+        if (ScriptManager1 != null && lnkPendingBreadcrumbHome != null)
+        {
+            ScriptManager1.RegisterPostBackControl(lnkPendingBreadcrumbHome);
+        }
         RegisterActiveTabClientState();
         base.OnPreRender(e);
     }
@@ -1024,7 +1028,7 @@ public partial class CMF_Web_portal : System.Web.UI.Page
         GridView_cmf_pending.Visible = true;
         fieldSelectorPanel.Visible = false;
         issueListHeaderPanel.Visible = false;
-        cmf_pending_header_panel.Visible = false;
+        cmf_pending_header_panel.Visible = true;
         SetIssuePagerVisible(false);
 
         pane3.Visible = false;
@@ -1187,6 +1191,12 @@ FROM " + platformTable + @"
     {
         platformTable = ResolvePlatformTable(platformTable);
         return string.Join(",", GetDistinctDrivers(platformTable, "open", "implemented").ToArray());
+    }
+
+    private static bool UsesPublicIssueStatusScope(string platformTable)
+    {
+        return string.Equals(platformTable, "CMF_NVL_H_ALL_COMPONENTS_TABLE", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(platformTable, "CMF_NVL_S_ALL_COMPONENTS_TABLE", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void AppendDashboardDriverFilter(StringBuilder whereClause, string filterValue)
@@ -1928,6 +1938,7 @@ ORDER BY LTRIM(RTRIM(drivers))", con))
         fieldSelectorPanel.Visible = true;
         issueListHeaderPanel.Visible = true;
         cmf_pending_header_panel.Visible = false;
+        ScriptManager.RegisterStartupScript(this, GetType(), "hidePendingTabShell", "var pendingShell=document.getElementById('pendingTabShell');if(pendingShell)pendingShell.style.display='none';", true);
         SetIssuePagerVisible(true);
         configRulesPanel.Visible = false;
         reportsPlaceholderPanel.Visible = false;
@@ -2042,7 +2053,7 @@ ORDER BY LTRIM(RTRIM(drivers))", con))
         pane9.Visible = false;
         fieldSelectorPanel.Visible = false;
         issueListHeaderPanel.Visible = false;
-        cmf_pending_header_panel.Visible = false;
+        cmf_pending_header_panel.Visible = true;
         SetIssuePagerVisible(false);
         configRulesPanel.Visible = false;
         reportsPlaceholderPanel.Visible = false;
@@ -4161,52 +4172,32 @@ LEFT JOIN " + designTable + @" AS d
 
             ApplyIssuePageSizeFromSession();
 
-            // Build WHERE clause - MODIFIED TO MATCH OLD CODE LOGIC
+            // Build WHERE clause - status filtering must stay consistent regardless of
+            // first load vs. postback (platform switch, paging, etc.), otherwise issue
+            // counts differ depending on how the page was reached.
             string whereClause = "";
+            string issueStatusClause = UsesPublicIssueStatusScope(platformTable)
+                ? "status NOT IN ('rejected')"
+                : "status IN ('open', 'implemented')";
 
             if (!string.IsNullOrEmpty(filterValue) && filterValue != "AllDrivers")
             {
                 if (filterValue.Contains(","))
                 {
-                    // Use old code logic: first load vs subsequent loads
-                    if (Session["isFirstLoad"] == null)
-                    {
-                        whereClause = " WHERE \r\n" +
-                        "((@FilterValue = 'Pre-PV' AND drivers LIKE '%WW%' \r\n" +
-                        "     AND FLOOR(CAST(SUBSTRING(drivers, CHARINDEX('WW', must_fix_for) + 2, 2) AS FLOAT)) BETWEEN 1 AND 31) \r\n" +
-                        "    OR ( " +
-                        "       @FilterValue LIKE '%,' + drivers + ',%' " +
-                        "       OR @FilterValue LIKE drivers + ',%' " +
-                        "       OR @FilterValue LIKE '%,' + drivers) ) " +
-                        "AND sysdebug Like ('%customer_must_fix%') AND status IN ('open', 'implemented') AND cmf_request in ('cmf_ok') ";
-                    }
-                    else
-                    {
-                        whereClause = " WHERE \r\n" +
-                        "((@FilterValue = 'Pre-PV' AND drivers LIKE '%WW%' \r\n" +
-                        "     AND FLOOR(CAST(SUBSTRING(drivers, CHARINDEX('WW', must_fix_for) + 2, 2) AS FLOAT)) BETWEEN 1 AND 31) \r\n" +
-                        "    OR ( " +
-                        "       @FilterValue LIKE '%,' + drivers + ',%' " +
-                        "       OR @FilterValue LIKE drivers + ',%' " +
-                        "       OR @FilterValue LIKE '%,' + drivers) ) " +
-                        "AND sysdebug Like ('%customer_must_fix%') AND cmf_request in ('cmf_ok') ";
-                    }
+                    whereClause = " WHERE \r\n" +
+                    "((@FilterValue = 'Pre-PV' AND drivers LIKE '%WW%' \r\n" +
+                    "     AND FLOOR(CAST(SUBSTRING(drivers, CHARINDEX('WW', must_fix_for) + 2, 2) AS FLOAT)) BETWEEN 1 AND 31) \r\n" +
+                    "    OR ( " +
+                    "       @FilterValue LIKE '%,' + drivers + ',%' " +
+                    "       OR @FilterValue LIKE drivers + ',%' " +
+                    "       OR @FilterValue LIKE '%,' + drivers) ) " +
+                    "AND sysdebug Like ('%customer_must_fix%') AND " + issueStatusClause + " AND cmf_request in ('cmf_ok') ";
                 }
                 else
                 {
-                    // Use old code logic: first load vs subsequent loads
-                    if (Session["isFirstLoad"] == null)
-                    {
-                        whereClause = " WHERE \r\n ((@FilterValue = 'Pre-PV' AND drivers LIKE '%WW%' \r\n" +
-                        " AND FLOOR(CAST(SUBSTRING(drivers, CHARINDEX('WW', must_fix_for) + 2, 2) AS FLOAT)) BETWEEN 1 AND 31) \r\n" +
-                        "    OR drivers = @FilterValue ) AND status in ('open', 'implemented') AND sysdebug Like ('%customer_must_fix%') AND cmf_request in ('cmf_ok') ";
-                    }
-                    else
-                    {
-                        whereClause = " WHERE \r\n ((@FilterValue = 'Pre-PV' AND drivers LIKE '%WW%' \r\n" +
-                        " AND FLOOR(CAST(SUBSTRING(drivers, CHARINDEX('WW', must_fix_for) + 2, 2) AS FLOAT)) BETWEEN 1 AND 31) \r\n" +
-                        "    OR drivers = @FilterValue ) AND sysdebug Like ('%customer_must_fix%') AND cmf_request in ('cmf_ok') ";
-                    }
+                    whereClause = " WHERE \r\n ((@FilterValue = 'Pre-PV' AND drivers LIKE '%WW%' \r\n" +
+                    " AND FLOOR(CAST(SUBSTRING(drivers, CHARINDEX('WW', must_fix_for) + 2, 2) AS FLOAT)) BETWEEN 1 AND 31) \r\n" +
+                    "    OR drivers = @FilterValue ) AND " + issueStatusClause + " AND sysdebug Like ('%customer_must_fix%') AND cmf_request in ('cmf_ok') ";
                 }
             }
             else
@@ -4569,9 +4560,6 @@ LEFT JOIN " + designTable + @" AS d
     {
         return "<span class=\"pending-issue-with-action\">" +
             RenderPendingIssueDetails(cpIdValue, titleValue, componentValue) +
-            "<span class=\"pending-issue-action-row\">" +
-            RenderPendingDecisionDetailsButton(cpIdValue, titleValue, componentValue, cmfRequestValue, impactValue, idstValue, reproOnRvpValue, reproducibilityValue, customerDetailValue, customerOwnerValue) +
-            "</span>" +
             "</span>";
     }
 
@@ -4669,7 +4657,7 @@ LEFT JOIN " + designTable + @" AS d
     {
         string cpId = cpIdValue == null || cpIdValue == DBNull.Value ? string.Empty : cpIdValue.ToString();
         return string.Format(
-            "<button type=\"button\" class=\"pending-recommendation-btn pending-ai-rec-btn\" data-cmf-rec-id=\"{10}\" onclick='openCmfPendingRecommendationModal(\"{0}\", \"{1}\", \"{2}\", \"{3}\", \"{4}\", \"{5}\", \"{6}\", \"{7}\", \"{8}\", \"{9}\")' title=\"Run AI recommendation\" aria-label=\"Run AI recommendation\"><span class=\"pending-ai-rec-label\">&#10024;</span><span class=\"pending-ai-rec-confidence\"></span></button>",
+            "<button type=\"button\" class=\"pending-recommendation-btn pending-ai-rec-btn\" data-cmf-rec-id=\"{10}\" onclick='openCmfPendingRecommendationModal(\"{0}\", \"{1}\", \"{2}\", \"{3}\", \"{4}\", \"{5}\", \"{6}\", \"{7}\", \"{8}\", \"{9}\")' title=\"Run CMF recommendation\" aria-label=\"Run CMF recommendation\"><span class=\"pending-ai-rec-label\">AI Recommendation</span><span class=\"pending-ai-rec-confidence\">Review scoring</span></button>",
             JsEncode(cpIdValue),
             JsEncode(titleValue),
             JsEncode(componentValue),
@@ -5575,6 +5563,73 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
         }
 
         builder.AppendLine(label + ": " + value);
+    }
+
+    [WebMethod(EnableSession = true)]
+    public static AiSummaryResponse GetCmfPendingListInsights(string platform, string rowsContext)
+    {
+        try
+        {
+            string resolvedPlatform = platform;
+            if (string.IsNullOrWhiteSpace(resolvedPlatform) && HttpContext.Current != null && HttpContext.Current.Session != null)
+            {
+                resolvedPlatform = HttpContext.Current.Session[IssuePendingPlatformSessionKey] as string
+                    ?? HttpContext.Current.Session["selectedPlatform"] as string;
+            }
+
+            if (!string.IsNullOrWhiteSpace(resolvedPlatform) && !AllowedPlatformTables.Contains(resolvedPlatform))
+            {
+                return new AiSummaryResponse
+                {
+                    Success = false,
+                    Message = "Invalid platform input for CMF Pending insights."
+                };
+            }
+
+            string platformLabel = BuildStaticPlatformDisplayName(resolvedPlatform);
+            string context = "Summarize the visible CMF Pending sightings for this platform. " +
+                "Return 3-4 concise bullet sentences. Explain the main pattern, repeated components/customers/owners, evidence gaps, and what a reviewer should notice next. " +
+                "Use only the supplied rows; do not invent counts or issue details.\n\n" +
+                (string.IsNullOrWhiteSpace(rowsContext) ? "No visible CMF Pending rows were supplied." : rowsContext);
+
+            return AiSummaryService.GenerateDashboardExecutiveSummary(platformLabel + " CMF Pending", context);
+        }
+        catch (Exception ex)
+        {
+            return new AiSummaryResponse
+            {
+                Success = false,
+                Message = "CMF Pending insights generation failed: " + ex.Message
+            };
+        }
+    }
+
+    private static string BuildStaticPlatformDisplayName(string platformTable)
+    {
+        string normalized = (platformTable ?? string.Empty).Trim();
+        if (string.Equals(normalized, "NVL-H", StringComparison.OrdinalIgnoreCase)) normalized = "CMF_NVL_H_ALL_COMPONENTS_TABLE";
+        else if (string.Equals(normalized, "NVL-S", StringComparison.OrdinalIgnoreCase)) normalized = "CMF_NVL_S_ALL_COMPONENTS_TABLE";
+        else if (string.Equals(normalized, "PTL", StringComparison.OrdinalIgnoreCase)) normalized = "CMF_PTL_ALL_COMPONENTS_TABLE";
+        else if (string.Equals(normalized, "LNL", StringComparison.OrdinalIgnoreCase)) normalized = "CMF_LNL_ALL_COMPONENTS_TABLE";
+        else if (string.Equals(normalized, "ARL-S", StringComparison.OrdinalIgnoreCase)) normalized = "CMF_ARL_S_ALL_COMPONENTS_TABLE";
+        else if (string.Equals(normalized, "ARL-H", StringComparison.OrdinalIgnoreCase)) normalized = "CMF_ARL_H_ALL_COMPONENTS_TABLE";
+        else if (string.Equals(normalized, "ARL-U", StringComparison.OrdinalIgnoreCase)) normalized = "CMF_ARL_U_ALL_COMPONENTS_TABLE";
+        else if (string.Equals(normalized, "ARL-Hx", StringComparison.OrdinalIgnoreCase)) normalized = "CMF_ARL_HX_ALL_COMPONENTS_TABLE";
+        else if (string.Equals(normalized, "ARL-Refresh", StringComparison.OrdinalIgnoreCase)) normalized = "CMF_ARL_Refresh_ALL_COMPONENTS_TABLE";
+        else if (string.Equals(normalized, "GNR", StringComparison.OrdinalIgnoreCase)) normalized = "CMF_GNR_ALL_COMPONENTS_TABLE";
+        else if (string.Equals(normalized, "WCL", StringComparison.OrdinalIgnoreCase)) normalized = "CMF_WCL_ALL_COMPONENTS_TABLE";
+        if (string.Equals(normalized, "CMF_NVL_H_ALL_COMPONENTS_TABLE", StringComparison.OrdinalIgnoreCase)) return "NVL-H";
+        if (string.Equals(normalized, "CMF_NVL_S_ALL_COMPONENTS_TABLE", StringComparison.OrdinalIgnoreCase)) return "NVL-S";
+        if (string.Equals(normalized, "CMF_PTL_ALL_COMPONENTS_TABLE", StringComparison.OrdinalIgnoreCase)) return "PTL";
+        if (string.Equals(normalized, "CMF_LNL_ALL_COMPONENTS_TABLE", StringComparison.OrdinalIgnoreCase)) return "LNL";
+        if (string.Equals(normalized, "CMF_ARL_S_ALL_COMPONENTS_TABLE", StringComparison.OrdinalIgnoreCase)) return "ARL-S";
+        if (string.Equals(normalized, "CMF_ARL_H_ALL_COMPONENTS_TABLE", StringComparison.OrdinalIgnoreCase)) return "ARL-H";
+        if (string.Equals(normalized, "CMF_ARL_U_ALL_COMPONENTS_TABLE", StringComparison.OrdinalIgnoreCase)) return "ARL-U";
+        if (string.Equals(normalized, "CMF_ARL_HX_ALL_COMPONENTS_TABLE", StringComparison.OrdinalIgnoreCase)) return "ARL-Hx";
+        if (string.Equals(normalized, "CMF_ARL_Refresh_ALL_COMPONENTS_TABLE", StringComparison.OrdinalIgnoreCase)) return "ARL-Refresh";
+        if (string.Equals(normalized, "CMF_GNR_ALL_COMPONENTS_TABLE", StringComparison.OrdinalIgnoreCase)) return "GNR";
+        if (string.Equals(normalized, "CMF_WCL_ALL_COMPONENTS_TABLE", StringComparison.OrdinalIgnoreCase)) return "WCL";
+        return string.IsNullOrWhiteSpace(normalized) ? "Selected Platform" : normalized;
     }
 
     [WebMethod(EnableSession = true)]
@@ -12066,7 +12121,12 @@ ORDER BY cp_id";
     {
         try
         {
-            string selectedPlatformTable = ResolvePlatformTable(ddlSharedPlatform.SelectedValue);
+            // ddlSharedPlatform.SelectedValue can go stale by the time this change event
+            // fires (it reflects the previously-applied platform, not what the user just
+            // picked). Read the raw posted form value instead, which always matches what
+            // was actually submitted.
+            string postedPlatform = Request.Form["ddlSharedPlatform"];
+            string selectedPlatformTable = ResolvePlatformTable(!string.IsNullOrWhiteSpace(postedPlatform) ? postedPlatform : ddlSharedPlatform.SelectedValue);
 
             if (!string.IsNullOrEmpty(selectedPlatformTable))
             {
