@@ -4579,11 +4579,64 @@ LEFT JOIN " + designTable + @" AS d
             JsEncode(customerOwnerValue));
     }
 
-    protected string RenderPendingRecommendationCell(object cpIdValue, object titleValue, object componentValue, object cmfRequestValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
+    protected string RenderPendingRecommendationCell(object cpIdValue, object titleValue, object componentValue, object componentGroupValue, object cmfRequestValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
     {
         return "<span class=\"pending-ai-rec-cell\">" +
-            RenderPendingRecommendationButton(cpIdValue, titleValue, componentValue, cmfRequestValue, impactValue, idstValue, reproOnRvpValue, reproducibilityValue, customerDetailValue, customerOwnerValue) +
+            RenderPendingRecommendationButton(cpIdValue, titleValue, componentValue, componentGroupValue, cmfRequestValue, impactValue, idstValue, reproOnRvpValue, reproducibilityValue, customerDetailValue, customerOwnerValue) +
             "</span>";
+    }
+
+    protected string RenderPendingRecommendationButton(object cpIdValue, object titleValue, object componentValue, object componentGroupValue, object cmfRequestValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
+    {
+        string cpId = cpIdValue == null || cpIdValue == DBNull.Value ? string.Empty : cpIdValue.ToString();
+        return string.Format(
+            "<button type=\"button\" class=\"pending-recommendation-btn pending-ai-rec-btn\" data-cmf-rec-id=\"{11}\" onclick='openCmfPendingRecommendationModal(\"{0}\", \"{1}\", \"{2}\", \"{3}\", \"{4}\", \"{5}\", \"{6}\", \"{7}\", \"{8}\", \"{9}\", \"{10}\")' title=\"Open AI CMF Assistant\" aria-label=\"Open AI CMF Assistant\"><i class=\"fas fa-wand-magic-sparkles\" aria-hidden=\"true\"></i><span class=\"pending-ai-rec-label\">AI CMF Assistant</span><span class=\"pending-ai-rec-confidence\">Open assessment</span></button>",
+            JsEncode(cpIdValue),
+            JsEncode(titleValue),
+            JsEncode(componentValue),
+            JsEncode(componentGroupValue),
+            JsEncode(cmfRequestValue),
+            JsEncode(impactValue),
+            JsEncode(idstValue),
+            JsEncode(reproOnRvpValue),
+            JsEncode(reproducibilityValue),
+            JsEncode(customerDetailValue),
+            JsEncode(customerOwnerValue),
+            HttpUtility.HtmlAttributeEncode(cpId));
+    }
+
+    protected string RenderSightingDetailsPanel(object cpIdValue, object titleValue, object componentValue, object cmfRequestValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
+    {
+        string cpId = cpIdValue == null || cpIdValue == DBNull.Value ? string.Empty : cpIdValue.ToString().Trim();
+        string title = titleValue == null || titleValue == DBNull.Value ? string.Empty : titleValue.ToString();
+        string component = componentValue == null || componentValue == DBNull.Value ? string.Empty : componentValue.ToString();
+        
+        StringBuilder sb = new StringBuilder();
+        sb.Append("<div class=\"sighting-details-panel\">");
+        
+        // Sighting ID
+        sb.AppendFormat("<div class=\"sighting-id-section\">");
+        sb.AppendFormat("<span class=\"sighting-id-label\">Sighting ID:</span>");
+        sb.AppendFormat("<span class=\"sighting-id-value\">{0}</span>", HttpUtility.HtmlEncode(cpId));
+        sb.Append("</div>");
+        
+        // AI-Generated Description (will be loaded asynchronously)
+        sb.AppendFormat("<div class=\"sighting-description-section\">");
+        sb.AppendFormat("<span class=\"sighting-description-label\">Description:</span>");
+        sb.AppendFormat("<div class=\"sighting-description-content\" id=\"desc-{0}\">", HttpUtility.HtmlAttributeEncode(cpId));
+        sb.Append("<span class=\"sighting-description-loading\">Loading...</span>");
+        sb.Append("</div>");
+        sb.Append("</div>");
+        
+        // Hidden container for data attributes
+        sb.AppendFormat("<div class=\"sighting-data-container\" data-sighting-id=\"{0}\" data-title=\"{1}\" data-component=\"{2}\" style=\"display:none;\"></div>",
+            HttpUtility.HtmlAttributeEncode(cpId),
+            HttpUtility.HtmlAttributeEncode(title),
+            HttpUtility.HtmlAttributeEncode(component));
+        
+        sb.Append("</div>");
+        
+        return sb.ToString();
     }
 
     protected string RenderPendingCustomer(object customerDetailValue, object ownerValue)
@@ -4651,24 +4704,6 @@ LEFT JOIN " + designTable + @" AS d
             JsEncode(reproducibilityValue),
             JsEncode(customerDetailValue),
             JsEncode(customerOwnerValue));
-    }
-
-    protected string RenderPendingRecommendationButton(object cpIdValue, object titleValue, object componentValue, object cmfRequestValue, object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue, object customerDetailValue, object customerOwnerValue)
-    {
-        string cpId = cpIdValue == null || cpIdValue == DBNull.Value ? string.Empty : cpIdValue.ToString();
-        return string.Format(
-            "<button type=\"button\" class=\"pending-recommendation-btn pending-ai-rec-btn\" data-cmf-rec-id=\"{10}\" onclick='openCmfPendingRecommendationModal(\"{0}\", \"{1}\", \"{2}\", \"{3}\", \"{4}\", \"{5}\", \"{6}\", \"{7}\", \"{8}\", \"{9}\")' title=\"Run CMF recommendation\" aria-label=\"Run CMF recommendation\"><span class=\"pending-ai-rec-label\">AI Recommendation</span><span class=\"pending-ai-rec-confidence\">Review scoring</span></button>",
-            JsEncode(cpIdValue),
-            JsEncode(titleValue),
-            JsEncode(componentValue),
-            JsEncode(cmfRequestValue),
-            JsEncode(impactValue),
-            JsEncode(idstValue),
-            JsEncode(reproOnRvpValue),
-            JsEncode(reproducibilityValue),
-            JsEncode(customerDetailValue),
-            JsEncode(customerOwnerValue),
-                HttpUtility.HtmlAttributeEncode(cpId));
     }
 
     private static string EstimatePendingRecommendationLabel(object impactValue, object idstValue, object reproOnRvpValue, object reproducibilityValue)
@@ -5793,6 +5828,95 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
             {
                 Success = false,
                 Message = "CMF impact details failed: " + ex.Message
+            };
+        }
+    }
+
+    [WebMethod]
+    public static AiSummaryResponse GetSightingDescription(string cpId, string title, string platform)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(cpId) || string.IsNullOrWhiteSpace(title))
+            {
+                return new AiSummaryResponse
+                {
+                    Success = false,
+                    Message = "Sighting ID and title are required."
+                };
+            }
+
+            // Build HSD context for better AI description generation
+            string hsdContext = BuildPendingHsdContext(cpId);
+            
+            // Build database context (issue details from CMF database)
+            string dbContext = BuildIssueSummaryContext(platform, cpId);
+            
+            // Combine contexts
+            StringBuilder contextBuilder = new StringBuilder();
+            if (!string.IsNullOrWhiteSpace(dbContext))
+            {
+                contextBuilder.AppendLine(dbContext);
+            }
+            if (!string.IsNullOrWhiteSpace(hsdContext))
+            {
+                if (contextBuilder.Length > 0) contextBuilder.AppendLine();
+                contextBuilder.AppendLine(hsdContext);
+            }
+
+            string contextDetails = contextBuilder.ToString();
+
+            // Call the AI service to generate the sighting description
+            AiSummaryResponse response = AiSummaryService.GenerateSightingDescription(cpId, title, contextDetails);
+            
+            return response;
+        }
+        catch (Exception ex)
+        {
+            return new AiSummaryResponse
+            {
+                Success = false,
+                Message = "Failed to generate sighting description: " + ex.Message
+            };
+        }
+    }
+
+    [WebMethod]
+    public static AiSummaryResponse GetSightingImpactSummary(string cpId, string title, string impact, string platform)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(cpId) || string.IsNullOrWhiteSpace(title))
+            {
+                return new AiSummaryResponse
+                {
+                    Success = false,
+                    Message = "Sighting ID and title are required."
+                };
+            }
+
+            string hsdContext = BuildPendingHsdContext(cpId);
+            string dbContext = BuildIssueSummaryContext(platform, cpId);
+
+            StringBuilder contextBuilder = new StringBuilder();
+            if (!string.IsNullOrWhiteSpace(dbContext))
+            {
+                contextBuilder.AppendLine(dbContext);
+            }
+            if (!string.IsNullOrWhiteSpace(hsdContext))
+            {
+                if (contextBuilder.Length > 0) contextBuilder.AppendLine();
+                contextBuilder.AppendLine(hsdContext);
+            }
+
+            return AiSummaryService.GenerateSightingImpactSummary(cpId, title, impact, contextBuilder.ToString());
+        }
+        catch (Exception ex)
+        {
+            return new AiSummaryResponse
+            {
+                Success = false,
+                Message = "Failed to generate sighting impact summary: " + ex.Message
             };
         }
     }
@@ -8064,6 +8188,10 @@ firstPatternCaseStatements +
                     // Update KPIs and accessibility links after binding
                     UpdateCmfPendingKpis();
                     UpdateCmfPendingAccessibilityLinks();
+
+                    // Initialize sighting description loading
+                    ScriptManager.RegisterStartupScript(this, GetType(), "initSightingDescriptions", 
+                        "setTimeout(function() { loadSightingDescriptions(); }, 100);", true);
                 }
             }
         }

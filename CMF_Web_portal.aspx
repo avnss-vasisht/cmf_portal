@@ -2201,7 +2201,152 @@
 }
 
 #cmfRecDrawer {
+    width: min(560px, 94vw) !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    top: 0 !important;
+    right: 0 !important;
+    border: 0 !important;
+    border-left: 1px solid rgba(172, 199, 231, 0.92) !important;
+    border-radius: 0 !important;
     overflow-y: auto !important;
+    padding: 18px 20px 20px !important;
+    background:
+        radial-gradient(circle at 12% 0%, rgba(40, 118, 240, 0.14), transparent 28%),
+        linear-gradient(180deg, #ffffff 0%, #f4f9ff 100%) !important;
+    background-color: #f7fbff !important;
+    box-shadow: -18px 0 42px rgba(8, 25, 49, 0.24) !important;
+    transform: translateX(100%) !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+#cmfRecDrawer.show {
+    transform: translateX(0) !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+#cmfRecDrawer .ai-summary-drawer-title {
+    margin-bottom: 7px;
+    padding-right: 42px;
+    color: #09204a;
+    font-size: 16px;
+    letter-spacing: 0;
+    line-height: 1.3;
+}
+
+.cmf-assistant-title-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 25px;
+    height: 25px;
+    margin-right: 8px;
+    border-radius: 999px;
+    background: #ffffff;
+    border: 1px solid #bae0ff;
+    color: inherit;
+    font-size: 15px;
+    vertical-align: middle;
+}
+
+.cmf-assistant-context {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 5px 9px;
+    margin: 0 0 8px;
+    padding: 8px 10px;
+    border: 1px solid #d8e7f5;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 6px 16px rgba(30, 84, 144, 0.05);
+}
+
+.cmf-assistant-context span {
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.cmf-assistant-context strong {
+    min-width: 0;
+    color: #102f55;
+    font-size: 11px;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+}
+
+.cmf-assistant-context-title {
+    align-self: start;
+}
+
+.cmf-assistant-heading-id {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #edf5ff;
+    border: 1px solid #c9ddfb;
+    color: #17457c;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.cmf-assistant-heading-id span:first-child {
+    color: #5f789b;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.cmf-assistant-heading-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.cmf-assistant-heading-meta-item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    max-width: 210px;
+    padding: 4px 8px;
+    border: 1px solid rgba(92, 137, 190, 0.20);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.70);
+    color: #17395f;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.cmf-assistant-heading-meta-item span {
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.cmf-assistant-heading-meta-item strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #102f55;
+    font-size: 11px;
+    font-weight: 800;
 }
 
 .cmf-rec-heading-sighting {
@@ -5397,6 +5542,407 @@ td:nth-child(odd), th:nth-child(odd) {
         font-weight: 800;
         color: #64748b;
         line-height: 1.1;
+    }
+
+    /* Sighting Details Panel Styles */
+    .sighting-details-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+        padding: 8px 0;
+        min-width: 0;
+    }
+
+    .sighting-id-section {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    .sighting-id-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #475569;
+        white-space: nowrap;
+    }
+
+    .sighting-id-value {
+        font-size: 12px;
+        font-weight: 600;
+        color: #0f5ea8;
+        word-break: break-word;
+        text-decoration: none;
+    }
+
+    .sighting-id-value:hover {
+        text-decoration: underline;
+    }
+
+    .sighting-description-section {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    .sighting-description-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #475569;
+    }
+
+    .sighting-description-content {
+        font-size: 12px;
+        line-height: 1.4;
+        color: #333;
+        min-height: 24px;
+        word-wrap: break-word;
+        white-space: normal;
+        padding: 4px;
+        border-radius: 4px;
+        background: #f8fafc;
+    }
+
+    .sighting-description-loading {
+        font-size: 11px;
+        color: #999;
+        font-style: italic;
+    }
+
+    .sighting-description-error {
+        font-size: 11px;
+        color: #dc2626;
+        font-style: italic;
+    }
+
+    .sighting-data-container {
+        display: none;
+    }
+
+    .cmf-assistant-sighting-card {
+        border: 0;
+        border-radius: 12px;
+        background: transparent;
+        padding: 0;
+        margin: 4px 0 0;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .cmf-assistant-sighting-head {
+        display: none;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        grid-column: 1 / -1;
+        padding: 10px 12px;
+        border: 1px solid rgba(194, 213, 239, 0.75);
+        border-radius: 10px;
+        background: linear-gradient(90deg, rgba(229, 241, 255, 0.88), rgba(236, 253, 245, 0.55));
+    }
+
+    .cmf-assistant-sighting-head i {
+        color: #1d67c1;
+        font-size: 18px;
+        margin-top: 2px;
+    }
+
+    .cmf-assistant-eyebrow {
+        font-size: 10px;
+        font-weight: 900;
+        color: #5d7290;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .cmf-assistant-sighting-id {
+        margin-top: 2px;
+        font-size: 13px;
+        font-weight: 900;
+        color: #315f93;
+    }
+
+    .cmf-assistant-description {
+        color: #28425c;
+        font-size: 11px;
+        line-height: 1.35;
+        background: #ffffff;
+        border: 1px solid #e1edf7;
+        border-radius: 8px;
+        padding: 6px 8px;
+        min-height: 0;
+        text-align: left;
+    }
+
+    .cmf-assistant-description p {
+        margin: 0;
+    }
+
+    .cmf-assistant-description ul {
+        display: none;
+    }
+
+    .cmf-assistant-description li {
+        margin: 3px 0;
+        padding-left: 2px;
+        text-align: justify;
+    }
+
+    .cmf-assistant-text-section {
+        border: 1px solid #d8e7f5;
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 8px 9px;
+        box-shadow: 0 6px 16px rgba(30, 84, 144, 0.05);
+    }
+
+    .cmf-assistant-text-section:first-child {
+        border-color: #b9d8ff;
+        background: linear-gradient(180deg, #f7fbff 0%, #ffffff 100%);
+    }
+
+    .cmf-assistant-text-section:nth-child(2) {
+        border-color: #fed7aa;
+        background: linear-gradient(180deg, #fff8ef 0%, #ffffff 100%);
+    }
+
+    .cmf-assistant-text-section h3 {
+        margin: 0 0 5px;
+        color: #102a43;
+        font-size: 11px;
+        font-weight: 900;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .cmf-assistant-text-section h3::before {
+        content: '\f0eb';
+        font-family: 'Font Awesome 5 Free';
+        font-weight: 900;
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #edf5ff;
+        color: #246bfe;
+        font-size: 9px;
+        box-shadow: none;
+    }
+
+    .cmf-assistant-text-section:nth-child(2) h3::before {
+        content: '\f071';
+        background: #fff3e0;
+        color: #f97316;
+    }
+
+    .cmf-assistant-text-section .cmf-assistant-description,
+    .cmf-assistant-text-section .cmf-assistant-impact-block {
+        border: 0;
+        border-radius: 0;
+        padding: 0;
+        min-height: 0;
+        background: transparent;
+    }
+
+    .cmf-assistant-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .cmf-assistant-meta-grid div {
+        border: 1px solid #d8e7f5;
+        background: linear-gradient(135deg, #ffffff, #f5fbff);
+        border-radius: 9px;
+        padding: 7px 10px;
+        min-width: 0;
+        box-shadow: 0 8px 20px rgba(30, 84, 144, 0.05);
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+    }
+
+    .cmf-assistant-meta-grid span {
+        display: inline-block;
+        color: #64748b;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .cmf-assistant-meta-grid strong {
+        display: inline-block;
+        color: #132f4c;
+        font-size: 12px;
+        margin-top: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        min-width: 0;
+    }
+
+    .cmf-assistant-impact-block {
+        border: 1px solid #d8e7f5;
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 10px 12px;
+    }
+
+    .cmf-assistant-impact-block span {
+        display: block;
+        color: #64748b;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .cmf-assistant-impact-block strong {
+        display: inline;
+        color: #28425c;
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.45;
+        white-space: normal;
+    }
+
+    .cmf-assistant-impact-summary {
+        color: #2f3640;
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 1.35;
+        margin-top: 0;
+        white-space: normal;
+        text-align: left;
+    }
+
+    .cmf-assistant-description em,
+    .cmf-assistant-impact-summary em {
+        font-style: italic;
+    }
+
+    .cmf-assistant-description u,
+    .cmf-assistant-impact-summary u {
+        text-decoration-thickness: 1.5px;
+        text-underline-offset: 2px;
+    }
+
+    .cmf-impact-skeleton {
+        gap: 9px;
+        padding: 2px 0;
+    }
+
+    @media (max-width: 700px) {
+        #cmfRecDrawer {
+            top: 10px !important;
+            right: 10px !important;
+            width: calc(100vw - 20px) !important;
+            max-height: calc(100vh - 20px) !important;
+        }
+
+        .cmf-assistant-sighting-card {
+            grid-template-columns: 1fr;
+        }
+
+        .cmf-assistant-meta-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .cmf-assistant-feature-card {
+        border: 1px solid #d8e7f5;
+        border-radius: 12px;
+        background: #fff;
+        padding: 14px 16px;
+        margin-bottom: 14px;
+    }
+
+    .cmf-assistant-feature-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    .cmf-assistant-feature-head h3 {
+        margin: 3px 0 0;
+        color: #102a43;
+        font-size: 16px;
+        font-weight: 900;
+    }
+
+    .cmf-quality-tier {
+        border-radius: 999px;
+        padding: 7px 10px;
+        font-size: 12px;
+        font-weight: 900;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .cmf-quality-tier.high { background: #dcfce7; color: #166534; }
+    .cmf-quality-tier.medium { background: #fef3c7; color: #92400e; }
+    .cmf-quality-tier.low { background: #fee2e2; color: #991b1b; }
+
+    .cmf-quality-tier span {
+        opacity: 0.85;
+        font-weight: 800;
+    }
+
+    .cmf-quality-meter {
+        height: 8px;
+        border-radius: 999px;
+        background: #e5edf5;
+        overflow: hidden;
+        margin-bottom: 12px;
+    }
+
+    .cmf-quality-meter span {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #16a34a 0%, #0f72c4 100%);
+    }
+
+    .cmf-quality-two-col {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .cmf-quality-two-col > div {
+        border: 1px solid #e1edf7;
+        border-radius: 8px;
+        background: #f8fbff;
+        padding: 10px;
+    }
+
+    .cmf-quality-two-col h4 {
+        margin: 0 0 8px;
+        font-size: 12px;
+        font-weight: 900;
+        color: #19324a;
+    }
+
+    .cmf-quality-note {
+        margin-top: 10px;
+        color: #5d7088;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    @media (max-width: 700px) {
+        .cmf-quality-two-col {
+            grid-template-columns: 1fr;
+        }
     }
 
     .cmf-rec-assessment-shell {
@@ -9221,6 +9767,79 @@ td:nth-child(odd), th:nth-child(odd) {
             return getCurrentPlatformValue();
         }
 
+        function getPlatformDisplayLabel(platformValue) {
+            var value = String(platformValue || '').trim();
+            if (!value) return 'Current platform';
+
+            var aliases = window.CMF_PORTAL && window.CMF_PORTAL.platformAliasMap ? window.CMF_PORTAL.platformAliasMap : {};
+            for (var label in aliases) {
+                if (Object.prototype.hasOwnProperty.call(aliases, label) && aliases[label] === value) {
+                    return label.replace(/-/g, '_').toUpperCase();
+                }
+            }
+
+            return value
+                .replace(/^CMF_/i, '')
+                .replace(/_ALL_COMPONENTS_TABLE$/i, '')
+                .replace(/-/g, '_')
+                .toUpperCase();
+        }
+
+        function renderImpactSummarySkeleton() {
+            return '<div class="ai-skeleton-loader cmf-impact-skeleton" aria-label="Generating impact summary">' +
+                '<div class="ai-skeleton-line" style="width: 94%;"></div>' +
+                '<div class="ai-skeleton-line" style="width: 88%;"></div>' +
+                '<div class="ai-skeleton-line" style="width: 72%;"></div>' +
+                '<div class="ai-skeleton-line" style="width: 90%; margin-top: 8px;"></div>' +
+                '<div class="ai-skeleton-line" style="width: 84%;"></div>' +
+                '<div class="ai-skeleton-line" style="width: 66%;"></div>' +
+                '</div>';
+        }
+
+            function renderIssueDescriptionSkeleton() {
+                return '<div class="ai-skeleton-loader cmf-impact-skeleton" aria-label="Generating issue description">' +
+                '<div class="ai-skeleton-line" style="width: 92%;"></div>' +
+                '<div class="ai-skeleton-line" style="width: 76%; margin-top: 8px;"></div>' +
+                '</div>';
+            }
+
+        function renderIssueDescriptionText(text) {
+            var lines = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+                .split('\n')
+                .map(function (line) { return line.trim(); })
+                .filter(Boolean);
+            if (!lines.length) return 'No description available.';
+
+            var brief = lines.map(function (line) { return line.replace(/^[-*•]\s*/, '').trim(); }).join(' ');
+            return '<p>' + renderAssistantRichText(brief) + '</p>';
+        }
+
+        function renderAssistantRichText(text) {
+            var html = escapeHtml(text || '');
+            html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/_(.+?)_/g, '<em>$1</em>');
+            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            html = html.replace(/~~(.+?)~~/g, '<u>$1</u>');
+            return html;
+        }
+
+        function renderImpactSummaryText(text) {
+            var lines = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+                .split('\n')
+                .map(function (line) { return line.trim(); })
+                .filter(Boolean);
+            if (!lines.length) return 'No impact summary available.';
+
+            return lines.map(function (line) {
+                var richLine = renderAssistantRichText(line);
+                if (/^Fix requested by:/i.test(line)) {
+                    return '<strong>' + richLine + '</strong>';
+                }
+                return richLine;
+            }).join('<br>');
+        }
+
         function renderMarkdown(text) {
             try {
                 var htmlContent = marked.parse(text);
@@ -9935,10 +10554,15 @@ td:nth-child(odd), th:nth-child(odd) {
                 .replace(/'/g, '&#39;');
         }
 
-        function openCmfPendingRecommendationModal(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner) {
+        function openCmfPendingRecommendationModal(cpId, title, component, componentGroup, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner) {
             var cpIdNode = document.getElementById('cmfRecCpId');
             var titleNode = document.getElementById('cmfRecTitle');
             var componentNode = document.getElementById('cmfRecComponent');
+            var sightingIdNode = document.getElementById('cmfAssistantSightingId');
+            var sightingDescriptionNode = document.getElementById('cmfAssistantSightingDescription');
+            var platformNode = document.getElementById('cmfAssistantPlatform');
+            var visibleComponentNode = document.getElementById('cmfAssistantComponent');
+            var impactSummaryNode = document.getElementById('cmfAssistantImpactSummary');
             var bodyNode = document.getElementById('cmfRecBody');
             var drawerBg = document.getElementById('cmfRecDrawerBg');
             var drawer = document.getElementById('cmfRecDrawer');
@@ -9948,29 +10572,32 @@ td:nth-child(odd), th:nth-child(odd) {
                 return;
             }
 
+            var summaryDrawer = document.getElementById('aiSummaryDrawer');
+            if (summaryDrawer && summaryDrawer.classList.contains('show')) {
+                closeAiSummaryDrawer();
+            }
+
             cpIdNode.textContent = cpId || 'N/A';
             titleNode.textContent = title || 'N/A';
             componentNode.textContent = component || 'N/A';
+            if (sightingDescriptionNode) sightingDescriptionNode.innerHTML = renderIssueDescriptionSkeleton();
+            if (impactSummaryNode) impactSummaryNode.innerHTML = renderImpactSummarySkeleton();
             
             var recNode = document.getElementById('cmfRecRecommendation');
             var evidenceNode = document.getElementById('cmfRecEvidence');
             var qualityNode = document.getElementById('cmfRecQuality');
             setCmfDrawerMode('recommendation');
             var headingNode = document.getElementById('cmfRecHeading');
-            if (headingNode) headingNode.textContent = 'CMF Recommendation';
+            if (headingNode) headingNode.innerHTML = '<span class="cmf-assistant-title-icon" aria-hidden="true">✨</span>AI CMF Assistant';
+            sightingIdNode = document.getElementById('cmfAssistantSightingId');
+            platformNode = document.getElementById('cmfAssistantPlatform');
+            visibleComponentNode = document.getElementById('cmfAssistantComponent');
+            if (sightingIdNode) sightingIdNode.textContent = cpId || 'N/A';
+            if (platformNode) platformNode.textContent = getPlatformDisplayLabel(getIssuePendingPlatformValue());
+            if (visibleComponentNode) visibleComponentNode.textContent = component || 'N/A';
             
             if (recNode) recNode.style.display = 'none';
-            if (evidenceNode) evidenceNode.innerHTML = `
-                <div class="ai-skeleton-loader">
-                    <div style="font-size: 13px; font-weight: 600; color: #5c7087; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                        &#10024; Generating CMF Recommendation...
-                    </div>
-                    <div class="ai-skeleton-line ai-skeleton-title" style="width: 50%;"></div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
-                        <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
-                        <div class="ai-sk-block"><div class="ai-skeleton-line ai-skeleton-label"></div><div class="ai-skeleton-line ai-skeleton-value"></div></div>
-                    </div>
-                </div>`;
+            if (evidenceNode) evidenceNode.innerHTML = '';
             if (qualityNode) qualityNode.textContent = 'Evidence Quality: --';
 
             drawerBg.classList.add('show');
@@ -9990,49 +10617,44 @@ td:nth-child(odd), th:nth-child(odd) {
                 platform: getIssuePendingPlatformValue()
             };
 
-            fetch('CMF_Web_portal.aspx/GetCmfPendingRecommendation', {
+            fetch('CMF_Web_portal.aspx/GetSightingDescription', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json; charset=utf-8'
-                },
-                body: JSON.stringify(payload)
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify({ cpId: payload.cpId, title: payload.title, platform: payload.platform })
             })
-            .then(function (response) {
-                return response.json();
-            })
+            .then(function (response) { return response.json(); })
             .then(function (data) {
                 var result = data && data.d ? data.d : data;
+                if (!sightingDescriptionNode) return;
                 if (!result || result.Success !== true) {
-                    if (recNode) {
-                        recNode.textContent = (result && result.Message) ? result.Message : 'Unable to generate recommendation at this time.';
-                    }
+                    sightingDescriptionNode.innerHTML = '<span class="sighting-description-error">Description unavailable.</span>';
                     return;
                 }
-
-            // Display recommendation
-                if (recNode) {
-                    recNode.style.display = 'inline-block';
-                    recNode.textContent = result.Recommendation || 'No recommendation returned.';
-                    recNode.className = 'cmf-rec-decision-badge';
-                }
-                updatePendingRecommendationBadge(cpId, result.Recommendation, result.OverallQualityScore);
-                if (qualityNode) {
-                    var scoreText = result.OverallQualityScore ? result.OverallQualityScore + '%' : '--';
-                    qualityNode.textContent = 'Evidence quality: ' + scoreText;
-                }
-                
-                // Display AI reasoning
-                if (evidenceNode) {
-                    var reasoningText = result.Evidence || 'No AI reasoning provided.';
-                    evidenceNode.innerHTML = renderMergedCmfRecommendation(result, payload);
-                }
-
+                sightingDescriptionNode.innerHTML = renderIssueDescriptionText(result.Summary || 'No description available.');
             })
             .catch(function () {
-                if (recNode) {
-                    recNode.textContent = 'Error while calling recommendation service.';
-                }
+                if (sightingDescriptionNode) sightingDescriptionNode.innerHTML = '<span class="sighting-description-error">Description unavailable.</span>';
             });
+
+            fetch('CMF_Web_portal.aspx/GetSightingImpactSummary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify({ cpId: payload.cpId, title: payload.title, impact: payload.impact, platform: payload.platform })
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                var result = data && data.d ? data.d : data;
+                if (!impactSummaryNode) return;
+                if (!result || result.Success !== true) {
+                    impactSummaryNode.innerHTML = '<span class="sighting-description-error">Impact summary unavailable.</span>';
+                    return;
+                }
+                impactSummaryNode.innerHTML = renderImpactSummaryText(result.Summary || 'No impact summary available.');
+            })
+            .catch(function () {
+                if (impactSummaryNode) impactSummaryNode.innerHTML = '<span class="sighting-description-error">Impact summary unavailable.</span>';
+            });
+
         }
 
         function openCmfPendingDetailsModal(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner) {
@@ -10183,12 +10805,14 @@ td:nth-child(odd), th:nth-child(odd) {
             var isInsights = mode === 'insights';
             var titleRow = document.getElementById('cmfRecTitleRow');
             var sightingRow = document.getElementById('cmfRecSightingRow');
+            var assistantSightingDetails = document.getElementById('cmfAssistantSightingDetails');
             var qualityNode = document.getElementById('cmfRecQuality');
             var reasoningSection = document.getElementById('cmfRecReasoningSection');
             var actionsNode = document.getElementById('cmfRecActions');
             var detailsBody = document.getElementById('cmfDecisionDetailsBody');
             if (titleRow) titleRow.classList.toggle('cmf-rec-hidden', isDetails || isInsights);
             if (sightingRow) sightingRow.classList.toggle('cmf-rec-hidden', isDetails || isInsights);
+            if (assistantSightingDetails) assistantSightingDetails.classList.toggle('cmf-rec-hidden', isDetails || isInsights);
             if (qualityNode) qualityNode.classList.toggle('cmf-rec-hidden', isDetails || isInsights);
             if (reasoningSection) reasoningSection.classList.toggle('cmf-rec-hidden', isDetails);
             if (actionsNode) actionsNode.classList.toggle('cmf-rec-hidden', isDetails || isInsights);
@@ -10196,7 +10820,7 @@ td:nth-child(odd), th:nth-child(odd) {
             if (!isDetails && detailsBody) detailsBody.innerHTML = '';
             if (!isDetails && !isInsights) {
                 var headingNode = document.getElementById('cmfRecHeading');
-                if (headingNode) headingNode.textContent = 'CMF Recommendation';
+                if (headingNode) headingNode.textContent = 'AI CMF Assistant';
             }
         }
 
@@ -10217,7 +10841,7 @@ td:nth-child(odd), th:nth-child(odd) {
             var scoreText = weightedScore ? weightedScore + '/5 score' : 'AI generated';
             for (var i = 0; i < nodes.length; i++) {
                 var labelNode = nodes[i].querySelector('.pending-ai-rec-label');
-                if (labelNode) labelNode.textContent = normalizeCmfRecommendationLabel(recommendation);
+                if (labelNode) labelNode.textContent = 'AI CMF Assistant';
                 var confidenceNode = nodes[i].querySelector('.pending-ai-rec-confidence');
                 if (confidenceNode) {
                     confidenceNode.textContent = scoreText;
@@ -10263,6 +10887,44 @@ td:nth-child(odd), th:nth-child(odd) {
             html += '<section class="cmf-rec-stage-card"><h4>4. Missing Information</h4>' + renderCmfMissingList(missing) + '</section>';
             html += '<section class="cmf-rec-stage-card"><h4>5. Reviewer Action</h4>' + renderCmfBriefList(reviewerActions) + '</section></div>';
             html += '</div>';
+            return html;
+        }
+
+        function renderSightingQualityAssessment(result, payload) {
+            result = result || {};
+            payload = payload || {};
+            var fields = [
+                { label: 'Issue description', value: payload.title },
+                { label: 'Reproduction / occurrence', value: payload.reproducibility || payload.reproOnRvp },
+                { label: 'Expected / actual behavior', value: payload.title },
+                { label: 'Logs / debug owner', value: payload.idst },
+                { label: 'Customer impact', value: payload.impact },
+                { label: 'Environment details', value: payload.component },
+                { label: 'Customer / owner', value: (payload.customerDetail || '') + ' ' + (payload.customerOwner || '') }
+            ];
+            var present = [];
+            var missing = [];
+            for (var i = 0; i < fields.length; i++) {
+                var value = String(fields[i].value || '').trim();
+                if (value && !/^unknown$|^n\/a$|^missing$/i.test(value)) present.push(fields[i].label);
+                else missing.push(fields[i].label);
+            }
+
+            var score = Math.round((present.length / fields.length) * 100);
+            var tier = score >= 80 ? 'High Quality' : (score >= 50 ? 'Medium Quality' : 'Low Quality');
+            var tierClass = score >= 80 ? 'high' : (score >= 50 ? 'medium' : 'low');
+            var recommendationScore = formatWeightedCmfScore(result.OverallQualityScore || 0);
+
+            var html = '<section class="cmf-assistant-feature-card cmf-quality-assessment-card">';
+            html += '<div class="cmf-assistant-feature-head"><div><div class="cmf-assistant-eyebrow">Sighting Quality Assessment</div><h3>Information readiness</h3></div>';
+            html += '<div class="cmf-quality-tier ' + tierClass + '">' + escapeHtml(tier) + '<span>' + score + '/100</span></div></div>';
+            html += '<div class="cmf-quality-meter"><span style="width:' + score + '%"></span></div>';
+            html += '<div class="cmf-quality-two-col">';
+            html += '<div><h4>Present Information</h4>' + renderCmfBriefList(present.length ? present : ['No required fields detected.']) + '</div>';
+            html += '<div><h4>Missing or Insufficient Information</h4>' + renderCmfBriefList(missing.length ? missing : ['No major gaps detected.']) + '</div>';
+            html += '</div>';
+            if (recommendationScore) html += '<div class="cmf-quality-note">AI CMF Recommendation evidence score: ' + escapeHtml(recommendationScore) + '/5.</div>';
+            html += '</section>';
             return html;
         }
 
@@ -10814,6 +11476,76 @@ td:nth-child(odd), th:nth-child(odd) {
                 var matchesIdst = !idst || rowIdst === idst;
                 rows[i].style.display = matchesQuery && matchesComponent && matchesOwner && matchesCustomer && matchesIdst ? '' : 'none';
             }
+
+            // Load sighting descriptions for visible rows
+            loadSightingDescriptions();
+        }
+
+        function loadSightingDescriptions() {
+            var table = document.getElementById('GridView_cmf_pending');
+            if (!table) return;
+
+            var rows = table.querySelectorAll('tbody tr');
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                if (getComputedStyle(row).display === 'none') continue;
+
+                var descriptionContainers = row.querySelectorAll('.sighting-description-content');
+                for (var j = 0; j < descriptionContainers.length; j++) {
+                    var container = descriptionContainers[j];
+                    var dataContainer = container.closest('.sighting-details-panel').querySelector('.sighting-data-container');
+                    
+                    if (dataContainer) {
+                        var cpId = dataContainer.getAttribute('data-sighting-id');
+                        var title = dataContainer.getAttribute('data-title');
+                        var component = dataContainer.getAttribute('data-component');
+                        
+                        // Only load if not already loaded
+                        if (container.getAttribute('data-loaded') !== 'true') {
+                            loadSingleSightingDescription(cpId, title, component, container);
+                        }
+                    }
+                }
+            }
+        }
+
+        function loadSingleSightingDescription(cpId, title, component, containerElement) {
+            if (!containerElement || !cpId) return;
+
+            // Mark as loading
+            containerElement.setAttribute('data-loaded', 'true');
+            containerElement.setAttribute('data-loading', 'true');
+
+            var platformValue = getIssuePendingPlatformValue();
+
+            fetch('CMF_Web_portal.aspx/GetSightingDescription', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify({
+                    cpId: cpId,
+                    title: title,
+                    platform: platformValue
+                })
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                containerElement.setAttribute('data-loading', 'false');
+                var result = data && data.d ? data.d : data;
+
+                if (!result || result.Success !== true) {
+                    var errorMsg = result && result.Message ? result.Message : 'Could not generate description.';
+                    containerElement.innerHTML = '<span class="sighting-description-error">⚠ ' + escapeHtml(errorMsg) + '</span>';
+                    return;
+                }
+
+                var description = result.Summary || 'No description available.';
+                containerElement.innerHTML = escapeHtml(description);
+            })
+            .catch(function (error) {
+                containerElement.setAttribute('data-loading', 'false');
+                containerElement.innerHTML = '<span class="sighting-description-error">⚠ Error loading description</span>';
+                console.error('Error loading sighting description:', error);
+            });
         }
 
         function openCmfPendingInsights() {
@@ -12682,18 +13414,34 @@ Submit
                 <div id="cmfRecDrawerBg" class="ai-summary-drawer-bg" onclick="closeCmfRecDrawer()"></div>
                 <aside id="cmfRecDrawer" class="ai-summary-drawer" aria-hidden="true" role="dialog" aria-label="AI CMF Pending Recommendation">
                     <button type="button" class="ai-summary-drawer-close" onclick="closeCmfRecDrawer()" aria-label="Close">&times;</button>
-                    <h2 id="cmfRecHeading" class="ai-summary-drawer-title">AI CMF Assessment</h2>
-                    <div id="cmfRecTitleRow" class="ai-summary-meta-row cmf-rec-title-row"><strong>Issue Title:</strong> <span id="cmfRecTitle" class="cmf-rec-title-text">-</span><span id="cmfRecRecommendation" class="cmf-rec-decision-badge">Generating...</span></div>
-                    <div id="cmfRecSightingRow" class="ai-summary-meta-row"><strong>Sighting ID:</strong> <span id="cmfRecCpId">-</span></div>
+                    <h2 id="cmfRecHeading" class="ai-summary-drawer-title"><span class="cmf-assistant-title-icon" aria-hidden="true">✨</span>AI CMF Assistant</h2>
+                    <div class="cmf-assistant-context" aria-label="Sighting context">
+                        <span>Sighting ID</span><strong id="cmfAssistantSightingId">-</strong>
+                        <span class="cmf-assistant-context-title">Title</span><strong id="cmfRecTitle" class="cmf-rec-title-text">-</strong>
+                    </div>
+                    <section id="cmfAssistantSightingDetails" class="cmf-assistant-sighting-card" aria-label="Sighting details">
+                        <div class="cmf-assistant-text-section">
+                            <h3>Issue Description</h3>
+                            <div id="cmfAssistantSightingDescription" class="cmf-assistant-description">-</div>
+                        </div>
+                        <div class="cmf-assistant-text-section">
+                            <h3>Impact Summary</h3>
+                            <div class="cmf-assistant-impact-block">
+                                <div id="cmfAssistantImpactSummary" class="cmf-assistant-impact-summary">-</div>
+                            </div>
+                        </div>
+                    </section>
+                    <div id="cmfRecTitleRow" class="ai-summary-meta-row cmf-rec-title-row" style="display:none"><strong>Issue Title:</strong> <span class="cmf-rec-title-text">-</span><span id="cmfRecRecommendation" class="cmf-rec-decision-badge">Generating...</span></div>
+                    <div id="cmfRecSightingRow" class="ai-summary-meta-row" style="display:none"><strong>Sighting ID:</strong> <span id="cmfRecCpId">-</span></div>
                     <span id="cmfRecComponent" style="display:none">-</span>
                     <div id="cmfRecQuality" class="ai-summary-meta-row" style="display:none">Evidence quality: --</div>
                     
-                    <div id="cmfRecReasoningSection" class="cmf-rec-section">
+                    <div id="cmfRecReasoningSection" class="cmf-rec-section" style="display:none">
                         <div id="cmfRecEvidence" class="ai-summary-body">-</div>
                     </div>
                     <div id="cmfDecisionDetailsBody" class="cmf-rec-hidden"></div>
                     
-                    <div id="cmfRecActions" class="cmf-rec-placeholder-actions">
+                    <div id="cmfRecActions" class="cmf-rec-placeholder-actions" style="display:none">
                         <button type="button" class="cmf-rec-placeholder-btn primary" onclick="showCmfPlaceholderAction('Approve CMF Tag')">Approve CMF Tag</button>
                         <button type="button" class="cmf-rec-placeholder-btn" onclick="showCmfPlaceholderAction('Commit Auto-fill')">Commit Auto-fill</button>
                     </div>
@@ -13326,8 +14074,8 @@ Submit
                                             <ItemTemplate><%# RenderPendingAskImpact(Eval("cp_id"), Eval("title"), Eval("component"), Eval("date_cmf_ask"), Eval("cmf_request"), Eval("impact"), Eval("idst"), Eval("repro_on_rvp"), Eval("reproducibility"), Eval("customer_detail"), Eval("customer_owner")) %></ItemTemplate>
                                         </asp:TemplateField>
 
-                                        <asp:TemplateField HeaderText="CMF Recommendation" ItemStyle-Width="150px" HeaderStyle-Width="150px">
-                                            <ItemTemplate><%# RenderPendingRecommendationCell(Eval("cp_id"), Eval("title"), Eval("component"), Eval("cmf_request"), Eval("impact"), Eval("idst"), Eval("repro_on_rvp"), Eval("reproducibility"), Eval("customer_detail"), Eval("customer_owner")) %></ItemTemplate>
+                                        <asp:TemplateField HeaderText="AI CMF Assistant" ItemStyle-Width="150px" HeaderStyle-Width="150px">
+                                            <ItemTemplate><%# RenderPendingRecommendationCell(Eval("cp_id"), Eval("title"), Eval("component"), Eval("component_group"), Eval("cmf_request"), Eval("impact"), Eval("idst"), Eval("repro_on_rvp"), Eval("reproducibility"), Eval("customer_detail"), Eval("customer_owner")) %></ItemTemplate>
                                         </asp:TemplateField>
 
                                     </Columns> 

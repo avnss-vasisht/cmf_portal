@@ -2159,6 +2159,359 @@ public static class AiSummaryService
             return builder.ToString();
         }
     }
+
+    // Generate a concise sighting description for CMF Pending List display
+    // Input: Sighting Title, Issue ID, Full Issue Description/Context
+    // Output: Action-oriented description summarizing the core problem/impact/failure
+    public static AiSummaryResponse GenerateSightingDescription(string sightingId, string title, string contextDetails)
+    {
+        sightingId = SafeText(sightingId);
+        title = SafeText(title);
+        contextDetails = SafeText(contextDetails);
+
+        string hash = ComputeHash("sighting-description-v8|" + GetAiProviderCacheSignature() + "|" + sightingId + "|" + title + "|" + contextDetails);
+        string cacheKey = "sighting-description:" + hash;
+
+        AiSummaryResponse cached = TryGetCached(cacheKey);
+        if (cached != null)
+        {
+            return cached;
+        }
+
+        string sightingDescriptionPrompt = BuildSightingDescriptionPrompt(sightingId, title, contextDetails);
+
+        string modelDescription;
+        string modelError;
+        bool hasModelDescription = TryGenerateWithGitHubModel(
+            sightingId,
+            string.Empty,
+            title,
+            string.Empty,
+            string.Empty,
+            contextDetails,
+            out modelDescription,
+            out modelError,
+            sightingDescriptionPrompt,
+            "You are a technical issue summarizer for CMF decision-makers. Generate only a concise issue description: what happened, where it happened, and what behavior was observed. Do not summarize business or customer impact here.");
+
+        string description = hasModelDescription
+            ? CleanupSightingDescription(modelDescription)
+            : BuildDeterministicSightingDescription(title, contextDetails);
+
+        AiSummaryResponse result = new AiSummaryResponse
+        {
+            Success = true,
+            IssueId = sightingId,
+            Title = title,
+            Summary = description,
+            Confidence = hasModelDescription ? 80 : 60,
+            Message = hasModelDescription ? "Sighting description generated." : "Using deterministic description.",
+            UsedFallback = !hasModelDescription
+        };
+
+        SetCached(cacheKey, result, DateTime.UtcNow.AddMinutes(60));
+        return result;
+    }
+
+    public static AiSummaryResponse GenerateSightingImpactSummary(string sightingId, string title, string impact, string contextDetails)
+    {
+        sightingId = SafeText(sightingId);
+        title = SafeText(title);
+        impact = SafeText(impact);
+        contextDetails = SafeText(contextDetails);
+
+        string hash = ComputeHash("sighting-impact-v8|" + GetAiProviderCacheSignature() + "|" + sightingId + "|" + title + "|" + impact + "|" + contextDetails);
+        string cacheKey = "sighting-impact:" + hash;
+
+        AiSummaryResponse cached = TryGetCached(cacheKey);
+        if (cached != null)
+        {
+            return cached;
+        }
+
+        string prompt = BuildSightingImpactPrompt(sightingId, title, impact, contextDetails);
+
+        string modelSummary;
+        string modelError;
+        bool hasModelSummary = TryGenerateWithGitHubModel(
+            sightingId,
+            string.Empty,
+            title,
+            string.Empty,
+            string.Empty,
+            contextDetails,
+            out modelSummary,
+            out modelError,
+            prompt,
+            "You synthesize the customer and end-user impact of an already-observed technical issue for CMF reviewers in clear, concise English. Explain consequences rather than restating fields.");
+
+        string summary = hasModelSummary
+            ? CleanupSightingImpactSummary(modelSummary)
+            : BuildDeterministicImpactSummary(title, impact, contextDetails);
+
+        AiSummaryResponse result = new AiSummaryResponse
+        {
+            Success = true,
+            IssueId = sightingId,
+            Title = title,
+            Summary = summary,
+            Confidence = hasModelSummary ? 80 : 60,
+            Message = hasModelSummary ? "Sighting impact summary generated." : "Using deterministic impact summary.",
+            UsedFallback = !hasModelSummary
+        };
+
+        SetCached(cacheKey, result, DateTime.UtcNow.AddMinutes(60));
+        return result;
+    }
+
+    private static string BuildSightingDescriptionPrompt(string sightingId, string title, string contextDetails)
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("Create one very concise issue description, 25-30 words when possible. If the sentence needs a few extra words to finish naturally, use up to 40 words rather than ending abruptly. Describe only the issue itself: the affected platform/device/tool, the observed failure, where/when it occurs, and the expected-vs-actual behavior. Do not summarize customer impact, business impact, schedule impact, CMF decision impact, support workload, or mitigation effort here; those belong in the impact summary. Do not write bullets, labels, headings, or field-name dumps such as 'Logs show', 'Evidence indicates', 'Component:', or 'Reproducibility:'. Do not force log details unless they are the clearest descriptive point. Do not mention the sighting ID. Use proper grammar, capitalization, commas, periods, and complete sentences so the description is reviewer-ready for users and iDST. Never end a sentence abruptly or with an unfinished parenthetical phrase.");
+        builder.AppendLine();
+        builder.AppendLine("Issue Title: " + title);
+        builder.AppendLine("Sighting ID: " + sightingId);
+        if (!string.IsNullOrWhiteSpace(contextDetails))
+        {
+            builder.AppendLine();
+            builder.AppendLine("Issue Context:");
+            builder.AppendLine(contextDetails);
+        }
+        builder.AppendLine();
+        builder.AppendLine("Return only one concise sentence. Do not include bullets or headings.");
+        return builder.ToString();
+    }
+
+    private static string BuildSightingImpactPrompt(string sightingId, string title, string impact, string contextDetails)
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("Explain the impact of this issue in clear, understandable English for a non-specialist reviewer. The issue has already happened; use the supplied details to infer what is disrupted or affected and how that affects the customer who raised the request and the end users who rely on the system. Write one concise paragraph, 65-110 words total. Do not merely restate the title, component, occurrence, or raw Impact field; synthesize the consequence in plain language. Use phrasing like 'causes', 'disrupts', 'affects', 'blocks', or 'can/could cause' when explaining likely stakeholder effects from the observed scenario. Include business/program impact only when supported by context. Do not add a second internal-debug paragraph, do not provide recommendations, do not invent facts, and do not mention the sighting ID. Use proper grammar, capitalization, commas, periods, and complete sentences so the summary is reviewer-ready for users and iDST. Never end a sentence abruptly.");
+        builder.AppendLine("Do not include requested fix timing in the paragraph. After the paragraph, add a separate final line exactly in this format when a requested timing exists in Must Fix For, Drivers, Impact, or related context: Fix requested by: <timing>. If no requested timing is present, omit this line.");
+        builder.AppendLine();
+        builder.AppendLine("Issue Title: " + title);
+        builder.AppendLine("Sighting ID: " + sightingId);
+        builder.AppendLine("Impact Field: " + (string.IsNullOrWhiteSpace(impact) ? "N/A" : impact));
+        if (!string.IsNullOrWhiteSpace(contextDetails))
+        {
+            builder.AppendLine();
+            builder.AppendLine("Issue Context:");
+            builder.AppendLine(contextDetails);
+        }
+        builder.AppendLine();
+        builder.AppendLine("Return only the impact summary paragraph and optional Fix requested by line. Do not include headings, bullets, markdown, or field-name dumps.");
+        return builder.ToString();
+    }
+
+    private static string CleanupSightingDescription(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+        string cleaned = text.Replace("\r\n", "\n").Replace("\r", "\n");
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"(?im)^\s*(issue description|problem description|summary)\s*:\s*", string.Empty).Trim();
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"[ \t]+", " ").Trim();
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\n{3,}", "\n").Trim();
+
+        string[] lines = cleaned.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        List<string> parts = new List<string>();
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = System.Text.RegularExpressions.Regex.Replace(lines[i].Trim(), @"^[-*•]\s*", string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(line)) parts.Add(line);
+        }
+
+        if (parts.Count == 0) return string.Empty;
+
+        string brief = string.Join(" ", parts.ToArray()).Trim();
+        brief = TrimToCompleteSentence(brief, 40);
+        brief = RepairUnbalancedTerminalPairs(brief);
+        if (!brief.EndsWith(".") && !brief.EndsWith("!") && !brief.EndsWith("?")) brief += ".";
+        return brief;
+    }
+
+    private static string TrimWords(string text, int maxWords)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        string[] words = text.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length <= maxWords) return text.Trim();
+        return string.Join(" ", words, 0, maxWords).TrimEnd('.', ',', ';', ':');
+    }
+
+    private static string TrimToCompleteSentence(string text, int maxWords)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        string cleaned = text.Trim();
+        string[] words = cleaned.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length <= maxWords) return cleaned;
+
+        string limited = string.Join(" ", words, 0, maxWords).TrimEnd('.', ',', ';', ':', '(', '[', '{').Trim();
+        int sentenceEnd = limited.LastIndexOfAny(new[] { '.', '!', '?' });
+        if (sentenceEnd >= Math.Min(20, limited.Length - 1))
+        {
+            return limited.Substring(0, sentenceEnd + 1).Trim();
+        }
+
+        return cleaned;
+    }
+
+    private static string RepairUnbalancedTerminalPairs(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+        string cleaned = text.Trim();
+        cleaned = CloseUnbalancedPair(cleaned, '(', ')');
+        cleaned = CloseUnbalancedPair(cleaned, '[', ']');
+        cleaned = CloseUnbalancedPair(cleaned, '{', '}');
+        return cleaned;
+    }
+
+    private static string CloseUnbalancedPair(string text, char openChar, char closeChar)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+        int balance = 0;
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (text[i] == openChar) balance++;
+            else if (text[i] == closeChar && balance > 0) balance--;
+        }
+
+        if (balance <= 0) return text;
+
+        int insertIndex = text.Length;
+        while (insertIndex > 0 && char.IsWhiteSpace(text[insertIndex - 1])) insertIndex--;
+        while (insertIndex > 0 && IsTerminalPunctuation(text[insertIndex - 1])) insertIndex--;
+
+        return text.Insert(insertIndex, new string(closeChar, balance));
+    }
+
+    private static bool IsTerminalPunctuation(char value)
+    {
+        return value == '.' || value == '!' || value == '?' || value == ';' || value == ':' || value == ',';
+    }
+
+    private static string CleanupSightingImpactSummary(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+        string cleaned = text.Replace("\r\n", "\n").Replace("\r", "\n");
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"(?m)^\s*[-*•]\s*", string.Empty).Trim();
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"[ \t]+", " ").Trim();
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\n{3,}", "\n\n").Trim();
+
+        return TrimImpactSummaryPreservingFixLine(cleaned, 120);
+    }
+
+    private static string TrimImpactSummaryPreservingFixLine(string text, int maxWords)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+        string[] lines = text.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        string fixLine = string.Empty;
+        List<string> paragraphLines = new List<string>();
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i].Trim();
+            if (line.StartsWith("Fix requested by:", StringComparison.OrdinalIgnoreCase)) fixLine = line;
+            else paragraphLines.Add(line);
+        }
+
+        string paragraph = string.Join(" ", paragraphLines.ToArray()).Trim();
+        paragraph = TrimToCompleteSentence(paragraph, maxWords);
+        paragraph = RepairUnbalancedTerminalPairs(paragraph);
+        if (!string.IsNullOrWhiteSpace(paragraph) && !paragraph.EndsWith(".") && !paragraph.EndsWith("!") && !paragraph.EndsWith("?")) paragraph += ".";
+        if (!string.IsNullOrWhiteSpace(fixLine)) return paragraph + "\n" + RepairUnbalancedTerminalPairs(fixLine);
+        return paragraph;
+    }
+
+    private static string BuildDeterministicSightingDescription(string title, string contextDetails)
+    {
+        Dictionary<string, string> contextMap = ParseContextDetails(contextDetails);
+        
+        string component = FirstContextValue(contextMap, "Component");
+        string impact = FirstContextValue(contextMap, "Customer Impact", "Impact", "Promoted Issue Impact");
+        string reproducibility = FirstContextValue(contextMap, "Reproducibility");
+        string rvpDebug = FirstContextValue(contextMap, "RVP Platform Debug Details", "Repro On RVP");
+
+        string lead = TrimToCompleteSentence(string.IsNullOrWhiteSpace(title) ? "The sighting reports a technical failure that needs CMF review" : title.Trim(), 42);
+        if (!lead.EndsWith(".") && !lead.EndsWith("!") && !lead.EndsWith("?")) lead += ".";
+
+        List<string> bullets = new List<string>();
+        if (!string.IsNullOrWhiteSpace(component)) bullets.Add("The failure is seen in the " + TrimToCompleteSentence(component.Trim(), 18) + " area.");
+        if (!string.IsNullOrWhiteSpace(reproducibility)) bullets.Add("The issue occurs with " + TrimToCompleteSentence(reproducibility.Trim(), 16) + " reproducibility.");
+        if (!string.IsNullOrWhiteSpace(impact)) bullets.Add(TrimToCompleteSentence(impact.Trim(), 30) + ".");
+        if (!string.IsNullOrWhiteSpace(rvpDebug) && bullets.Count < 3) bullets.Add("Platform debug observations differ from the expected behavior.");
+
+        while (bullets.Count < 2)
+        {
+            bullets.Add("Available evidence should be reviewed against the expected platform behavior.");
+        }
+
+        StringBuilder description = new StringBuilder();
+        description.AppendLine(lead);
+        for (int i = 0; i < bullets.Count && i < 3; i++)
+        {
+            description.Append("- ").AppendLine(bullets[i]);
+        }
+
+        return CleanupSightingDescription(description.ToString());
+    }
+
+    private static string BuildDeterministicImpactSummary(string title, string impact, string contextDetails)
+    {
+        Dictionary<string, string> contextMap = ParseContextDetails(contextDetails);
+        string customerImpact = FirstContextValue(contextMap, "Customer Impact", "Promoted Issue Customer Impact");
+        string component = FirstContextValue(contextMap, "Component");
+        string reproducibility = FirstContextValue(contextMap, "Reproducibility");
+        string platform = FirstContextValue(contextMap, "Context Platform Table", "Operating System", "Processor");
+        string fixRequestedBy = FirstContextValue(contextMap, "Must Fix For", "Drivers");
+
+        StringBuilder summary = new StringBuilder();
+        if (!string.IsNullOrWhiteSpace(impact))
+        {
+            summary.Append(BuildImpactConsequenceSentence(RemoveFixTimingFromImpactText(impact.Trim()), customerImpact));
+        }
+        else if (!string.IsNullOrWhiteSpace(customerImpact))
+        {
+            summary.Append("This issue affects the customer and end-user experience by creating a ").Append(customerImpact.Trim()).Append(" disruption in the reported usage scenario.");
+        }
+        else
+        {
+            summary.Append("This issue creates customer-facing disruption in the reported usage scenario, but the written impact details are limited.");
+        }
+        if (!string.IsNullOrWhiteSpace(component)) summary.Append(" It places extra attention on the ").Append(component.Trim()).Append(" area for customer readiness.");
+        if (!string.IsNullOrWhiteSpace(platform)) summary.Append(" The platform context is ").Append(platform.Trim()).Append(".");
+        if (!string.IsNullOrWhiteSpace(reproducibility))
+        {
+            summary.Append(" Its reported ").Append(reproducibility.Trim()).Append(" occurrence increased validation and business attention.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(fixRequestedBy)) summary.Append("\nFix requested by: ").Append(fixRequestedBy.Trim());
+
+        string result = summary.ToString().Trim();
+        if (!result.EndsWith(".") && !result.EndsWith("!") && !result.EndsWith("?")) result += ".";
+        return CleanupSightingImpactSummary(result);
+    }
+
+    private static string RemoveFixTimingFromImpactText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        string cleaned = System.Text.RegularExpressions.Regex.Replace(text, @"(?i)\b(request(?:ed)?|ask(?:ed)?|need(?:ed)?|clarif(?:y|ication)|fix(?:ed)?)\b[^.?!]*(?:by|before|for)\s+WW\s*\d{1,2}[^.?!]*[.?!]?", string.Empty);
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s+", " ").Trim();
+        return cleaned;
+    }
+
+    private static string BuildImpactConsequenceSentence(string impact, string customerImpact)
+    {
+        if (string.IsNullOrWhiteSpace(impact))
+        {
+            return string.IsNullOrWhiteSpace(customerImpact)
+                ? "This issue disrupts the reported customer or end-user workflow and creates customer-facing exposure."
+                : "This issue creates a " + customerImpact.Trim() + " customer-facing disruption in the reported workflow.";
+        }
+
+        string cleanedImpact = impact.Trim().TrimEnd('.', ';', ':');
+        return "This issue disrupts the customer or end-user workflow by turning the reported behavior into a usability, validation, or readiness concern: " + cleanedImpact + ".";
+    }
 }
 
 public class AiSummaryCacheEntry
