@@ -52,10 +52,62 @@ public class CmfRecommendationResponse
     }
 }
 
+public class SightingQualityFieldAssessment
+{
+    public string FieldName { get; set; }
+    public string Status { get; set; }
+    public string Characteristic { get; set; }
+    public string Evidence { get; set; }
+    public string Recommendation { get; set; }
+    public string DecisionUse { get; set; }
+}
+
+public class SightingQualityAssessmentResponse
+{
+    public bool Success { get; set; }
+    public string CpId { get; set; }
+    public int QualityScore { get; set; }
+    public int BaselineScore { get; set; }
+    public string Tier { get; set; }
+    public string Summary { get; set; }
+    public List<SightingQualityFieldAssessment> Fields { get; set; }
+    public string Message { get; set; }
+
+    public SightingQualityAssessmentResponse()
+    {
+        Fields = new List<SightingQualityFieldAssessment>();
+    }
+}
+
 public static class CmfRecommendationService
 {
     private static readonly object CacheSync = new object();
     private static readonly Dictionary<string, CmfRecommendationCacheEntry> Cache = new Dictionary<string, CmfRecommendationCacheEntry>(StringComparer.Ordinal);
+    private static readonly Dictionary<string, SightingQualityAssessmentCacheEntry> SightingQualityCache = new Dictionary<string, SightingQualityAssessmentCacheEntry>(StringComparer.Ordinal);
+    private static readonly string[] SightingQualityFieldNames = new[]
+    {
+        "Issue Title / Subject",
+        "Problem Description / What Happened",
+        "Customer Impact",
+        "Reproducibility / Failure Rate",
+        "Reproduction Details / Trigger",
+        "Platform / Product Context",
+        "System Configuration",
+        "Debug Evidence / Attachments",
+        "Ownership / Routing",
+        "Status / Resolution Context"
+    };
+    private static readonly HashSet<string> SightingQualityCoreFieldNames = new HashSet<string>(new[]
+    {
+        "Issue Title / Subject",
+        "Problem Description / What Happened",
+        "Customer Impact",
+        "Reproducibility / Failure Rate",
+        "Reproduction Details / Trigger",
+        "Platform / Product Context",
+        "System Configuration",
+        "Debug Evidence / Attachments"
+    }, StringComparer.OrdinalIgnoreCase);
         private const string RulesRelativePath = "~/App_Data/cmf-recommendation-rules.txt";
         private const string DefaultRulesText = @"CMF Recommendation Scoring Policy
 
@@ -81,6 +133,12 @@ public static class CmfRecommendationService
     public class CmfRecommendationCacheEntry
     {
         public CmfRecommendationResponse Response { get; set; }
+        public DateTime ExpiresAt { get; set; }
+    }
+
+    public class SightingQualityAssessmentCacheEntry
+    {
+        public SightingQualityAssessmentResponse Response { get; set; }
         public DateTime ExpiresAt { get; set; }
     }
 
@@ -241,6 +299,75 @@ public static class CmfRecommendationService
         return response;
     }
 
+    public static SightingQualityAssessmentResponse GenerateSightingQualityAssessment(CmfRecommendationRequest request)
+    {
+        if (request == null)
+        {
+            return new SightingQualityAssessmentResponse { Success = false, Message = "Invalid sighting quality request." };
+        }
+
+        string cpId = SafeText(request.CpId);
+        string title = SafeText(request.Title);
+        string component = SafeText(request.Component);
+        string impact = SafeText(request.Impact);
+        string idst = SafeText(request.Idst);
+        string reproOnRvp = SafeText(request.ReproOnRvp);
+        string reproducibility = SafeText(request.Reproducibility);
+        string customerDetail = SafeText(request.CustomerDetail);
+        string customerOwner = SafeText(request.CustomerOwner);
+        string hsdContext = SafeText(request.HsdContext);
+        string cacheKey = "sqa-gap-assessment:v5:" + ComputeHash(GetAiProviderCacheSignature() + "|" + cpId + "|" + title + "|" + component + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + hsdContext);
+
+        SightingQualityAssessmentResponse cached = TryGetCachedSightingQualityAssessment(cacheKey);
+        if (cached != null)
+        {
+            return cached;
+        }
+
+        SightingQualityAssessmentResponse deterministicAssessment = BuildFallbackSightingQualityAssessment(cpId, title, component, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, hsdContext);
+
+        string modelResponse;
+        string modelError;
+        bool hasModelResponse = TryGenerateWithGitHubModel(
+            cpId,
+            title,
+            component,
+            SafeText(request.CmfRequest),
+            impact,
+            idst,
+            reproOnRvp,
+            reproducibility,
+            customerDetail,
+            customerOwner,
+            string.Empty,
+            string.Empty,
+            out modelResponse,
+            out modelError,
+            BuildSightingQualityAssessmentPrompt(cpId, title, component, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, hsdContext, deterministicAssessment),
+            "You classify sighting information quality. Follow the supplied missing/partial/present rules exactly and return strict JSON only.");
+
+        SightingQualityAssessmentResponse parsed = hasModelResponse ? ParseSightingQualityAssessment(modelResponse) : null;
+        if (parsed == null || parsed.Fields.Count == 0)
+        {
+            parsed = deterministicAssessment;
+            parsed.Message = string.IsNullOrWhiteSpace(modelError) ? "Deterministic sighting quality gap assessment generated." : "Deterministic sighting quality gap assessment generated: " + modelError;
+        }
+        else
+        {
+            NormalizeSightingQualityFields(parsed, deterministicAssessment);
+            ApplyDeterministicSightingQualityGuardrails(parsed, deterministicAssessment);
+            parsed.Message = "LLM-assisted sighting quality gap assessment generated with deterministic missing-field guardrails.";
+        }
+
+        parsed.Success = true;
+        parsed.CpId = cpId;
+        ApplySightingQualityScoreModel(parsed);
+        ApplySightingQualityAssessmentSummary(parsed);
+        SanitizeSightingQualityAssessment(parsed);
+        SetCachedSightingQualityAssessment(cacheKey, parsed, DateTime.UtcNow.AddHours(2));
+        return parsed;
+    }
+
     public static string GetDefaultRulesText()
     {
         return DefaultRulesText;
@@ -325,6 +452,33 @@ public static class CmfRecommendationService
         lock (CacheSync)
         {
             Cache[cacheKey] = new CmfRecommendationCacheEntry
+            {
+                Response = response,
+                ExpiresAt = expiresAt
+            };
+        }
+    }
+
+    private static SightingQualityAssessmentResponse TryGetCachedSightingQualityAssessment(string cacheKey)
+    {
+        lock (CacheSync)
+        {
+            SightingQualityAssessmentCacheEntry entry;
+            if (!SightingQualityCache.TryGetValue(cacheKey, out entry)) return null;
+            if (DateTime.UtcNow > entry.ExpiresAt)
+            {
+                SightingQualityCache.Remove(cacheKey);
+                return null;
+            }
+            return entry.Response;
+        }
+    }
+
+    private static void SetCachedSightingQualityAssessment(string cacheKey, SightingQualityAssessmentResponse response, DateTime expiresAt)
+    {
+        lock (CacheSync)
+        {
+            SightingQualityCache[cacheKey] = new SightingQualityAssessmentCacheEntry
             {
                 Response = response,
                 ExpiresAt = expiresAt
@@ -1414,6 +1568,625 @@ public static class CmfRecommendationService
             prompt.AppendLine(hsdContext);
         }
         return prompt.ToString();
+    }
+
+    private static string BuildSightingQualityAssessmentPrompt(string cpId, string title, string component, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string hsdContext, SightingQualityAssessmentResponse deterministicAssessment)
+    {
+        StringBuilder prompt = new StringBuilder();
+        prompt.AppendLine("Assess general sighting information quality only. This is Sighting Quality Assessment (SQA), not CMF decision scoring and not a CMF recommendation.");
+        prompt.AppendLine("Use evidence-bucket contextual ranking: for each fixed SQA field, inspect every evidence line in that field's bucket, then decide whether the bucket is useful enough for a reviewer to understand that aspect of the sighting.");
+        prompt.AppendLine("Return exactly the 10 fields listed in the evidence packets, in the same order. Do not add, remove, rename, merge, or split fields.");
+        prompt.AppendLine("Allowed Status values only: Present, Missing, Partial, Conflicting.");
+        prompt.AppendLine("Definitions to apply strictly:");
+        prompt.AppendLine("- Missing = the field bucket has no usable evidence, or only empty/placeholder values such as N/A, NA, null, none, unknown, TBD, no, no iDST assigned, not attached, or equivalent negative placeholders.");
+        prompt.AppendLine("- Partial = some evidence exists, but it is not complete or not useful enough to understand that information area. Mark Partial for vague statements, incomplete steps, no root scenario, no actionable impact, only broad labels, row/HSD disagreement, or negative row evidence mixed with positive HSD evidence.");
+        prompt.AppendLine("- Present = the evidence is specific, actionable, and sufficient for a reviewer to understand that information area without guessing.");
+        prompt.AppendLine("- Conflicting = two or more sources materially disagree in a way that changes interpretation.");
+        prompt.AppendLine("Do not mark a field Present just because related context exists. It must satisfy that field's purpose.");
+        prompt.AppendLine("Do not mark a field Missing when real but weak evidence exists; use Partial instead.");
+        prompt.AppendLine("Do not mark a field Partial only because the value is short. Aliases, status labels, board names, IDs, filenames, and yes/no attachment flags can be complete only when they satisfy that field's purpose.");
+        prompt.AppendLine("If Status is Partial, Characteristic must be specific. Do not use generic wording such as 'low detail or vague'. Use concrete phrases such as 'Missing numeric rate or sample size', 'Trigger/scenario not described', 'Impact effect not explained', 'No log or attachment reference', 'Configuration lacks OS/build/driver detail', or 'Title lacks observable symptom'.");
+        prompt.AppendLine("For Debug Evidence / Attachments, distinguish evidence attachment from debug routing. If DB iDST says no iDST assigned but HSD has a log or system-scope file, classify Partial because evidence exists but routing/readiness is incomplete.");
+        prompt.AppendLine("The first 8 fields are core SQA scoring fields. Ownership / Routing and Status / Resolution Context are additional context fields and should be assessed but do not drive the quality score unless they contain material conflicts.");
+        prompt.AppendLine("The portal calculates the final quality score from core Missing, Partial, and Conflicting counts; do not optimize status values to influence score.");
+        prompt.AppendLine("Return strict JSON only: {\"qualityScore\":75,\"baselineScore\":90,\"tier\":\"Orange\",\"summary\":\"one concise sentence\",\"fields\":[{\"fieldName\":\"Steps to Reproduce\",\"status\":\"Partial\",\"characteristic\":\"Trigger/scenario not described\",\"evidence\":\"specific cited value or reason\",\"recommendation\":\"specific update needed\",\"decisionUse\":\"why this field matters\"}]}");
+        prompt.AppendLine();
+        prompt.AppendLine("Sighting ID: " + SafeDisplay(cpId));
+        prompt.AppendLine();
+        prompt.AppendLine("Evidence packets:");
+        prompt.AppendLine(BuildSightingQualityEvidencePackets(deterministicAssessment));
+        prompt.AppendLine();
+        prompt.AppendLine("Additional normalized context:");
+        prompt.AppendLine("Issue Title: " + SafeDisplay(title));
+        prompt.AppendLine("Component / Platform signal: " + SafeDisplay(component));
+        prompt.AppendLine("Impact: " + SafeDisplay(impact));
+        prompt.AppendLine("Logs / iDST: " + SafeDisplay(idst));
+        prompt.AppendLine("RVP Repro: " + SafeDisplay(reproOnRvp));
+        prompt.AppendLine("Reproducibility: " + SafeDisplay(reproducibility));
+        prompt.AppendLine("Customer Detail / Design: " + SafeDisplay(customerDetail));
+        prompt.AppendLine("Customer Owner: " + SafeDisplay(customerOwner));
+        if (!string.IsNullOrWhiteSpace(hsdContext))
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("Database + HSD context:");
+            prompt.AppendLine(hsdContext);
+        }
+        return prompt.ToString();
+    }
+
+    private static string BuildSightingQualityEvidencePackets(SightingQualityAssessmentResponse assessment)
+    {
+        StringBuilder builder = new StringBuilder();
+        foreach (string fieldName in SightingQualityFieldNames)
+        {
+            SightingQualityFieldAssessment field = FindQualityField(assessment, fieldName);
+            builder.AppendLine("- Field: " + fieldName + (IsSightingQualityCoreField(fieldName) ? " (core scoring field)" : " (additional context field)"));
+            builder.AppendLine("  Initial status signal: " + SafeDisplay(field == null ? string.Empty : field.Status));
+            builder.AppendLine("  Evidence bucket: " + SafeDisplay(field == null ? string.Empty : field.Evidence));
+            builder.AppendLine("  Initial characteristic: " + SafeDisplay(field == null ? string.Empty : field.Characteristic));
+            builder.AppendLine("  Recommended update if weak: " + SafeDisplay(field == null ? string.Empty : field.Recommendation));
+        }
+        return builder.ToString();
+    }
+
+    private static SightingQualityAssessmentResponse ParseSightingQualityAssessment(string rawResponse)
+    {
+        string json = ExtractJsonObject(rawResponse);
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            JavaScriptSerializer serializer = new JavaScriptSerializer();
+            serializer.MaxJsonLength = int.MaxValue;
+            Dictionary<string, object> root = serializer.DeserializeObject(json) as Dictionary<string, object>;
+            if (root == null) return null;
+            SightingQualityAssessmentResponse response = new SightingQualityAssessmentResponse();
+            response.QualityScore = ReadInt(root, "qualityScore", "QualityScore");
+            response.BaselineScore = ReadInt(root, "baselineScore", "BaselineScore");
+            response.Tier = ReadString(root, "tier", "Tier");
+            response.Summary = ReadString(root, "summary", "Summary");
+            object fieldsObj;
+            if (root.TryGetValue("fields", out fieldsObj) || root.TryGetValue("Fields", out fieldsObj))
+            {
+                object[] fieldArray = fieldsObj as object[];
+                if (fieldArray != null)
+                {
+                    foreach (object item in fieldArray)
+                    {
+                        Dictionary<string, object> dict = item as Dictionary<string, object>;
+                        if (dict == null) continue;
+                        response.Fields.Add(new SightingQualityFieldAssessment
+                        {
+                            FieldName = ReadString(dict, "fieldName", "FieldName"),
+                            Status = ReadString(dict, "status", "Status"),
+                            Characteristic = ReadString(dict, "characteristic", "Characteristic"),
+                            Evidence = ReadString(dict, "evidence", "Evidence"),
+                            Recommendation = ReadString(dict, "recommendation", "Recommendation"),
+                            DecisionUse = ReadString(dict, "decisionUse", "DecisionUse", "whyItMatters", "WhyItMatters")
+                        });
+                    }
+                }
+            }
+            return response;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static SightingQualityAssessmentResponse BuildFallbackSightingQualityAssessment(string cpId, string title, string component, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string hsdContext)
+    {
+        Dictionary<string, string> context = ParseSimpleContextMap(hsdContext);
+        SightingQualityAssessmentResponse response = new SightingQualityAssessmentResponse { CpId = cpId };
+        AddQualityField(response, "Issue Title / Subject", BuildQualityEvidenceBucket(context, "DB Title", title, "HSD Title", FirstContextValue(context, "Title"), "HSD Subject", FirstContextValue(context, "Subject")), "Use a title/subject that captures symptom, trigger, platform, and occurrence if known.");
+        AddQualityField(response, "Problem Description / What Happened", BuildQualityEvidenceBucket(context, "What Happened", FirstContextValue(context, "What Happened"), "Description", FirstContextValue(context, "Description"), "Actual Behavior", FirstContextValue(context, "Actual Behavior"), "DB Impact", impact, "DB Title", title), "Add a clear problem description or what-happened statement with observed behavior and scope.");
+        AddQualityField(response, "Customer Impact", BuildQualityEvidenceBucket(context, "DB Impact", impact, "Customer Impact", FirstContextValue(context, "Customer Impact"), "Customer Summary", FirstContextValue(context, "Customer Summary"), "Customer Detail", FirstContextValue(context, "Customer Detail")), "Add customer/user effect, validation impact, or practical consequence.");
+        AddQualityField(response, "Reproducibility / Failure Rate", BuildQualityEvidenceBucket(context, "DB Reproducibility", reproducibility, "HSD Reproducibility", FirstContextValue(context, "Reproducibility"), "RVP Repro", FirstContextValue(context, "RVP Repro"), "DB RVP Repro", reproOnRvp, "Title occurrence signal", title), "State exact failure rate, cycle count, sample size, or reproducibility band.");
+        AddQualityField(response, "Reproduction Details / Trigger", BuildQualityEvidenceBucket(context, "Steps to Reproduce", FirstContextValue(context, "Steps to Reproduce"), "What Should Have Happened", FirstContextValue(context, "What Should Have Happened"), "DB RVP Repro", reproOnRvp, "DB Reproducibility", reproducibility, "Description", FirstContextValue(context, "Description")), "Add concrete reproduction details, trigger, cycle count, or scenario setup.");
+        AddQualityField(response, "Platform / Product Context", BuildQualityEvidenceBucket(context, "DB Component", component, "HSD Component", FirstContextValue(context, "Component"), "Family", FirstContextValue(context, "Family"), "Board", FirstContextValue(context, "Board"), "Customer Detail", customerDetail, "Platform", FirstContextValue(context, "Platform")), "Identify platform, product, design, board, family, or component.");
+        AddQualityField(response, "System Configuration", BuildQualityEvidenceBucket(context, "Customer Detail", customerDetail, "Operating System", FirstContextValue(context, "Operating System"), "Processor", FirstContextValue(context, "Processor"), "Board", FirstContextValue(context, "Board"), "Family", FirstContextValue(context, "Family"), "Component", FirstContextValue(context, "Component"), "System Scope Filename", FirstContextValue(context, "System Scope Filename"), "Description", FirstContextValue(context, "Description")), "Add relevant OS, BIOS, build, driver, processor, board, or system configuration.");
+        AddQualityField(response, "Debug Evidence / Attachments", BuildQualityEvidenceBucket(context, "DB iDST", idst, "Debug Log Attached", FirstContextValue(context, "Debug Log Attached"), "System Scope Filename", FirstContextValue(context, "System Scope Filename"), "Sysdebug Category", FirstContextValue(context, "Sysdebug Category"), "Sysdebug Forum", FirstContextValue(context, "Sysdebug Forum")), "Attach or reference logs, system scope, debug owner/status, or sysdebug routing evidence.");
+        AddQualityField(response, "Ownership / Routing", BuildQualityEvidenceBucket(context, "DB Customer Owner", customerOwner, "HSD Owner", FirstContextValue(context, "Owner"), "Submitter", FirstContextValue(context, "Submitter"), "Sysdebug Forum", FirstContextValue(context, "Sysdebug Forum")), "Identify owner, submitter, customer owner, or routing/debug forum.");
+        AddQualityField(response, "Status / Resolution Context", BuildQualityEvidenceBucket(context, "Status", FirstContextValue(context, "Status"), "Fix Description", FirstContextValue(context, "Fix Description"), "Closed Reason", FirstContextValue(context, "Closed Reason"), "Fixed Version", FirstContextValue(context, "Fixed Version"), "CMF Justification", FirstContextValue(context, "CMF Justification")), "Add current status, resolution, fix, closure, or CMF justification context where applicable.");
+        AddOccurrenceConflictIfFound(response, title, impact, reproducibility, hsdContext);
+        return response;
+    }
+
+    private static void NormalizeSightingQualityFields(SightingQualityAssessmentResponse response, SightingQualityAssessmentResponse fallback)
+    {
+        if (response == null) return;
+        List<SightingQualityFieldAssessment> normalized = new List<SightingQualityFieldAssessment>();
+        foreach (string fieldName in SightingQualityFieldNames)
+        {
+            SightingQualityFieldAssessment field = FindQualityField(response, fieldName);
+            SightingQualityFieldAssessment fallbackField = FindQualityField(fallback, fieldName);
+            if (field == null)
+            {
+                normalized.Add(fallbackField ?? new SightingQualityFieldAssessment { FieldName = fieldName, Status = "Missing", Characteristic = "Not assessed", Evidence = "The contextual ranking response omitted this field.", Recommendation = "Review this field manually.", DecisionUse = GetSightingQualityDecisionUse(fieldName) });
+                continue;
+            }
+
+            field.FieldName = fieldName;
+            field.Status = NormalizeSightingQualityStatus(field.Status);
+            if (string.IsNullOrWhiteSpace(field.Characteristic)) field.Characteristic = fallbackField == null ? "Contextual ranking applied" : fallbackField.Characteristic;
+            if (string.IsNullOrWhiteSpace(field.Evidence)) field.Evidence = fallbackField == null ? "No evidence text returned." : fallbackField.Evidence;
+            if (string.IsNullOrWhiteSpace(field.Recommendation)) field.Recommendation = fallbackField == null ? "Review this field manually." : fallbackField.Recommendation;
+            if (string.IsNullOrWhiteSpace(field.DecisionUse)) field.DecisionUse = fallbackField == null ? GetSightingQualityDecisionUse(fieldName) : fallbackField.DecisionUse;
+            normalized.Add(field);
+        }
+
+        response.Fields = normalized;
+    }
+
+    private static void ApplyDeterministicSightingQualityGuardrails(SightingQualityAssessmentResponse response, SightingQualityAssessmentResponse fallback)
+    {
+        if (response == null || fallback == null) return;
+        foreach (string fieldName in SightingQualityFieldNames)
+        {
+            SightingQualityFieldAssessment field = FindQualityField(response, fieldName);
+            SightingQualityFieldAssessment fallbackField = FindQualityField(fallback, fieldName);
+            if (field == null || fallbackField == null) continue;
+
+            string status = NormalizeSightingQualityStatus(field.Status);
+            string fallbackStatus = NormalizeSightingQualityStatus(fallbackField.Status);
+            bool modelWeakenedDeterministicGap = GetSightingQualityStatusRank(status) < GetSightingQualityStatusRank(fallbackStatus);
+            bool deterministicConflict = string.Equals(fallbackStatus, "Conflicting", StringComparison.OrdinalIgnoreCase);
+
+            if (!modelWeakenedDeterministicGap && !deterministicConflict) continue;
+
+            field.Status = fallbackStatus;
+            field.Characteristic = fallbackField.Characteristic;
+            field.Evidence = fallbackField.Evidence;
+            field.Recommendation = fallbackField.Recommendation;
+            field.DecisionUse = fallbackField.DecisionUse;
+        }
+    }
+
+    private static int GetSightingQualityStatusRank(string status)
+    {
+        string normalized = NormalizeSightingQualityStatus(status);
+        if (string.Equals(normalized, "Present", StringComparison.OrdinalIgnoreCase)) return 0;
+        if (string.Equals(normalized, "Partial", StringComparison.OrdinalIgnoreCase)) return 1;
+        if (string.Equals(normalized, "Missing", StringComparison.OrdinalIgnoreCase)) return 2;
+        if (string.Equals(normalized, "Conflicting", StringComparison.OrdinalIgnoreCase)) return 3;
+        return 1;
+    }
+
+    private static string NormalizeSightingQualityStatus(string status)
+    {
+        string text = SafeText(status).ToLowerInvariant();
+        if (text.Contains("conflict")) return "Conflicting";
+        if (text.Contains("missing") || text.Contains("absent") || text.Contains("empty")) return "Missing";
+        if (text.Contains("partial") || text.Contains("weak") || text.Contains("vague") || text.Contains("incomplete") || text.Contains("review")) return "Partial";
+        if (text.Contains("present") || text.Contains("complete") || text.Contains("sufficient")) return "Present";
+        return "Partial";
+    }
+
+    private static void ApplySightingQualityScoreModel(SightingQualityAssessmentResponse response)
+    {
+        if (response == null || response.Fields == null || response.Fields.Count == 0) return;
+
+        int missingCount = 0;
+        int partialCount = 0;
+        int conflictingCount = 0;
+        foreach (SightingQualityFieldAssessment field in response.Fields)
+        {
+            if (field == null || !IsSightingQualityCoreField(field.FieldName)) continue;
+            string status = SafeText(field == null ? string.Empty : field.Status).ToLowerInvariant();
+            if (status.Contains("conflict")) conflictingCount++;
+            else if (status.Contains("missing")) missingCount++;
+            else if (status.Contains("partial") || status.Contains("review")) partialCount++;
+        }
+
+        double scoreOutOfTen = ((8.0 - missingCount - (0.5 * partialCount) - (1.5 * conflictingCount)) / 8.0) * 10.0;
+        if (conflictingCount >= 2) scoreOutOfTen = Math.Min(scoreOutOfTen, 5.5);
+        else if (conflictingCount >= 1) scoreOutOfTen = Math.Min(scoreOutOfTen, 7.0);
+        scoreOutOfTen = Math.Max(0.0, Math.Min(10.0, scoreOutOfTen));
+
+        response.BaselineScore = Math.Max(0, Math.Min(100, (int)Math.Round(((8.0 - missingCount) / 8.0) * 100.0, MidpointRounding.AwayFromZero)));
+        response.QualityScore = Math.Max(0, Math.Min(100, (int)Math.Round(scoreOutOfTen * 10.0, MidpointRounding.AwayFromZero)));
+        response.Tier = response.QualityScore >= 80 ? "Green" : (response.QualityScore >= 50 ? "Orange" : "Red");
+        response.Summary = "Score is based on 8 core SQA fields: missing core fields reduce score by 1.0, partial core fields by 0.5, and conflicting core fields by 1.5 before normalization to /10; conflicts cap the maximum score. Ownership/routing and status/resolution are additional context fields.";
+    }
+
+    private static void ApplySightingQualityAssessmentSummary(SightingQualityAssessmentResponse response)
+    {
+        if (response == null || response.Fields == null) return;
+        int missingCount = 0;
+        int partialCount = 0;
+        int conflictingCount = 0;
+        foreach (SightingQualityFieldAssessment field in response.Fields)
+        {
+            if (field == null) continue;
+            if (string.IsNullOrWhiteSpace(field.DecisionUse)) field.DecisionUse = GetSightingQualityDecisionUse(field.FieldName);
+            if (!IsSightingQualityCoreField(field.FieldName) && !SafeText(field.Status).ToLowerInvariant().Contains("conflict")) continue;
+            string status = SafeText(field.Status).ToLowerInvariant();
+            if (status.Contains("conflict")) conflictingCount++;
+            else if (status.Contains("missing")) missingCount++;
+            else if (status.Contains("partial") || status.Contains("review")) partialCount++;
+        }
+
+        if (missingCount == 0 && partialCount == 0 && conflictingCount == 0)
+        {
+            response.Summary = "No critical information gaps were identified across the core sighting assessment fields. Review the field evidence for context before making downstream decisions.";
+            return;
+        }
+
+        List<string> parts = new List<string>();
+        if (missingCount > 0) parts.Add(missingCount.ToString(System.Globalization.CultureInfo.InvariantCulture) + " missing critical field" + (missingCount == 1 ? string.Empty : "s"));
+        if (partialCount > 0) parts.Add(partialCount.ToString(System.Globalization.CultureInfo.InvariantCulture) + " partial critical field" + (partialCount == 1 ? string.Empty : "s"));
+        if (conflictingCount > 0) parts.Add(conflictingCount.ToString(System.Globalization.CultureInfo.InvariantCulture) + " conflicting field" + (conflictingCount == 1 ? string.Empty : "s"));
+        response.Summary = "SQA found " + string.Join(", ", parts.ToArray()) + ". Use the missing and partial sections to see what information is blocking a clear understanding of this sighting.";
+    }
+
+    private static bool IsSightingQualityCoreField(string fieldName)
+    {
+        return !string.IsNullOrWhiteSpace(fieldName) && SightingQualityCoreFieldNames.Contains(fieldName.Trim());
+    }
+
+    private static void AddQualityField(SightingQualityAssessmentResponse response, string fieldName, string value, string recommendation)
+    {
+        string text = SafeText(value);
+        SightingQualityFieldAssessment field = ClassifySightingQualityField(fieldName, text, recommendation);
+        response.Fields.Add(field);
+    }
+
+    private static string BuildQualityEvidenceBucket(Dictionary<string, string> context, params string[] labelValuePairs)
+    {
+        StringBuilder builder = new StringBuilder();
+        HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (labelValuePairs != null)
+        {
+            for (int i = 0; i + 1 < labelValuePairs.Length; i += 2)
+            {
+                string label = SafeText(labelValuePairs[i]);
+                string value = SafeText(labelValuePairs[i + 1]);
+                if (!HasUsefulQualityValue(value)) continue;
+                string key = label + "|" + value;
+                if (!seen.Add(key)) continue;
+                builder.Append(label).Append(": ").Append(TruncateForQuality(value, 220)).AppendLine();
+            }
+        }
+        return builder.ToString().Trim();
+    }
+
+    private static SightingQualityFieldAssessment ClassifySightingQualityField(string fieldName, string value, string recommendation)
+    {
+        string text = SafeText(value);
+        string status = "Present";
+        string characteristic = "Usable evidence available";
+        string evidence = TruncateForQuality(text, 180);
+        if (!HasUsefulQualityValue(text))
+        {
+            status = "Missing";
+            characteristic = "Empty or unavailable";
+            evidence = "No usable value found in database or HSD context.";
+        }
+        else if (IsPartialSightingQualityValue(fieldName, text, out characteristic))
+        {
+            status = "Partial";
+            evidence = TruncateForQuality(text, 180);
+        }
+        else
+        {
+            status = "Present";
+            characteristic = GetPresentSightingQualityCharacteristic(fieldName);
+            evidence = TruncateForQuality(text, 180);
+        }
+
+        return new SightingQualityFieldAssessment { FieldName = fieldName, Status = status, Characteristic = characteristic, Evidence = evidence, Recommendation = string.Equals(status, "Present", StringComparison.OrdinalIgnoreCase) ? "No immediate completeness update needed." : recommendation, DecisionUse = GetSightingQualityDecisionUse(fieldName) };
+    }
+
+    private static string GetSightingQualityDecisionUse(string fieldName)
+    {
+        if (string.Equals(fieldName, "Issue Title / Subject", StringComparison.OrdinalIgnoreCase)) return "Helps the reviewer quickly identify the symptom and affected area without opening every raw field.";
+        if (string.Equals(fieldName, "Problem Description / What Happened", StringComparison.OrdinalIgnoreCase)) return "Explains the actual observed behavior so the sighting can be understood without guessing from labels.";
+        if (string.Equals(fieldName, "Customer Impact", StringComparison.OrdinalIgnoreCase)) return "Shows why the issue matters to validation, customer readiness, user experience, or release risk.";
+        if (string.Equals(fieldName, "Reproducibility / Failure Rate", StringComparison.OrdinalIgnoreCase)) return "Indicates how often the issue happens and whether the evidence represents a repeatable problem or an isolated observation.";
+        if (string.Equals(fieldName, "Reproduction Details / Trigger", StringComparison.OrdinalIgnoreCase)) return "Gives the scenario or trigger needed to reproduce, debug, or verify the sighting.";
+        if (string.Equals(fieldName, "Platform / Product Context", StringComparison.OrdinalIgnoreCase)) return "Identifies the affected product, platform, family, component, or design scope.";
+        if (string.Equals(fieldName, "System Configuration", StringComparison.OrdinalIgnoreCase)) return "Provides environment details such as OS, processor, board, build, driver, or system scope needed to compare sightings.";
+        if (string.Equals(fieldName, "Debug Evidence / Attachments", StringComparison.OrdinalIgnoreCase)) return "Confirms whether logs, system scope, traces, or debug references exist to support investigation.";
+        if (string.Equals(fieldName, "Ownership / Routing", StringComparison.OrdinalIgnoreCase)) return "Shows who owns or should route the sighting for follow-up.";
+        if (string.Equals(fieldName, "Status / Resolution Context", StringComparison.OrdinalIgnoreCase)) return "Shows whether the sighting is still open, already fixed, closed, rejected, or awaiting action.";
+        return "Explains how this information helps a reviewer understand the sighting.";
+    }
+
+    private static bool IsPartialSightingQualityValue(string fieldName, string value, out string characteristic)
+    {
+        characteristic = "Needs more specific evidence";
+        string text = SafeText(value);
+        string lower = text.ToLowerInvariant();
+
+        if (string.Equals(fieldName, "Ownership / Routing", StringComparison.OrdinalIgnoreCase))
+        {
+            if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^[a-z][a-z0-9_\.-]{2,30}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+                || System.Text.RegularExpressions.Regex.IsMatch(text, @":\s*[a-z][a-z0-9_\.-]{2,30}\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+                || lower.Contains("@")
+                || lower.Contains("forum")
+                || lower.Contains("team")) return false;
+            characteristic = "Owner/routing value is not specific";
+            return true;
+        }
+
+        if (string.Equals(fieldName, "Status / Resolution Context", StringComparison.OrdinalIgnoreCase))
+        {
+            if (System.Text.RegularExpressions.Regex.IsMatch(lower, @"\b(open|implemented|verified|closed|rejected|complete|duplicate|root caused|debug|triage|await|fixed|wont fix|won't fix)\b")) return false;
+            characteristic = "Status/resolution state is unclear";
+            return true;
+        }
+
+        if (string.Equals(fieldName, "Reproducibility / Failure Rate", StringComparison.OrdinalIgnoreCase))
+        {
+            if (System.Text.RegularExpressions.Regex.IsMatch(lower, @"\d+\s*/\s*\d+|\d+\s*%|\d+\s*(out of|of|in)\s*\d+|always|every\s+time|100%|reproducible|can\s+reproduce")) return false;
+            characteristic = "Missing numeric rate or clear repro band";
+            return true;
+        }
+
+        if (string.Equals(fieldName, "Reproduction Details / Trigger", StringComparison.OrdinalIgnoreCase))
+        {
+            if (HasQualityEvidenceLabel(text, "Steps to Reproduce", "What Happened", "Description")
+                && System.Text.RegularExpressions.Regex.IsMatch(lower, @"\b(when|while|after|before|during|steps?|trigger|run|execute|boot|resume|replug|connect|disconnect|install|launch|test|workload|scenario)\b")) return false;
+            characteristic = "Trigger/scenario not described";
+            return true;
+        }
+
+        if (string.Equals(fieldName, "Debug Evidence / Attachments", StringComparison.OrdinalIgnoreCase))
+        {
+            bool hasNegativeDebugSignal = System.Text.RegularExpressions.Regex.IsMatch(lower, @"\b(no\s+idst|db\s+idst\s*:\s*no|idst\s*:\s*no|no\s+log|not\s+attached|debug\s+log\s+attached\s*:\s*no|debug\s+log\s+attached\s*:\s*false)\b");
+            bool hasPositiveDebugSignal = System.Text.RegularExpressions.Regex.IsMatch(lower, @"\b(log|attach|attached|scope|zip|etl|dmp|dump|trace|link|http|sysdebug|forum|signature|yes|true)\b");
+            if (hasNegativeDebugSignal && hasPositiveDebugSignal)
+            {
+                characteristic = "Row evidence says debug routing/evidence is incomplete";
+                return true;
+            }
+            if (hasNegativeDebugSignal)
+            {
+                characteristic = "No log or attachment reference";
+                return true;
+            }
+            if (hasPositiveDebugSignal) return false;
+            characteristic = "No log or attachment reference";
+            return true;
+        }
+
+        if (string.Equals(fieldName, "System Configuration", StringComparison.OrdinalIgnoreCase))
+        {
+            int configSignals = CountQualityEvidenceLabels(text, "Operating System", "Processor", "Board", "System Scope Filename", "Customer Detail", "Description");
+            if (configSignals >= 2 && System.Text.RegularExpressions.Regex.IsMatch(lower, @"\b(os|windows|win11|bios|bkc|driver|build|ifwi|cpu|processor|board|sku|version|stepping|memory|gfx|graphics|systemscope)\b|\d+\.\d+|\d{4,}")) return false;
+            characteristic = "Configuration lacks OS/build/driver detail";
+            return true;
+        }
+
+        if (string.Equals(fieldName, "Platform / Product Context", StringComparison.OrdinalIgnoreCase))
+        {
+            if (System.Text.RegularExpressions.Regex.IsMatch(lower, @"\b(nvl|ptl|lnl|arl|gnr|wcl|component|platform|board|family|design|lenovo|asus|dell|hp|lcfc|odm|oem)\b|[a-z]+[_-][a-z0-9]+")) return false;
+            characteristic = "Affected platform/product scope is unclear";
+            return true;
+        }
+
+        if (string.Equals(fieldName, "Customer Impact", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!HasQualityEvidenceLabel(text, "DB Impact", "Customer Impact", "Customer Summary") || IsGenericQualityPhrase(lower))
+            {
+                characteristic = "Impact effect not explained";
+                return true;
+            }
+            return false;
+        }
+
+        if (string.Equals(fieldName, "Issue Title / Subject", StringComparison.OrdinalIgnoreCase))
+        {
+            if (IsGenericQualityPhrase(lower))
+            {
+                characteristic = "Title lacks observable symptom";
+                return true;
+            }
+            return false;
+        }
+
+        if (string.Equals(fieldName, "Problem Description / What Happened", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!HasQualityEvidenceLabel(text, "What Happened", "Description", "Actual Behavior") || IsGenericQualityPhrase(lower))
+            {
+                characteristic = "Observed behavior unclear";
+                return true;
+            }
+            return false;
+        }
+
+        return false;
+    }
+
+    private static bool HasQualityEvidenceLabel(string text, params string[] labels)
+    {
+        return CountQualityEvidenceLabels(text, labels) > 0;
+    }
+
+    private static int CountQualityEvidenceLabels(string text, params string[] labels)
+    {
+        if (string.IsNullOrWhiteSpace(text) || labels == null) return 0;
+        int count = 0;
+        foreach (string label in labels)
+        {
+            if (string.IsNullOrWhiteSpace(label)) continue;
+            if (System.Text.RegularExpressions.Regex.IsMatch(text, @"(^|\n)\s*" + System.Text.RegularExpressions.Regex.Escape(label.Trim()) + @"\s*:", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) count++;
+        }
+        return count;
+    }
+
+    private static bool IsNegativeQualityEvidence(string label, string value)
+    {
+        string combined = (SafeText(label) + " " + SafeText(value)).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(combined)) return true;
+        if (System.Text.RegularExpressions.Regex.IsMatch(combined, @"\b(no\s+idst|idst\s*:\s*no|no\s+log|not\s+attached|debug\s+log\s+attached\s*:\s*(no|false)|rvp\s+repro\s*:\s*(no|unknown)|db\s+rvp\s+repro\s+unknown|db\s+rvp\s+repro\s+no)\b")) return true;
+        return false;
+    }
+
+    private static string GetPresentSightingQualityCharacteristic(string fieldName)
+    {
+        if (string.Equals(fieldName, "Ownership / Routing", StringComparison.OrdinalIgnoreCase)) return "Owner or routing value available";
+        if (string.Equals(fieldName, "Status / Resolution Context", StringComparison.OrdinalIgnoreCase)) return "Status/resolution state available";
+        if (string.Equals(fieldName, "Reproducibility / Failure Rate", StringComparison.OrdinalIgnoreCase)) return "Repro/failure-rate signal available";
+        if (string.Equals(fieldName, "Reproduction Details / Trigger", StringComparison.OrdinalIgnoreCase)) return "Trigger or scenario evidence available";
+        if (string.Equals(fieldName, "Debug Evidence / Attachments", StringComparison.OrdinalIgnoreCase)) return "Debug evidence reference available";
+        if (string.Equals(fieldName, "System Configuration", StringComparison.OrdinalIgnoreCase)) return "Configuration context available";
+        if (string.Equals(fieldName, "Platform / Product Context", StringComparison.OrdinalIgnoreCase)) return "Platform/product context available";
+        if (string.Equals(fieldName, "Customer Impact", StringComparison.OrdinalIgnoreCase)) return "Impact statement available";
+        if (string.Equals(fieldName, "Issue Title / Subject", StringComparison.OrdinalIgnoreCase)) return "Title/subject available";
+        if (string.Equals(fieldName, "Problem Description / What Happened", StringComparison.OrdinalIgnoreCase)) return "Problem description available";
+        return "Usable evidence available";
+    }
+
+    private static bool IsGenericQualityPhrase(string lower)
+    {
+        string text = SafeText(lower).Trim().ToLowerInvariant();
+        if (text.Length < 10) return true;
+        return text == "issue observed" || text == "issues observed" || text == "failure seen" || text == "test failed" || text == "not working" || text == "need to check" || text == "under debug" || text == "customer impact" || text == "blocks validation" || text == "blocks fvt exit";
+    }
+
+    private static void AddOccurrenceConflictIfFound(SightingQualityAssessmentResponse response, string title, string impact, string reproducibility, string hsdContext)
+    {
+        string titleBand = ClassifyOccurrenceBand(title);
+        string reproBand = ClassifyOccurrenceBand(reproducibility);
+        string impactBand = ClassifyOccurrenceBand(impact);
+        string hsdBand = ClassifyOccurrenceBand(hsdContext);
+        string referenceBand = FirstNonEmpty(titleBand, reproBand, hsdBand);
+
+        if (!string.IsNullOrWhiteSpace(referenceBand) && !string.IsNullOrWhiteSpace(impactBand) && !string.Equals(referenceBand, impactBand, StringComparison.OrdinalIgnoreCase))
+        {
+            SightingQualityFieldAssessment occurrenceField = FindQualityField(response, "Reproducibility / Failure Rate");
+            if (occurrenceField == null)
+            {
+                occurrenceField = new SightingQualityFieldAssessment { FieldName = "Reproducibility / Failure Rate" };
+                response.Fields.Add(occurrenceField);
+            }
+            occurrenceField.Status = "Conflicting";
+            occurrenceField.Characteristic = "Occurrence statements disagree";
+            occurrenceField.Evidence = "Title/repro/HSD indicates " + referenceBand + " occurrence, while impact text indicates " + impactBand + " occurrence.";
+            occurrenceField.Recommendation = "Align the occurrence/failure-rate statement across title, reproducibility, impact, and HSD description.";
+        }
+    }
+
+    private static SightingQualityFieldAssessment FindQualityField(SightingQualityAssessmentResponse response, string fieldName)
+    {
+        if (response == null || response.Fields == null) return null;
+        foreach (SightingQualityFieldAssessment field in response.Fields)
+        {
+            if (field != null && string.Equals(field.FieldName, fieldName, StringComparison.OrdinalIgnoreCase)) return field;
+        }
+        return null;
+    }
+
+    private static string ClassifyOccurrenceBand(string value)
+    {
+        string text = SafeText(value).ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        if (System.Text.RegularExpressions.Regex.IsMatch(text, ">?=\\s*1\\s*/\\s*10|1\\s*in\\s*10|hourly|frequent|frequently|always|every\\s+time|100%")) return "frequent";
+        if (System.Text.RegularExpressions.Regex.IsMatch(text, "1\\s*/\\s*1000|1\\s*in\\s*1000|<\\s*1\\s*/\\s*1000|rare|sporadic|occasionally|intermittent")) return "rare";
+        if (System.Text.RegularExpressions.Regex.IsMatch(text, "1\\s*/\\s*5000|1\\s*in\\s*5000|very\\s+rare")) return "very rare";
+        return string.Empty;
+    }
+
+    private static void SanitizeSightingQualityAssessment(SightingQualityAssessmentResponse response)
+    {
+        if (response == null) return;
+        response.QualityScore = Math.Max(0, Math.Min(100, response.QualityScore));
+        response.BaselineScore = Math.Max(0, Math.Min(100, response.BaselineScore));
+        if (string.IsNullOrWhiteSpace(response.Tier)) response.Tier = response.QualityScore >= 80 ? "Green" : (response.QualityScore >= 50 ? "Orange" : "Red");
+        if (string.IsNullOrWhiteSpace(response.Summary)) response.Summary = "Sighting completeness assessment generated from available database and HSD context.";
+    }
+
+    private static bool HasUsefulQualityValue(string value)
+    {
+        string text = SafeText(value);
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        string lower = text.ToLowerInvariant();
+        return lower != "n/a" && lower != "na" && lower != "none" && lower != "unknown" && lower != "null" && lower != "missing" && lower != "tbd";
+    }
+
+    private static bool IsLowQualityValue(string value)
+    {
+        string text = SafeText(value);
+        if (!HasUsefulQualityValue(text)) return true;
+        string[] words = text.Split(new[] { ' ', '\t', '\r', '\n', '_', '-' }, StringSplitOptions.RemoveEmptyEntries);
+        if (text.Length < 18 || words.Length < 4) return true;
+        string lower = text.ToLowerInvariant();
+        return lower == "blocks fvt exit" || lower == "issues observed" || lower == "issue observed" || lower == "need to check" || lower == "under debug" || lower == "it should be reproduced";
+    }
+
+    private static string TruncateForQuality(string value, int maxLength)
+    {
+        string text = SafeText(value).Replace("\r", " ").Replace("\n", " ");
+        while (text.Contains("  ")) text = text.Replace("  ", " ");
+        if (text.Length <= maxLength) return text;
+        return text.Substring(0, maxLength).TrimEnd() + "...";
+    }
+
+    private static Dictionary<string, string> ParseSimpleContextMap(string contextText)
+    {
+        Dictionary<string, string> map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(contextText)) return map;
+        string[] lines = contextText.Replace("\r", "\n").Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (string rawLine in lines)
+        {
+            int colon = rawLine.IndexOf(':');
+            if (colon <= 0) continue;
+            string key = rawLine.Substring(0, colon).Trim('-', ' ', '\t');
+            string value = rawLine.Substring(colon + 1).Trim();
+            if (!map.ContainsKey(key) && !string.IsNullOrWhiteSpace(value)) map[key] = value;
+        }
+        return map;
+    }
+
+    private static string FirstContextValue(Dictionary<string, string> context, params string[] keys)
+    {
+        if (context == null || keys == null) return string.Empty;
+        foreach (string key in keys)
+        {
+            string value;
+            if (context.TryGetValue(key, out value) && HasUsefulQualityValue(value)) return value;
+        }
+        return string.Empty;
+    }
+
+    private static string FindContextContaining(string contextText, string token)
+    {
+        if (string.IsNullOrWhiteSpace(contextText) || string.IsNullOrWhiteSpace(token)) return string.Empty;
+        string[] lines = contextText.Replace("\r", "\n").Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (string line in lines)
+        {
+            if (line.IndexOf(token, StringComparison.OrdinalIgnoreCase) >= 0) return line.Trim();
+        }
+        return string.Empty;
+    }
+
+    private static string ExtractJsonObject(string value)
+    {
+        string text = SafeText(value);
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        int start = text.IndexOf('{');
+        int end = text.LastIndexOf('}');
+        if (start < 0 || end <= start) return string.Empty;
+        return text.Substring(start, end - start + 1);
+    }
+
+    private static string ReadString(Dictionary<string, object> dict, params string[] keys)
+    {
+        if (dict == null || keys == null) return string.Empty;
+        foreach (string key in keys)
+        {
+            object value;
+            if (dict.TryGetValue(key, out value) && value != null) return value.ToString().Trim();
+        }
+        return string.Empty;
+    }
+
+    private static int ReadInt(Dictionary<string, object> dict, params string[] keys)
+    {
+        string text = ReadString(dict, keys);
+        int value;
+        return int.TryParse(text, out value) ? value : 0;
     }
 
     private static string BuildFallbackCmfDecisionDetails(string title, string component, string cmfRequest, string impact, string idst, string reproOnRvp, string reproducibility, string customerDetail, string customerOwner, string hsdContext)

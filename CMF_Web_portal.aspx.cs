@@ -170,6 +170,7 @@ public partial class CMF_Web_portal : System.Web.UI.Page
     private const string IssueGridCacheDataSessionKey = "issueGridCacheData";
     private const string IssueGlobalSearchSessionKey = "issueGlobalSearch";
     private const string DefaultPlatformTable = "CMF_NVL_H_ALL_COMPONENTS_TABLE";
+    private static readonly object AssistantContextCacheSync = new object();
 
     private static readonly HashSet<string> AllowedPlatformTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -5727,6 +5728,65 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
     }
 
     [WebMethod(EnableSession = true)]
+    public static SightingQualityAssessmentResponse GetSightingQualityAssessment(
+        string cpId,
+        string title,
+        string component,
+        string cmfRequest,
+        string impact,
+        string idst,
+        string reproOnRvp,
+        string reproducibility,
+        string customerDetail,
+        string customerOwner,
+        string platform)
+    {
+        try
+        {
+            string resolvedPlatform = platform;
+            if (string.IsNullOrWhiteSpace(resolvedPlatform) && HttpContext.Current != null && HttpContext.Current.Session != null)
+            {
+                resolvedPlatform = HttpContext.Current.Session[IssuePendingPlatformSessionKey] as string
+                    ?? HttpContext.Current.Session["selectedPlatform"] as string;
+            }
+
+            if (!string.IsNullOrWhiteSpace(resolvedPlatform) && !AllowedPlatformTables.Contains(resolvedPlatform))
+            {
+                return new SightingQualityAssessmentResponse
+                {
+                    Success = false,
+                    Message = "Invalid platform input for sighting quality assessment."
+                };
+            }
+
+            CmfRecommendationRequest request = new CmfRecommendationRequest
+            {
+                CpId = cpId,
+                Title = title,
+                Component = component,
+                CmfRequest = cmfRequest,
+                Impact = impact,
+                Idst = idst,
+                ReproOnRvp = reproOnRvp,
+                Reproducibility = reproducibility,
+                CustomerDetail = customerDetail,
+                CustomerOwner = customerOwner,
+                HsdContext = BuildPendingRecommendationContext(resolvedPlatform, cpId)
+            };
+
+            return CmfRecommendationService.GenerateSightingQualityAssessment(request);
+        }
+        catch (Exception ex)
+        {
+            return new SightingQualityAssessmentResponse
+            {
+                Success = false,
+                Message = "Sighting quality assessment failed: " + ex.Message
+            };
+        }
+    }
+
+    [WebMethod(EnableSession = true)]
     public static CmfRecommendationResponse GetCmfPendingDecisionDetails(
         string cpId,
         string title,
@@ -5924,13 +5984,29 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
     private static string BuildPendingHsdContext(string cpId)
     {
         if (string.IsNullOrWhiteSpace(cpId)) return string.Empty;
+        string cacheKey = "cmf-assistant-hsd-context:" + cpId.Trim();
+        lock (AssistantContextCacheSync)
+        {
+            string cached = HttpRuntime.Cache[cacheKey] as string;
+            if (cached != null) return cached;
+        }
+
         try
         {
             HsdArticleData article = HsdPortalService.FetchArticle(cpId.Trim());
-            return HsdPortalService.FormatForAiContext(article, "Pending Sighting");
+            string context = HsdPortalService.FormatForAiContext(article, "Pending Sighting");
+            lock (AssistantContextCacheSync)
+            {
+                HttpRuntime.Cache.Insert(cacheKey, context ?? string.Empty, null, DateTime.UtcNow.AddMinutes(10), System.Web.Caching.Cache.NoSlidingExpiration);
+            }
+            return context;
         }
         catch
         {
+            lock (AssistantContextCacheSync)
+            {
+                HttpRuntime.Cache.Insert(cacheKey, string.Empty, null, DateTime.UtcNow.AddMinutes(2), System.Web.Caching.Cache.NoSlidingExpiration);
+            }
             return string.Empty;
         }
     }
@@ -5938,9 +6014,18 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
     private static string BuildPendingRecommendationContext(string platformTable, string cpId)
     {
         if (string.IsNullOrWhiteSpace(cpId)) return string.Empty;
+        string resolvedPlatform = !string.IsNullOrWhiteSpace(platformTable) && AllowedPlatformTables.Contains(platformTable)
+            ? platformTable
+            : DefaultPlatformTable;
+        string cacheKey = "cmf-assistant-recommendation-context:" + resolvedPlatform + ":" + cpId.Trim();
+        lock (AssistantContextCacheSync)
+        {
+            string cached = HttpRuntime.Cache[cacheKey] as string;
+            if (cached != null) return cached;
+        }
 
         StringBuilder builder = new StringBuilder();
-        string dbContext = BuildIssueSummaryContext(platformTable, cpId);
+        string dbContext = BuildIssueSummaryContext(resolvedPlatform, cpId);
         if (!string.IsNullOrWhiteSpace(dbContext))
         {
             builder.AppendLine(dbContext);
@@ -5953,7 +6038,12 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
             builder.AppendLine(hsdContext);
         }
 
-        return builder.ToString().Trim();
+        string context = builder.ToString().Trim();
+        lock (AssistantContextCacheSync)
+        {
+            HttpRuntime.Cache.Insert(cacheKey, context, null, DateTime.UtcNow.AddMinutes(10), System.Web.Caching.Cache.NoSlidingExpiration);
+        }
+        return context;
     }
 
     [WebMethod(EnableSession = true)]

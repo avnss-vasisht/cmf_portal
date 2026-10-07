@@ -25,6 +25,13 @@ public class HsdArticleData
     public string StepsToReproduce { get; set; }
     public string ExpectedBehavior { get; set; }
     public string ActualBehavior { get; set; }
+    public string WhatHappened { get; set; }
+    public string WhatShouldHaveHappened { get; set; }
+    public string DebugLogAttached { get; set; }
+    public string SystemScopeFilename { get; set; }
+    public string CustomerDetail { get; set; }
+    public string CustomerSummary { get; set; }
+    public string Board { get; set; }
     public List<string> Comments { get; set; }
     public bool FetchSuccess { get; set; }
     public string FetchError { get; set; }
@@ -151,6 +158,13 @@ public static class HsdPortalService
         AppendIfSet(sb, "Steps to Reproduce", Truncate(data.StepsToReproduce, 800));
         AppendIfSet(sb, "Expected Behavior", Truncate(data.ExpectedBehavior, 500));
         AppendIfSet(sb, "Actual Behavior", Truncate(data.ActualBehavior, 500));
+        AppendIfSet(sb, "What Happened", Truncate(data.WhatHappened, 800));
+        AppendIfSet(sb, "What Should Have Happened", Truncate(data.WhatShouldHaveHappened, 500));
+        AppendIfSet(sb, "Customer Detail", Truncate(data.CustomerDetail, 500));
+        AppendIfSet(sb, "Customer Summary", Truncate(data.CustomerSummary, 500));
+        AppendIfSet(sb, "Board", data.Board);
+        AppendIfSet(sb, "Debug Log Attached", data.DebugLogAttached);
+        AppendIfSet(sb, "System Scope Filename", data.SystemScopeFilename);
         AppendIfSet(sb, "CMF Justification", Truncate(data.CmfJustification, 1000));
         AppendIfSet(sb, "Fix Description", Truncate(data.FixDescription, 1000));
         AppendIfSet(sb, "Fixed Version", data.FixedVersion);
@@ -834,9 +848,16 @@ public static class HsdPortalService
         result.Priority = FirstNonEmpty(Pick(fields, "priority", "sighting.priority", "severity"), result.Priority);
         result.Submitter = FirstNonEmpty(Pick(fields, "submitter", "reporter", "created_by", "author"), result.Submitter);
         result.Owner = FirstNonEmpty(Pick(fields, "owner", "assigned_to", "assignee"), result.Owner);
-        result.StepsToReproduce = FirstNonEmpty(Pick(fields, "steps_to_reproduce", "repro_steps", "sighting.steps_to_reproduce", "repro"), result.StepsToReproduce);
-        result.ExpectedBehavior = FirstNonEmpty(Pick(fields, "expected_behavior", "expected", "sighting.expected_behavior"), result.ExpectedBehavior);
-        result.ActualBehavior = FirstNonEmpty(Pick(fields, "actual_behavior", "actual", "sighting.actual_behavior"), result.ActualBehavior);
+        result.StepsToReproduce = FirstNonEmpty(Pick(fields, "steps_to_reproduce", "repro_steps", "sighting.steps_to_reproduce", "repro", "to_reproduce", "bug.to_reproduce", "client_platf.bug.ext_cust_to_reproduce"), result.StepsToReproduce);
+        result.ExpectedBehavior = FirstNonEmpty(Pick(fields, "expected_behavior", "expected", "sighting.expected_behavior", "client_platf.bug.what_should_have_happened"), result.ExpectedBehavior);
+        result.ActualBehavior = FirstNonEmpty(Pick(fields, "actual_behavior", "actual", "sighting.actual_behavior", "client_platf.bug.what_happened"), result.ActualBehavior);
+        result.WhatHappened = FirstNonEmpty(Pick(fields, "what_happened", "client_platf.bug.what_happened"), result.WhatHappened);
+        result.WhatShouldHaveHappened = FirstNonEmpty(Pick(fields, "what_should_have_happened", "client_platf.bug.what_should_have_happened"), result.WhatShouldHaveHappened);
+        result.DebugLogAttached = FirstNonEmpty(Pick(fields, "debug_log_attached", "client_platf.bug.debug_log_attached", "is_system_scope_log_attached", "client_platf.bug.is_system_scope_log_attached"), result.DebugLogAttached);
+        result.SystemScopeFilename = FirstNonEmpty(Pick(fields, "system_scope_filename", "client_platf.bug.system_scope_filename"), result.SystemScopeFilename);
+        result.CustomerDetail = FirstNonEmpty(Pick(fields, "customer_detail", "client_platf.bug.customer_detail"), result.CustomerDetail);
+        result.CustomerSummary = FirstNonEmpty(Pick(fields, "customer_summary", "client_platf.bug.customer_summary"), result.CustomerSummary);
+        result.Board = FirstNonEmpty(Pick(fields, "board", "client_platf.bug.board", "customer_board", "client_platf.bug.customer_board"), result.Board);
         result.FixDescription = FirstNonEmpty(Pick(
             fields,
             "fix_description",

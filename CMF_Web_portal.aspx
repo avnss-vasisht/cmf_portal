@@ -2239,17 +2239,12 @@
 }
 
 .cmf-assistant-title-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 25px;
-    height: 25px;
+    display: inline;
     margin-right: 8px;
-    border-radius: 999px;
-    background: #ffffff;
-    border: 1px solid #bae0ff;
+    background: transparent;
+    border: 0;
     color: inherit;
-    font-size: 15px;
+    font-size: 16px;
     vertical-align: middle;
 }
 
@@ -5682,13 +5677,14 @@ td:nth-child(odd), th:nth-child(odd) {
     }
 
     .cmf-assistant-description ul {
-        display: none;
+        margin: 6px 0 0;
+        padding-left: 18px;
     }
 
     .cmf-assistant-description li {
         margin: 3px 0;
         padding-left: 2px;
-        text-align: justify;
+        text-align: left;
     }
 
     .cmf-assistant-text-section {
@@ -5706,7 +5702,7 @@ td:nth-child(odd), th:nth-child(odd) {
 
     .cmf-assistant-text-section:nth-child(2) {
         border-color: #fed7aa;
-        background: linear-gradient(180deg, #fff8ef 0%, #ffffff 100%);
+        background: #ffffff;
     }
 
     .cmf-assistant-text-section h3 {
@@ -5862,6 +5858,526 @@ td:nth-child(odd), th:nth-child(odd) {
         margin-bottom: 14px;
     }
 
+    .cmf-assistant-quality-slot .cmf-assistant-feature-card {
+        margin-top: 12px;
+    }
+
+    .cmf-quality-assessment-card {
+        border: 1px solid #b9d8ff;
+        border-radius: 8px;
+        padding: 8px 9px;
+        margin-bottom: 12px;
+        box-shadow: 0 6px 16px rgba(30, 84, 144, 0.05);
+        background: #ffffff;
+    }
+
+    .cmf-quality-assessment-card.is-quality-high {
+        border-color: #bbf7d0;
+    }
+
+    .cmf-quality-assessment-card.is-quality-medium {
+        border-color: #fed7aa;
+    }
+
+    .cmf-quality-assessment-card.is-quality-low {
+        border-color: #fecaca;
+    }
+
+    .cmf-quality-assessment-card .cmf-assistant-feature-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .cmf-quality-assessment-card .cmf-assistant-feature-head h3 {
+        margin: 0;
+        font-size: 11px;
+        line-height: 1.25;
+        letter-spacing: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .cmf-quality-assessment-card .cmf-assistant-feature-head h3::before {
+        content: '\f46c';
+        font-family: 'Font Awesome 5 Free';
+        font-weight: 900;
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #edf5ff;
+        color: #246bfe;
+        font-size: 9px;
+    }
+
+    .cmf-sqa-category-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    .cmf-sqa-score-pill {
+        border: 2px solid #19324a;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #102a43;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 950;
+        white-space: nowrap;
+    }
+
+    .cmf-sqa-score-pill.is-quality-high { border-color: #16a34a; color: #166534; }
+    .cmf-sqa-score-pill.is-quality-medium { border-color: #f59e0b; color: #92400e; }
+    .cmf-sqa-score-pill.is-quality-low { border-color: #dc2626; color: #991b1b; }
+
+    .cmf-sqa-category-card {
+        border: 2px solid #d8e7f5;
+        border-radius: 14px;
+        background: #ffffff;
+        min-height: 116px;
+        padding: 10px 11px;
+        min-width: 0;
+    }
+
+    .cmf-sqa-category-card.missing { border-color: #fecaca; }
+    .cmf-sqa-category-card.partial { border-color: #fed7aa; }
+    .cmf-sqa-category-card.conflicting { border-color: #bfdbfe; }
+
+    .cmf-sqa-category-title {
+        margin-bottom: 8px;
+        color: #102a43;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .cmf-sqa-category-list {
+        display: grid;
+        gap: 6px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .cmf-sqa-category-list li {
+        color: #304761;
+        font-size: 11px;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+    }
+
+    .cmf-sqa-category-list li strong,
+    .cmf-sqa-category-list li span,
+    .cmf-sqa-category-list li small {
+        display: block;
+    }
+
+    .cmf-sqa-category-list li strong {
+        color: #102a43;
+        font-size: 11px;
+        font-weight: 950;
+        margin-bottom: 2px;
+    }
+
+    .cmf-sqa-category-list li span {
+        color: #304761;
+        font-weight: 800;
+    }
+
+    .cmf-sqa-category-list li small {
+        color: #64748b;
+        font-size: 10px;
+        line-height: 1.35;
+        margin-top: 2px;
+    }
+
+    .cmf-sqa-category-list li.is-empty {
+        color: #64748b;
+        font-style: italic;
+    }
+
+    .cmf-sqa-skeleton {
+        border: 1px solid #d8e7f5;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 10px 11px;
+        margin: 12px 0;
+    }
+
+    .cmf-sqa-skeleton-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .cmf-sqa-skeleton-box {
+        border: 1px solid #e1edf7;
+        border-radius: 8px;
+        padding: 10px;
+        min-height: 72px;
+    }
+
+    .cmf-quality-score-panel,
+    .cmf-quality-fields-panel {
+        border: 1px solid #e1edf7;
+        border-radius: 8px;
+        background: #f8fbff;
+        padding: 9px 10px;
+        min-width: 0;
+    }
+
+    .cmf-quality-score-panel.is-quality-high {
+        border-color: #bbf7d0;
+        background: #f0fdf4;
+    }
+
+    .cmf-quality-score-panel.is-quality-medium {
+        border-color: #fed7aa;
+        background: #fff7ed;
+    }
+
+    .cmf-quality-score-panel.is-quality-low {
+        border-color: #fecaca;
+        background: #fff1f2;
+    }
+
+    .cmf-quality-score-value {
+        color: #0f4f83;
+        font-size: 26px;
+        line-height: 1;
+        font-weight: 950;
+    }
+
+    .cmf-quality-score-panel.is-quality-high .cmf-quality-score-value { color: #166534; }
+    .cmf-quality-score-panel.is-quality-medium .cmf-quality-score-value { color: #b45309; }
+    .cmf-quality-score-panel.is-quality-low .cmf-quality-score-value { color: #b91c1c; }
+
+    .cmf-quality-score-value span {
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 850;
+    }
+
+    .cmf-quality-panel-label {
+        margin-bottom: 6px;
+        color: #64748b;
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
+    .cmf-quality-field-list {
+        display: grid;
+        gap: 5px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .cmf-quality-field-list li {
+        color: #304761;
+        font-size: 11px;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+    }
+
+    .cmf-quality-action-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 8px;
+    }
+
+    .cmf-quality-details-btn,
+    .cmf-quality-back-btn,
+    .cmf-quality-refresh-btn {
+        border: 1px solid #b9d8ff;
+        border-radius: 7px;
+        background: #ffffff;
+        color: #0f5ea8;
+        font-size: 11px;
+        font-weight: 900;
+        padding: 6px 10px;
+        cursor: pointer;
+    }
+
+    .cmf-quality-details-btn:hover,
+    .cmf-quality-back-btn:hover,
+    .cmf-quality-refresh-btn:hover {
+        background: #edf5ff;
+    }
+
+    .cmf-quality-refresh-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-color: #246bfe;
+        background: #246bfe;
+        color: #ffffff;
+        box-shadow: 0 8px 18px rgba(36, 107, 254, 0.18);
+        white-space: nowrap;
+    }
+
+    .cmf-quality-refresh-btn:hover {
+        background: #1857d7;
+        color: #ffffff;
+    }
+
+    .cmf-quality-detail-shell {
+        display: grid;
+        gap: 12px;
+    }
+
+    .cmf-quality-detail-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .cmf-quality-detail-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .cmf-quality-detail-header h3 {
+        margin: 0;
+        color: #102a43;
+        font-size: 16px;
+        font-weight: 900;
+    }
+
+    .cmf-quality-detail-card {
+        border: 1px solid #d8e7f5;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 11px 12px;
+    }
+
+    .cmf-quality-detail-card h4 {
+        margin: 0 0 8px;
+        color: #19324a;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .cmf-quality-overview-card {
+        display: grid;
+        gap: 14px;
+    }
+
+    .cmf-quality-score-topline {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 14px;
+        min-width: 0;
+    }
+
+    .cmf-quality-score-chart-wrap {
+        display: grid;
+        gap: 8px;
+        justify-items: center;
+        grid-column: 2;
+    }
+
+    .cmf-quality-score-topline .cmf-quality-refresh-btn {
+        justify-self: end;
+        grid-column: 3;
+    }
+
+    .cmf-quality-donut {
+        width: 132px;
+        height: 132px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: conic-gradient(#22a65a 0 var(--score), #f2d15a var(--score) 82%, #e65b55 82% 100%);
+        position: relative;
+        box-shadow: inset 0 0 0 1px rgba(16, 42, 67, 0.08);
+    }
+
+    .cmf-quality-donut::after {
+        content: '';
+        position: absolute;
+        width: 76px;
+        height: 76px;
+        border-radius: 50%;
+        background: #ffffff;
+    }
+
+    .cmf-quality-donut-value {
+        position: relative;
+        z-index: 1;
+        color: #102a43;
+        font-size: 24px;
+        font-weight: 950;
+    }
+
+    .cmf-quality-score-list {
+        display: grid;
+        gap: 9px;
+    }
+
+    .cmf-quality-score-row {
+        display: grid;
+        grid-template-columns: minmax(130px, 1fr) 72px minmax(96px, 1.15fr);
+        align-items: center;
+        gap: 8px;
+        padding: 8px 0;
+        border-bottom: 1px solid #edf2f7;
+        min-width: 0;
+    }
+
+    .cmf-quality-score-row:last-child {
+        border-bottom: 0;
+    }
+
+    .cmf-quality-score-name {
+        color: #24364a;
+        font-size: 12px;
+        font-weight: 900;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .cmf-quality-score-bar {
+        height: 6px;
+        border-radius: 999px;
+        background: #e5edf5;
+        overflow: hidden;
+    }
+
+    .cmf-quality-score-bar span {
+        display: block;
+        width: var(--bar);
+        height: 100%;
+        border-radius: inherit;
+        background: #22a65a;
+    }
+
+    .cmf-quality-score-row.partial .cmf-quality-score-bar span { background: #f2c94c; }
+    .cmf-quality-score-row.missing .cmf-quality-score-bar span,
+    .cmf-quality-score-row.conflicting .cmf-quality-score-bar span { background: #df5b57; }
+
+    .cmf-quality-score-status {
+        color: #4b6077;
+        font-size: 12px;
+        line-height: 1.3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 640px) {
+        .cmf-quality-score-topline {
+            align-items: flex-start;
+            grid-template-columns: 1fr auto;
+        }
+
+        .cmf-quality-score-chart-wrap {
+            grid-column: 1 / -1;
+            justify-self: center;
+        }
+
+        .cmf-quality-score-topline .cmf-quality-refresh-btn {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .cmf-quality-score-row {
+            grid-template-columns: minmax(100px, 1fr) 58px minmax(84px, 1fr);
+            gap: 6px;
+        }
+
+        .cmf-quality-score-status,
+        .cmf-quality-score-name {
+            font-size: 11px;
+        }
+    }
+
+    .cmf-quality-suggestions {
+        margin: 0;
+        padding-left: 18px;
+        color: #304761;
+        font-size: 12px;
+        line-height: 1.45;
+    }
+
+    .cmf-quality-score-notes {
+        display: grid;
+        gap: 7px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .cmf-quality-score-notes li {
+        color: #304761;
+        font-size: 12px;
+        line-height: 1.42;
+    }
+
+    .cmf-quality-detail-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .cmf-quality-section-subtitle {
+        margin: -2px 0 9px;
+        color: #5b6f84;
+        font-size: 11px;
+        line-height: 1.4;
+    }
+
+    .cmf-quality-field-card {
+        border: 1px solid #e1edf7;
+        border-radius: 8px;
+        background: #f8fbff;
+        padding: 10px 11px;
+    }
+
+    .cmf-quality-field-card.present { border-color: #bbf7d0; background: #f0fdf4; }
+    .cmf-quality-field-card.partial { border-color: #fed7aa; background: #fff7ed; }
+    .cmf-quality-field-card.missing { border-color: #fecaca; background: #fff1f2; }
+    .cmf-quality-field-card.conflicting { border-color: #fecaca; background: #fff1f2; }
+
+    .cmf-quality-field-card-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 7px;
+    }
+
+    .cmf-quality-field-card-title {
+        color: #102a43;
+        font-size: 12px;
+        font-weight: 900;
+        line-height: 1.35;
+    }
+
+    .cmf-quality-field-card p {
+        margin: 5px 0 0;
+        color: #304761;
+        font-size: 11px;
+        line-height: 1.45;
+    }
+
+    .cmf-quality-field-card strong {
+        color: #143f6b;
+        font-weight: 900;
+    }
+
     .cmf-assistant-feature-head {
         display: flex;
         align-items: flex-start;
@@ -5912,6 +6428,24 @@ td:nth-child(odd), th:nth-child(odd) {
         background: linear-gradient(90deg, #16a34a 0%, #0f72c4 100%);
     }
 
+    .cmf-quality-meter.is-quality-high span { background: #16a34a; }
+    .cmf-quality-meter.is-quality-medium span { background: #f59e0b; }
+    .cmf-quality-meter.is-quality-low span { background: #dc2626; }
+
+    .cmf-quality-status-badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-size: 10px;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .cmf-quality-status-badge.present { background: #dcfce7; color: #166534; }
+    .cmf-quality-status-badge.partial { background: #fef3c7; color: #92400e; }
+    .cmf-quality-status-badge.missing { background: #fee2e2; color: #991b1b; }
+
     .cmf-quality-two-col {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5941,6 +6475,10 @@ td:nth-child(odd), th:nth-child(odd) {
 
     @media (max-width: 700px) {
         .cmf-quality-two-col {
+            grid-template-columns: 1fr;
+        }
+
+        .cmf-sqa-category-grid {
             grid-template-columns: 1fr;
         }
     }
@@ -9804,14 +10342,43 @@ td:nth-child(odd), th:nth-child(odd) {
             }
 
         function renderIssueDescriptionText(text) {
-            var lines = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+            var source = normalizeIssueDescriptionBullets(text || '');
+            var lines = source.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
                 .split('\n')
                 .map(function (line) { return line.trim(); })
                 .filter(Boolean);
             if (!lines.length) return 'No description available.';
 
-            var brief = lines.map(function (line) { return line.replace(/^[-*•]\s*/, '').trim(); }).join(' ');
-            return '<p>' + renderAssistantRichText(brief) + '</p>';
+            var lead = lines[0].replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '');
+            var bullets = [];
+            for (var i = 1; i < lines.length; i++) {
+                var bullet = lines[i].replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '').trim();
+                if (bullet) bullets.push(bullet);
+            }
+
+            if (!bullets.length) {
+                var sentenceParts = lead.match(/[^.!?]+[.!?]+/g) || [];
+                if (sentenceParts.length > 1) {
+                    lead = sentenceParts.shift().trim();
+                    bullets = sentenceParts.map(function (sentence) { return sentence.trim(); }).slice(0, 3);
+                }
+            }
+
+            var html = '<p>' + renderAssistantRichText(lead) + '</p>';
+            if (bullets.length) {
+                html += '<ul>';
+                for (var j = 0; j < bullets.length && j < 3; j++) {
+                    html += '<li>' + renderAssistantRichText(bullets[j]) + '</li>';
+                }
+                html += '</ul>';
+            }
+            return html;
+        }
+
+        function normalizeIssueDescriptionBullets(text) {
+            return String(text || '')
+                .replace(/\s+([-*•])\s+/g, '\n$1 ')
+                .replace(/\s+(\d+[.)])\s+/g, '\n$1 ');
         }
 
         function renderAssistantRichText(text) {
@@ -10563,6 +11130,7 @@ td:nth-child(odd), th:nth-child(odd) {
             var platformNode = document.getElementById('cmfAssistantPlatform');
             var visibleComponentNode = document.getElementById('cmfAssistantComponent');
             var impactSummaryNode = document.getElementById('cmfAssistantImpactSummary');
+            var qualityAssessmentNode = document.getElementById('cmfAssistantQualityAssessment');
             var bodyNode = document.getElementById('cmfRecBody');
             var drawerBg = document.getElementById('cmfRecDrawerBg');
             var drawer = document.getElementById('cmfRecDrawer');
@@ -10573,7 +11141,8 @@ td:nth-child(odd), th:nth-child(odd) {
             }
 
             var summaryDrawer = document.getElementById('aiSummaryDrawer');
-            if (summaryDrawer && summaryDrawer.classList.contains('show')) {
+            var summaryDrawerBg = document.getElementById('aiSummaryDrawerBg');
+            if (summaryDrawer || summaryDrawerBg) {
                 closeAiSummaryDrawer();
             }
 
@@ -10617,6 +11186,8 @@ td:nth-child(odd), th:nth-child(odd) {
                 platform: getIssuePendingPlatformValue()
             };
 
+            if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessmentSkeleton();
+
             fetch('CMF_Web_portal.aspx/GetSightingDescription', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json; charset=utf-8' },
@@ -10653,6 +11224,49 @@ td:nth-child(odd), th:nth-child(odd) {
             })
             .catch(function () {
                 if (impactSummaryNode) impactSummaryNode.innerHTML = '<span class="sighting-description-error">Impact summary unavailable.</span>';
+            });
+
+            fetch('CMF_Web_portal.aspx/GetSightingQualityAssessment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify(payload)
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                var result = data && data.d ? data.d : data;
+                if (!result || result.Success !== true) {
+                    if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessmentUnavailable();
+                    return;
+                }
+                if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessment(result, payload);
+            })
+            .catch(function () {
+                if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessmentUnavailable();
+            });
+
+            if (evidenceNode) {
+                evidenceNode.innerHTML = '<div class="ai-skeleton-loader"><div style="font-size:13px;font-weight:600;color:#5c7087;">&#10024; Assessing sighting quality and CMF readiness...</div><div class="ai-skeleton-line ai-skeleton-title" style="width:55%;"></div><div class="ai-skeleton-line" style="width:95%;"></div><div class="ai-skeleton-line" style="width:88%;"></div></div>';
+            }
+
+            fetch('CMF_Web_portal.aspx/GetCmfPendingRecommendation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify(payload)
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                var result = data && data.d ? data.d : data;
+                if (!result || result.Success !== true) {
+                    if (evidenceNode) evidenceNode.textContent = (result && result.Message) ? result.Message : 'Unable to generate CMF recommendation.';
+                    return;
+                }
+                if (qualityNode) qualityNode.textContent = 'Sighting quality and CMF readiness';
+                updatePendingRecommendationBadge(payload.cpId, result.Recommendation, result.OverallQualityScore);
+                if (evidenceNode) evidenceNode.innerHTML = renderMergedCmfRecommendation(result, payload);
+            })
+            .catch(function () {
+                if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = '<span class="sighting-description-error">Sighting quality assessment unavailable.</span>';
+                if (evidenceNode) evidenceNode.textContent = 'Error while calling CMF recommendation service.';
             });
 
         }
@@ -10806,6 +11420,7 @@ td:nth-child(odd), th:nth-child(odd) {
             var titleRow = document.getElementById('cmfRecTitleRow');
             var sightingRow = document.getElementById('cmfRecSightingRow');
             var assistantSightingDetails = document.getElementById('cmfAssistantSightingDetails');
+            var assistantQualityAssessment = document.getElementById('cmfAssistantQualityAssessment');
             var qualityNode = document.getElementById('cmfRecQuality');
             var reasoningSection = document.getElementById('cmfRecReasoningSection');
             var actionsNode = document.getElementById('cmfRecActions');
@@ -10813,6 +11428,7 @@ td:nth-child(odd), th:nth-child(odd) {
             if (titleRow) titleRow.classList.toggle('cmf-rec-hidden', isDetails || isInsights);
             if (sightingRow) sightingRow.classList.toggle('cmf-rec-hidden', isDetails || isInsights);
             if (assistantSightingDetails) assistantSightingDetails.classList.toggle('cmf-rec-hidden', isDetails || isInsights);
+            if (assistantQualityAssessment) assistantQualityAssessment.classList.toggle('cmf-rec-hidden', isDetails || isInsights);
             if (qualityNode) qualityNode.classList.toggle('cmf-rec-hidden', isDetails || isInsights);
             if (reasoningSection) reasoningSection.classList.toggle('cmf-rec-hidden', isDetails);
             if (actionsNode) actionsNode.classList.toggle('cmf-rec-hidden', isDetails || isInsights);
@@ -10893,39 +11509,533 @@ td:nth-child(odd), th:nth-child(odd) {
         function renderSightingQualityAssessment(result, payload) {
             result = result || {};
             payload = payload || {};
-            var fields = [
-                { label: 'Issue description', value: payload.title },
-                { label: 'Reproduction / occurrence', value: payload.reproducibility || payload.reproOnRvp },
-                { label: 'Expected / actual behavior', value: payload.title },
-                { label: 'Logs / debug owner', value: payload.idst },
-                { label: 'Customer impact', value: payload.impact },
-                { label: 'Environment details', value: payload.component },
-                { label: 'Customer / owner', value: (payload.customerDetail || '') + ' ' + (payload.customerOwner || '') }
-            ];
-            var present = [];
-            var missing = [];
-            for (var i = 0; i < fields.length; i++) {
-                var value = String(fields[i].value || '').trim();
-                if (value && !/^unknown$|^n\/a$|^missing$/i.test(value)) present.push(fields[i].label);
-                else missing.push(fields[i].label);
-            }
+            var assessment = normalizeSightingQualityAssessment(result, payload);
+            var score = assessment.score;
+            var qualityStateClass = getQualityStateClass(score);
+            window.CMF_PORTAL = window.CMF_PORTAL || {};
+            window.CMF_PORTAL.currentSightingQualityAssessment = { assessment: assessment, payload: payload };
+            var categoryItems = buildSqaCategoryItems(assessment);
+            var scoreOutOfTen = formatSqaScoreOutOfTen(score);
 
-            var score = Math.round((present.length / fields.length) * 100);
-            var tier = score >= 80 ? 'High Quality' : (score >= 50 ? 'Medium Quality' : 'Low Quality');
-            var tierClass = score >= 80 ? 'high' : (score >= 50 ? 'medium' : 'low');
-            var recommendationScore = formatWeightedCmfScore(result.OverallQualityScore || 0);
-
-            var html = '<section class="cmf-assistant-feature-card cmf-quality-assessment-card">';
-            html += '<div class="cmf-assistant-feature-head"><div><div class="cmf-assistant-eyebrow">Sighting Quality Assessment</div><h3>Information readiness</h3></div>';
-            html += '<div class="cmf-quality-tier ' + tierClass + '">' + escapeHtml(tier) + '<span>' + score + '/100</span></div></div>';
-            html += '<div class="cmf-quality-meter"><span style="width:' + score + '%"></span></div>';
-            html += '<div class="cmf-quality-two-col">';
-            html += '<div><h4>Present Information</h4>' + renderCmfBriefList(present.length ? present : ['No required fields detected.']) + '</div>';
-            html += '<div><h4>Missing or Insufficient Information</h4>' + renderCmfBriefList(missing.length ? missing : ['No major gaps detected.']) + '</div>';
+            var html = '<section class="cmf-assistant-feature-card cmf-quality-assessment-card ' + qualityStateClass + '">';
+            html += '<div class="cmf-assistant-feature-head"><div><h3>Sighting Quality Assessment</h3></div><div class="cmf-sqa-score-pill ' + qualityStateClass + '">Quality Score: ' + escapeHtml(scoreOutOfTen) + '/10</div></div>';
+            html += '<div class="cmf-sqa-category-grid">';
+            html += renderSqaCategoryCard('Missing Information', 'missing', categoryItems.missing);
+            html += renderSqaCategoryCard('Partial Information', 'partial', categoryItems.partial);
+            html += renderSqaCategoryCard('Conflicting Information', 'conflicting', categoryItems.conflicting);
             html += '</div>';
-            if (recommendationScore) html += '<div class="cmf-quality-note">AI CMF Recommendation evidence score: ' + escapeHtml(recommendationScore) + '/5.</div>';
+            html += '<div class="cmf-quality-action-row"><button type="button" class="cmf-quality-details-btn" onclick="showSightingQualityDetails()">View details</button></div>';
             html += '</section>';
             return html;
+        }
+
+        function renderSightingQualityAssessmentSkeleton() {
+            return '<section class="cmf-assistant-feature-card cmf-quality-assessment-card cmf-sqa-skeleton" aria-label="Generating sighting quality assessment">' +
+                '<div class="cmf-assistant-feature-head"><div><h3>Sighting Quality Assessment</h3></div></div>' +
+                '<div class="ai-skeleton-loader">' +
+                    '<div class="ai-skeleton-line" style="width:62%; height:13px;"></div>' +
+                    '<div class="ai-skeleton-line" style="width:36%; height:13px; margin-top:8px;"></div>' +
+                    '<div class="cmf-sqa-skeleton-grid">' +
+                        '<div class="cmf-sqa-skeleton-box"><div class="ai-skeleton-line" style="width:72%;"></div><div class="ai-skeleton-line" style="width:54%; margin-top:10px;"></div></div>' +
+                        '<div class="cmf-sqa-skeleton-box"><div class="ai-skeleton-line" style="width:70%;"></div><div class="ai-skeleton-line" style="width:62%; margin-top:10px;"></div></div>' +
+                        '<div class="cmf-sqa-skeleton-box"><div class="ai-skeleton-line" style="width:78%;"></div><div class="ai-skeleton-line" style="width:50%; margin-top:10px;"></div></div>' +
+                    '</div>' +
+                '</div>' +
+            '</section>';
+        }
+
+        function renderSightingQualityAssessmentUnavailable() {
+            return '<section class="cmf-assistant-feature-card cmf-quality-assessment-card"><div class="cmf-assistant-feature-head"><div><h3>Sighting Quality Assessment</h3></div></div><div class="sighting-description-error">Sighting quality assessment unavailable.</div></section>';
+        }
+
+        function refreshSightingQualityAssessment() {
+            var state = window.CMF_PORTAL && window.CMF_PORTAL.currentSightingQualityAssessment;
+            if (!state || !state.payload) return;
+            var qualityAssessmentNode = document.getElementById('cmfAssistantQualityAssessment');
+            var detailsBody = document.getElementById('cmfDecisionDetailsBody');
+            var payload = state.payload || {};
+            if (detailsBody && !detailsBody.classList.contains('cmf-rec-hidden')) {
+                detailsBody.innerHTML = '<div class="cmf-quality-detail-shell">' + renderSightingQualityAssessmentSkeleton() + '</div>';
+            }
+            if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessmentSkeleton();
+
+            fetch('CMF_Web_portal.aspx/GetSightingQualityAssessment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify(payload)
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                var result = data && data.d ? data.d : data;
+                if (!result || result.Success !== true) {
+                    if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessmentUnavailable();
+                    if (detailsBody && !detailsBody.classList.contains('cmf-rec-hidden')) detailsBody.innerHTML = '<div class="sighting-description-error">Sighting quality assessment unavailable.</div>';
+                    return;
+                }
+                var assessment = normalizeSightingQualityAssessment(result, payload);
+                window.CMF_PORTAL.currentSightingQualityAssessment = { assessment: assessment, payload: payload };
+                if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessment(result, payload);
+                if (detailsBody && !detailsBody.classList.contains('cmf-rec-hidden')) detailsBody.innerHTML = renderSightingQualityDetails(assessment, payload);
+            })
+            .catch(function () {
+                if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessmentUnavailable();
+                if (detailsBody && !detailsBody.classList.contains('cmf-rec-hidden')) detailsBody.innerHTML = '<div class="sighting-description-error">Sighting quality assessment unavailable.</div>';
+            });
+        }
+
+        function formatSqaScoreOutOfTen(score) {
+            var value = Math.max(0, Math.min(10, (parseFloat(score) || 0) / 10));
+            return value % 1 === 0 ? String(value.toFixed(0)) : value.toFixed(1);
+        }
+
+        function buildSqaCategoryItems(assessment) {
+            var grouped = { missing: [], partial: [], conflicting: [] };
+            var fields = assessment.fields || [];
+            for (var i = 0; i < fields.length; i++) {
+                var field = fields[i] || {};
+                if (!isSqaCoreField(field.fieldName) && String(field.status || '').toLowerCase().indexOf('conflict') < 0) continue;
+                var status = String(field.status || '').toLowerCase();
+                if (status.indexOf('missing') >= 0) grouped.missing.push(field);
+                else if (status.indexOf('conflict') >= 0) grouped.conflicting.push(field);
+                else if (status.indexOf('partial') >= 0 || status.indexOf('review') >= 0) grouped.partial.push(field);
+            }
+            return grouped;
+        }
+
+        function isSqaCoreField(fieldName) {
+            var text = String(fieldName || '').toLowerCase();
+            return text === 'issue title / subject'
+                || text === 'problem description / what happened'
+                || text === 'customer impact'
+                || text === 'reproducibility / failure rate'
+                || text === 'reproduction details / trigger'
+                || text === 'platform / product context'
+                || text === 'system configuration'
+                || text === 'debug evidence / attachments';
+        }
+
+        function renderSqaCategoryCard(title, type, items) {
+            var list = (items || []).slice(0, 3);
+            var html = '<div class="cmf-sqa-category-card ' + escapeHtml(type) + '"><div class="cmf-sqa-category-title">' + escapeHtml(title) + '</div><ul class="cmf-sqa-category-list">';
+            if (!list.length) {
+                html += '<li class="is-empty">None identified</li>';
+            } else {
+                for (var i = 0; i < list.length; i++) {
+                    var field = list[i] || {};
+                    html += '<li>' + escapeHtml(field.fieldName || 'Field') + '</li>';
+                }
+            }
+            return html + '</ul></div>';
+        }
+
+        function getQualityStateClass(score) {
+            if (score >= 80) return 'is-quality-high';
+            if (score >= 50) return 'is-quality-medium';
+            return 'is-quality-low';
+        }
+
+        function normalizeSightingQualityAssessment(result, payload) {
+            var rawFields = result.Fields || result.fields || [];
+            if (rawFields && rawFields.length) {
+                var score = parseInt(result.QualityScore || result.qualityScore || 0, 10);
+                var baseline = parseInt(result.BaselineScore || result.baselineScore || 0, 10);
+                if (isNaN(score)) score = 0;
+                if (isNaN(baseline)) baseline = score;
+                var fields = [];
+                for (var i = 0; i < rawFields.length; i++) {
+                    var item = rawFields[i] || {};
+                    fields.push({
+                        fieldName: item.FieldName || item.fieldName || 'Field',
+                        status: item.Status || item.status || 'Present',
+                        characteristic: item.Characteristic || item.characteristic || 'Usable',
+                        evidence: item.Evidence || item.evidence || '',
+                        recommendation: item.Recommendation || item.recommendation || '',
+                        decisionUse: item.DecisionUse || item.decisionUse || item.WhyItMatters || item.whyItMatters || ''
+                    });
+                }
+                return {
+                    score: Math.max(0, Math.min(100, score)),
+                    baselineScore: Math.max(0, Math.min(100, baseline)),
+                    tier: result.Tier || result.tier || '',
+                    summary: [result.Summary || result.summary || 'Sighting completeness was assessed from database and HSD context.'],
+                    issues: buildIssuesFromQualityFields(fields),
+                    fields: fields
+                };
+            }
+            var fallback = buildSightingQualityAssessment(result, payload);
+            fallback.baselineScore = fallback.score;
+            fallback.fields = buildFallbackQualityFields(fallback);
+            return fallback;
+        }
+
+        function buildIssuesFromQualityFields(fields) {
+            var issues = [];
+            for (var i = 0; i < (fields || []).length; i++) {
+                var field = fields[i] || {};
+                if (!/^present$/i.test(field.status || '')) {
+                    issues.push((field.fieldName || 'Field') + ': ' + (field.status || 'Needs review') + (field.characteristic ? ' - ' + field.characteristic : ''));
+                }
+            }
+            return issues;
+        }
+
+        function buildQualityAttentionItems(assessment) {
+            if (assessment.fields && assessment.fields.length) {
+                var items = [];
+                for (var i = 0; i < assessment.fields.length; i++) {
+                    var field = assessment.fields[i] || {};
+                    if (!/^present$/i.test(field.status || '')) {
+                        items.push((field.fieldName || 'Field') + ': ' + (field.status || 'Needs review') + (field.characteristic ? ' - ' + field.characteristic : ''));
+                    }
+                }
+                return items;
+            }
+            return assessment.issues || [];
+        }
+
+        function buildFallbackQualityFields(assessment) {
+            var fields = [];
+            var issues = assessment.issues || [];
+            for (var i = 0; i < issues.length; i++) {
+                var parts = String(issues[i]).split(':');
+                var rawCharacteristic = parts.slice(1).join(':').replace(/^\s+/, '') || 'Needs review';
+                var characteristic = /partial or vague/i.test(rawCharacteristic) ? 'Needs more specific evidence' : rawCharacteristic;
+                fields.push({
+                    fieldName: parts[0] || 'Field',
+                    status: /missing/i.test(issues[i]) ? 'Missing' : (/conflict|disagree/i.test(issues[i]) ? 'Partial' : 'Partial'),
+                    characteristic: characteristic,
+                    evidence: 'Preliminary row-data check flagged this field before the full database and HSD assessment completed.',
+                    recommendation: 'Add concrete sighting details or wait for the backend HSD assessment to refine this field.'
+                });
+            }
+            return fields;
+        }
+
+        function renderQualityFieldList(items) {
+            var html = '<ul class="cmf-quality-field-list">';
+            for (var i = 0; i < items.length; i++) {
+                html += '<li>' + escapeHtml(items[i]) + '</li>';
+            }
+            return html + '</ul>';
+        }
+
+        function showSightingQualityDetails() {
+            var state = window.CMF_PORTAL && window.CMF_PORTAL.currentSightingQualityAssessment;
+            if (!state || !state.assessment) return;
+
+            var headingNode = document.getElementById('cmfRecHeading');
+            var sightingDetails = document.getElementById('cmfAssistantSightingDetails');
+            var qualitySlot = document.getElementById('cmfAssistantQualityAssessment');
+            var reasoningSection = document.getElementById('cmfRecReasoningSection');
+            var detailsBody = document.getElementById('cmfDecisionDetailsBody');
+            if (headingNode) headingNode.innerHTML = '<button type="button" class="cmf-quality-back-btn" onclick="returnToCmfAssistantFromQualityDetails()">Back</button><span style="margin-left:10px;">Sighting Quality Assessment</span>';
+            if (sightingDetails) sightingDetails.classList.add('cmf-rec-hidden');
+            if (qualitySlot) qualitySlot.classList.add('cmf-rec-hidden');
+            if (reasoningSection) reasoningSection.classList.add('cmf-rec-hidden');
+            if (detailsBody) {
+                detailsBody.classList.remove('cmf-rec-hidden');
+                detailsBody.innerHTML = renderSightingQualityDetails(state.assessment, state.payload || {});
+            }
+        }
+
+        function returnToCmfAssistantFromQualityDetails() {
+            var headingNode = document.getElementById('cmfRecHeading');
+            var sightingDetails = document.getElementById('cmfAssistantSightingDetails');
+            var qualitySlot = document.getElementById('cmfAssistantQualityAssessment');
+            var reasoningSection = document.getElementById('cmfRecReasoningSection');
+            var detailsBody = document.getElementById('cmfDecisionDetailsBody');
+            if (headingNode) headingNode.innerHTML = '<span class="cmf-assistant-title-icon" aria-hidden="true">✨</span>AI CMF Assistant';
+            if (sightingDetails) sightingDetails.classList.remove('cmf-rec-hidden');
+            if (qualitySlot) qualitySlot.classList.remove('cmf-rec-hidden');
+            if (reasoningSection) reasoningSection.classList.remove('cmf-rec-hidden');
+            if (detailsBody) {
+                detailsBody.classList.add('cmf-rec-hidden');
+                detailsBody.innerHTML = '';
+            }
+        }
+
+        function renderSightingQualityDetails(assessment, payload) {
+            var missing = [];
+            var partial = [];
+            var conflicting = [];
+            var fields = assessment.fields || [];
+            for (var i = 0; i < fields.length; i++) {
+                var field = fields[i] || {};
+                var isCore = isSqaCoreField(field.fieldName);
+                if (!isCore && !/conflict/i.test(field.status || '')) {
+                    continue;
+                }
+                var itemText = renderSightingQualityFieldCard(field);
+                if (/conflict/i.test(field.status || '') || /conflict|disagree|contradict/i.test((field.characteristic || '') + ' ' + (field.evidence || ''))) conflicting.push(itemText);
+                else if (/missing/i.test(field.status || '')) missing.push(itemText);
+                else if (!/^present$/i.test(field.status || '')) partial.push(itemText);
+            }
+            var stateClass = getQualityStateClass(assessment.score);
+            var html = '<div class="cmf-quality-detail-shell">';
+            html += renderSightingQualityScoreOverview(assessment);
+            html += renderQualityDetailSection('Missing Information', missing);
+            html += renderQualityDetailSection('Partial / Vague Information', partial);
+            html += renderQualityDetailSection('Conflicting Information', conflicting);
+            html += renderSightingQualitySuggestions(assessment);
+            html += '</div>';
+            return html;
+        }
+
+        function renderSightingQualityScoreOverview(assessment) {
+            var fields = (assessment.fields || []).filter(function (field) { return isSqaCoreField(field.fieldName); });
+            var score = Math.max(0, Math.min(100, parseFloat(assessment.score) || 0));
+            var html = '<section class="cmf-quality-detail-card cmf-quality-overview-card">';
+            html += '<div class="cmf-quality-score-topline"><span aria-hidden="true"></span><div class="cmf-quality-score-chart-wrap"><div class="cmf-quality-panel-label">Quality Score</div><div class="cmf-quality-donut" style="--score:' + escapeHtml(score) + '%"><div class="cmf-quality-donut-value">' + escapeHtml(formatSqaScoreOutOfTen(score)) + '/10</div></div></div><button type="button" class="cmf-quality-refresh-btn" onclick="refreshSightingQualityAssessment()"><span aria-hidden="true">&#8635;</span><span>Refresh</span></button></div>';
+            html += '<div class="cmf-quality-score-list">';
+            for (var i = 0; i < fields.length; i++) html += renderSightingQualityScoreRow(fields[i]);
+            html += '</div></section>';
+            return html;
+        }
+
+        function renderSightingQualityScoreRow(field) {
+            field = field || {};
+            var statusClass = getQualityStatusClass(field.status);
+            var score = getSqaFieldScore(field.status);
+            var statusText = normalizeSqaFieldStatusLabel(field.status);
+            var detail = getSqaBriefFactor(field);
+            return '<div class="cmf-quality-score-row ' + escapeHtml(statusClass) + '">' +
+                '<div class="cmf-quality-score-name">' + escapeHtml(field.fieldName || 'Field') + '</div>' +
+                '<div class="cmf-quality-score-bar" style="--bar:' + escapeHtml(score * 10) + '%"><span></span></div>' +
+                '<div class="cmf-quality-score-status" title="' + escapeHtml(statusText + (detail ? ': ' + detail : '')) + '">' + escapeHtml(statusText) + (detail ? ' - ' + escapeHtml(detail) : '') + '</div>' +
+            '</div>';
+        }
+
+        function getSqaBriefFactor(field) {
+            field = field || {};
+            var status = normalizeSqaFieldStatusLabel(field.status);
+            var fieldName = String(field.fieldName || '').toLowerCase();
+            var text = String(field.characteristic || '').replace(/\s+/g, ' ').trim();
+            var lower = text.toLowerCase();
+            if (status === 'Complete') {
+                if (fieldName.indexOf('title') >= 0 || fieldName.indexOf('subject') >= 0) return 'Clear title provided';
+                if (fieldName.indexOf('description') >= 0 || fieldName.indexOf('happened') >= 0) return 'Problem details provided';
+                if (fieldName.indexOf('impact') >= 0) return 'Impact context provided';
+                if (fieldName.indexOf('repro') >= 0 || fieldName.indexOf('failure rate') >= 0) return 'Repro details provided';
+                if (fieldName.indexOf('trigger') >= 0) return 'Trigger details provided';
+                if (fieldName.indexOf('platform') >= 0 || fieldName.indexOf('product') >= 0) return 'Platform context provided';
+                if (fieldName.indexOf('configuration') >= 0) return 'Configuration details provided';
+                if (fieldName.indexOf('debug') >= 0 || fieldName.indexOf('attachment') >= 0) return 'Debug evidence available';
+                return 'Sufficient evidence provided';
+            }
+            if (status === 'Missing') return 'No usable evidence found';
+            if (status === 'Conflicting') return 'Evidence does not agree';
+            if (!text) return 'Needs more detail';
+            if (lower.indexOf('empty') >= 0 || lower.indexOf('unavailable') >= 0) return 'No usable value';
+            if (lower.indexOf('idst') >= 0 || lower.indexOf('routing') >= 0) return 'Routing incomplete';
+            if (lower.indexOf('numeric') >= 0 || lower.indexOf('repro') >= 0) return 'Rate unclear';
+            if (lower.indexOf('trigger') >= 0 || lower.indexOf('scenario') >= 0) return 'Scenario unclear';
+            if (lower.indexOf('impact') >= 0) return 'Impact unclear';
+            if (lower.indexOf('configuration') >= 0 || lower.indexOf('os') >= 0 || lower.indexOf('driver') >= 0) return 'Config incomplete';
+            if (lower.indexOf('description') >= 0 || lower.indexOf('behavior') >= 0) return 'Description weak';
+            if (lower.indexOf('title') >= 0 || lower.indexOf('subject') >= 0) return 'Title weak';
+            var words = text.split(' ').filter(Boolean).slice(0, 8);
+            return words.join(' ');
+        }
+
+        function getSqaFieldScore(status) {
+            var text = String(status || '').toLowerCase();
+            if (text.indexOf('missing') >= 0) return 0;
+            if (text.indexOf('conflict') >= 0) return 3;
+            if (text.indexOf('partial') >= 0 || text.indexOf('review') >= 0) return 5;
+            return 10;
+        }
+
+        function normalizeSqaFieldStatusLabel(status) {
+            var text = String(status || '').toLowerCase();
+            if (text.indexOf('missing') >= 0) return 'Missing';
+            if (text.indexOf('conflict') >= 0) return 'Conflicting';
+            if (text.indexOf('partial') >= 0 || text.indexOf('review') >= 0) return 'Partial';
+            return 'Complete';
+        }
+
+        function renderSightingQualitySuggestions(assessment) {
+            var fields = assessment.fields || [];
+            var suggestions = [];
+            for (var i = 0; i < fields.length; i++) {
+                var field = fields[i] || {};
+                if (/^present$/i.test(field.status || '')) continue;
+                var suggestion = field.recommendation || ('Improve ' + (field.fieldName || 'this field') + '.');
+                if (suggestions.indexOf(suggestion) < 0) suggestions.push(suggestion);
+            }
+            if (!suggestions.length) suggestions.push('No immediate quality improvements were identified for the core SQA fields.');
+            var html = '<section class="cmf-quality-detail-card"><h4>Suggestions for Improvement</h4><ul class="cmf-quality-suggestions">';
+            for (var j = 0; j < suggestions.length; j++) html += '<li>' + escapeHtml(suggestions[j]) + '</li>';
+            return html + '</ul></section>';
+        }
+
+        function renderQualityScoreNotes(items) {
+            var html = '<ul class="cmf-quality-score-notes">';
+            for (var i = 0; i < (items || []).length; i++) {
+                if (String(items[i] || '').trim()) html += '<li>' + escapeHtml(items[i]) + '</li>';
+            }
+            return html + '</ul>';
+        }
+
+        function renderQualityDetailSection(title, items) {
+            if (!items || !items.length) return '';
+            return '<section class="cmf-quality-detail-card"><h4>' + escapeHtml(title) + '</h4>' + renderQualityDetailCards(items) + '</section>';
+        }
+
+        function renderQualityDetailCards(items) {
+            return '<div class="cmf-quality-detail-list">' + items.join('') + '</div>';
+        }
+
+        function renderSightingQualityFieldCard(field) {
+            field = field || {};
+            var statusClass = getQualityStatusClass(field.status);
+            var statusText = field.status || 'Needs review';
+            var html = '<article class="cmf-quality-field-card ' + statusClass + '">';
+            html += '<div class="cmf-quality-field-card-head"><div class="cmf-quality-field-card-title">' + escapeHtml(field.fieldName || 'Field') + '</div>' + renderQualityStatusBadge(statusText) + '</div>';
+            html += '<p><strong>Reason:</strong> ' + escapeHtml(getSqaStatusReason(field)) + '</p>';
+            html += '</article>';
+            return html;
+        }
+
+        function getSqaStatusReason(field) {
+            field = field || {};
+            var status = normalizeSqaFieldStatusLabel(field.status);
+            var reason = getSqaDetailedReasonText(field);
+            if (reason) return reason;
+            var factor = getSqaBriefFactor(field);
+            if (status === 'Missing') return factor + ' for this field.';
+            if (status === 'Conflicting') return factor + ' for this field.';
+            if (status === 'Partial') return factor + ' for this field.';
+            return factor + '.';
+        }
+
+        function getSqaDetailedReasonText(field) {
+            field = field || {};
+            var status = normalizeSqaFieldStatusLabel(field.status);
+            var characteristic = cleanSqaReasonText(field.characteristic);
+            var evidence = cleanSqaReasonText(field.evidence);
+            if (status === 'Missing') {
+                if (characteristic) return 'Marked missing because ' + lowerFirstSqaReason(characteristic) + '.';
+                if (evidence) return 'Marked missing because ' + lowerFirstSqaReason(evidence) + '.';
+                return '';
+            }
+            if (status === 'Partial') {
+                if (characteristic && evidence) return 'Marked partial because ' + lowerFirstSqaReason(characteristic) + '; evidence: ' + lowerFirstSqaReason(evidence) + '.';
+                if (characteristic) return 'Marked partial because ' + lowerFirstSqaReason(characteristic) + '.';
+                if (evidence) return 'Marked partial because the evidence is incomplete: ' + lowerFirstSqaReason(evidence) + '.';
+                return '';
+            }
+            if (status === 'Conflicting') {
+                if (characteristic && evidence) return 'Marked conflicting because ' + lowerFirstSqaReason(characteristic) + '; evidence: ' + lowerFirstSqaReason(evidence) + '.';
+                if (characteristic) return 'Marked conflicting because ' + lowerFirstSqaReason(characteristic) + '.';
+                if (evidence) return 'Marked conflicting because the available evidence disagrees: ' + lowerFirstSqaReason(evidence) + '.';
+                return '';
+            }
+            return '';
+        }
+
+        function cleanSqaReasonText(value) {
+            var text = String(value || '').replace(/\s+/g, ' ').trim();
+            if (!text || /^(usable|complete|present|needs review)$/i.test(text)) return '';
+            return text.replace(/[.;:,\s]+$/g, '');
+        }
+
+        function lowerFirstSqaReason(value) {
+            var text = cleanSqaReasonText(value);
+            if (!text) return '';
+            if (/^[A-Z]{2}/.test(text)) return text;
+            return text.charAt(0).toLowerCase() + text.slice(1);
+        }
+
+        function renderQualityStatusBadge(status) {
+            return '<span class="cmf-quality-status-badge ' + getQualityStatusClass(status) + '">' + escapeHtml(status || 'Needs review') + '</span>';
+        }
+
+        function getQualityStatusClass(status) {
+            var text = String(status || '').toLowerCase();
+            if (text.indexOf('missing') >= 0) return 'missing';
+            if (text.indexOf('conflict') >= 0) return 'conflicting';
+            if (text.indexOf('partial') >= 0 || text.indexOf('review') >= 0) return 'partial';
+            return 'present';
+        }
+
+        function buildSightingQualityAssessment(result, payload) {
+            var rules = result.RuleScores || [];
+            var mandatoryFields = [
+                { key: 'symptom', label: 'Symptom / failure mode', value: payload.title, ruleId: 'S', partialPattern: /^(issue|failure|problem|error|fails?|not working|observed|seen)$/i },
+                { key: 'occurrence', label: 'Occurrence / reproducibility', value: payload.reproducibility || payload.reproOnRvp, ruleId: 'O', partialPattern: /^(sometimes|intermittent|frequent|rare|random|occasionally|reproduced|not sure)$/i },
+                { key: 'usage', label: 'Usage trigger / decision context', value: payload.customerDetail || payload.component, ruleId: 'D', partialPattern: /^(customer|platform|component|validation|test|scenario)$/i },
+                { key: 'impact', label: 'Customer impact', value: payload.impact, ruleId: 'B', partialPattern: /^(impact|blocked|blocks|issue observed|issues observed|customer impact|affects customer)$/i },
+                { key: 'owner', label: 'Owner / debug routing', value: payload.idst || payload.customerOwner, ruleId: '', partialPattern: /^(owner|debug|idst|tbd|pending)$/i }
+            ];
+            var present = 0;
+            var partial = [];
+            var missing = [];
+            var conflicting = findOccurrenceConflicts(payload, rules);
+
+            for (var i = 0; i < mandatoryFields.length; i++) {
+                var field = mandatoryFields[i];
+                var value = String(field.value || '').replace(/\s+/g, ' ').trim();
+                var rule = field.ruleId ? findCmfRuleById(rules, field.ruleId) : null;
+                var ruleScore = rule ? parseInt(normalizeDimensionScore(rule.Score || '1'), 10) : 3;
+                if (!isUsefulQualityText(value)) {
+                    missing.push(field.label + ': missing');
+                } else if (isPartialQualityText(value, field.partialPattern) || (rule && ruleScore <= 2)) {
+                    partial.push(field.label + ': partial or vague');
+                    present += 0.5;
+                } else {
+                    present += 1;
+                }
+            }
+
+            var rawScore = Math.round((present / mandatoryFields.length) * 100);
+            var penalty = (conflicting.length * 15) + (partial.length * 5);
+            var score = Math.max(0, Math.min(100, rawScore - penalty));
+            var issues = missing.concat(partial).concat(conflicting);
+            var summary = [
+                'Mandatory CMF fields assessed: symptom, occurrence, usage context, customer impact, and owner/debug routing.',
+                'Completeness score before conflict penalties: ' + rawScore + '/100.',
+                issues.length ? 'Confidence reduced by ' + issues.length + ' missing, partial, or conflicting signal' + (issues.length === 1 ? '.' : 's.') : 'Current sighting has enough decision context for initial CMF review.'
+            ];
+            return { score: score, summary: summary, issues: issues };
+        }
+
+        function isUsefulQualityText(value) {
+            var text = String(value || '').replace(/\s+/g, ' ').trim();
+            return !!text && !/^n\/?a$|^none$|^unknown$|^missing$|^null$|^tbd$|^na$/i.test(text);
+        }
+
+        function isPartialQualityText(value, fieldPattern) {
+            var text = String(value || '').replace(/\s+/g, ' ').trim();
+            if (!isUsefulQualityText(text)) return false;
+            if (text.length < 18 || text.split(/\s+/).length < 4) return true;
+            if (fieldPattern && fieldPattern.test(text)) return true;
+            return /^(it should be reproduced|need to check|under debug|to be updated|will update|issue observed|issues observed|blocks fvt exit)$/i.test(text);
+        }
+
+        function findOccurrenceConflicts(payload, rules) {
+            var conflicts = [];
+            var titleBand = classifyOccurrenceSignal(payload.title);
+            var reproBand = classifyOccurrenceSignal(payload.reproducibility || payload.reproOnRvp);
+            var impactBand = classifyOccurrenceSignal(payload.impact);
+            var occurrenceRule = findCmfRuleById(rules, 'O');
+            var ruleBand = occurrenceRule ? classifyOccurrenceSignal(occurrenceRule.Evaluation) : '';
+            var referenceBand = titleBand || reproBand || ruleBand;
+            if (referenceBand && impactBand && referenceBand !== impactBand) {
+                conflicts.push('Occurrence: title/repro says ' + referenceBand + ', but impact says ' + impactBand + '.');
+            }
+            if (titleBand && reproBand && titleBand !== reproBand) {
+                conflicts.push('Occurrence: title and reproducibility fields disagree.');
+            }
+            return conflicts;
+        }
+
+        function classifyOccurrenceSignal(value) {
+            var text = String(value || '').toLowerCase();
+            if (!text) return '';
+            if (/>?=\s*1\s*\/\s*10|1\s*in\s*10|hourly|frequent|frequently|always|every\s+time|100%/i.test(text)) return 'frequent';
+            if (/1\s*\/\s*1000|1\s*in\s*1000|<\s*1\s*\/\s*1000|rare|sporadic|occasionally|intermittent/i.test(text)) return 'rare';
+            if (/1\s*\/\s*5000|1\s*in\s*5000|very\s+rare/i.test(text)) return 'very rare';
+            return '';
         }
 
         function renderCmfScorePanel(scoreDisplay, scorePercent, recommendation) {
@@ -13431,6 +14541,7 @@ Submit
                             </div>
                         </div>
                     </section>
+                    <div id="cmfAssistantQualityAssessment" class="cmf-assistant-quality-slot" aria-label="Sighting quality assessment"></div>
                     <div id="cmfRecTitleRow" class="ai-summary-meta-row cmf-rec-title-row" style="display:none"><strong>Issue Title:</strong> <span class="cmf-rec-title-text">-</span><span id="cmfRecRecommendation" class="cmf-rec-decision-badge">Generating...</span></div>
                     <div id="cmfRecSightingRow" class="ai-summary-meta-row" style="display:none"><strong>Sighting ID:</strong> <span id="cmfRecCpId">-</span></div>
                     <span id="cmfRecComponent" style="display:none">-</span>

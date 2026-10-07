@@ -2169,7 +2169,7 @@ public static class AiSummaryService
         title = SafeText(title);
         contextDetails = SafeText(contextDetails);
 
-        string hash = ComputeHash("sighting-description-v8|" + GetAiProviderCacheSignature() + "|" + sightingId + "|" + title + "|" + contextDetails);
+        string hash = ComputeHash("sighting-description-v10|" + GetAiProviderCacheSignature() + "|" + sightingId + "|" + title + "|" + contextDetails);
         string cacheKey = "sighting-description:" + hash;
 
         AiSummaryResponse cached = TryGetCached(cacheKey);
@@ -2267,7 +2267,7 @@ public static class AiSummaryService
     private static string BuildSightingDescriptionPrompt(string sightingId, string title, string contextDetails)
     {
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine("Create one very concise issue description, 25-30 words when possible. If the sentence needs a few extra words to finish naturally, use up to 40 words rather than ending abruptly. Describe only the issue itself: the affected platform/device/tool, the observed failure, where/when it occurs, and the expected-vs-actual behavior. Do not summarize customer impact, business impact, schedule impact, CMF decision impact, support workload, or mitigation effort here; those belong in the impact summary. Do not write bullets, labels, headings, or field-name dumps such as 'Logs show', 'Evidence indicates', 'Component:', or 'Reproducibility:'. Do not force log details unless they are the clearest descriptive point. Do not mention the sighting ID. Use proper grammar, capitalization, commas, periods, and complete sentences so the description is reviewer-ready for users and iDST. Never end a sentence abruptly or with an unfinished parenthetical phrase.");
+        builder.AppendLine("Create an issue description in exactly this shape: one concise lead sentence followed by exactly three bullet points. Each bullet must be on its own separate line and must start with '- '. Describe only the issue itself: the affected platform/device/tool, the observed failure, where/when it occurs, and the expected-vs-actual behavior. Do not summarize customer impact, business impact, schedule impact, CMF decision impact, support workload, or mitigation effort here; those belong in the impact summary. Each bullet must be a complete plain-English sentence about a distinct symptom, observed behavior, affected configuration, or comparison point. Do not write labels, headings, or field-name dumps such as 'Logs show', 'Evidence indicates', 'Component:', or 'Reproducibility:'. Do not force log details unless they are the clearest descriptive point. Do not mention the sighting ID. Use proper grammar, capitalization, commas, periods, and complete sentences so the description is reviewer-ready for users and iDST. Never end a sentence abruptly or with an unfinished parenthetical phrase.");
         builder.AppendLine();
         builder.AppendLine("Issue Title: " + title);
         builder.AppendLine("Sighting ID: " + sightingId);
@@ -2278,7 +2278,12 @@ public static class AiSummaryService
             builder.AppendLine(contextDetails);
         }
         builder.AppendLine();
-        builder.AppendLine("Return only one concise sentence. Do not include bullets or headings.");
+        builder.AppendLine("Return only the description text in this shape. Do not include a heading:");
+        builder.AppendLine("<one concise lead sentence>.");
+        builder.AppendLine("- <bullet point 1>.");
+        builder.AppendLine("- <bullet point 2>.");
+        builder.AppendLine("- <bullet point 3>.");
+        builder.AppendLine("Do not put the bullets in the same paragraph as the lead sentence.");
         return builder.ToString();
     }
 
@@ -2308,24 +2313,70 @@ public static class AiSummaryService
 
         string cleaned = text.Replace("\r\n", "\n").Replace("\r", "\n");
         cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"(?im)^\s*(issue description|problem description|summary)\s*:\s*", string.Empty).Trim();
+        cleaned = NormalizeSightingDescriptionBulletBreaks(cleaned);
         cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"[ \t]+", " ").Trim();
         cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\n{3,}", "\n").Trim();
 
         string[] lines = cleaned.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        List<string> parts = new List<string>();
+        string lead = string.Empty;
+        List<string> bullets = new List<string>();
         for (int i = 0; i < lines.Length; i++)
         {
-            string line = System.Text.RegularExpressions.Regex.Replace(lines[i].Trim(), @"^[-*•]\s*", string.Empty).Trim();
-            if (!string.IsNullOrWhiteSpace(line)) parts.Add(line);
+            string rawLine = lines[i].Trim();
+            bool isBullet = System.Text.RegularExpressions.Regex.IsMatch(rawLine, @"^\s*(?:[-*•]|\d+[.)])\s+");
+            string line = System.Text.RegularExpressions.Regex.Replace(rawLine, @"^\s*(?:[-*•]|\d+[.)])\s+", string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            if (string.IsNullOrWhiteSpace(lead) && !isBullet)
+            {
+                lead = CompleteSightingDescriptionLine(line, 38);
+                continue;
+            }
+
+            if (bullets.Count < 3)
+            {
+                bullets.Add(CompleteSightingDescriptionLine(line, 24));
+            }
         }
 
-        if (parts.Count == 0) return string.Empty;
+        if (string.IsNullOrWhiteSpace(lead) && bullets.Count > 0)
+        {
+            lead = CompleteSightingDescriptionLine(bullets[0], 38);
+            bullets.RemoveAt(0);
+        }
 
-        string brief = string.Join(" ", parts.ToArray()).Trim();
-        brief = TrimToCompleteSentence(brief, 40);
-        brief = RepairUnbalancedTerminalPairs(brief);
-        if (!brief.EndsWith(".") && !brief.EndsWith("!") && !brief.EndsWith("?")) brief += ".";
-        return brief;
+        if (string.IsNullOrWhiteSpace(lead)) return string.Empty;
+
+        while (bullets.Count < 3)
+        {
+            bullets.Add("Available evidence should be reviewed against the expected platform behavior.");
+        }
+
+        StringBuilder output = new StringBuilder();
+        output.AppendLine(lead);
+        for (int i = 0; i < bullets.Count && i < 3; i++)
+        {
+            output.Append("- ").AppendLine(bullets[i]);
+        }
+
+        return output.ToString().Trim();
+    }
+
+    private static string NormalizeSightingDescriptionBulletBreaks(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+        string normalized = System.Text.RegularExpressions.Regex.Replace(text, @"\s+([-*•])\s+", "\n$1 ");
+        normalized = System.Text.RegularExpressions.Regex.Replace(normalized, @"\s+(\d+[.)])\s+", "\n$1 ");
+        return normalized.Trim();
+    }
+
+    private static string CompleteSightingDescriptionLine(string text, int maxWords)
+    {
+        string line = TrimToCompleteSentence(text, maxWords);
+        line = RepairUnbalancedTerminalPairs(line);
+        if (!string.IsNullOrWhiteSpace(line) && !line.EndsWith(".") && !line.EndsWith("!") && !line.EndsWith("?")) line += ".";
+        return line;
     }
 
     private static string TrimWords(string text, int maxWords)
