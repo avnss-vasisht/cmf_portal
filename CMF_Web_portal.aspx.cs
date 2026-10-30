@@ -9478,7 +9478,7 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
                 CustomerDetail = customerDetail,
                 CustomerOwner = customerOwner,
                 Rules = CmfRecommendationService.GetActiveRulesText(),
-                HsdContext = BuildPendingRecommendationContext(NormalizePlatformForLookup(resolvedPlatform), cpId)
+                HsdContext = BuildPendingRecommendationContext(NormalizePlatformForLookup(resolvedPlatform), cpId, true)
             };
 
             return CmfRecommendationService.GenerateCmfPendingRecommendation(request);
@@ -9852,10 +9852,10 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
         }
     }
 
-    private static string BuildPendingHsdContext(string cpId)
+    private static string BuildPendingHsdContext(string cpId, bool evidenceLed = false)
     {
         if (string.IsNullOrWhiteSpace(cpId)) return string.Empty;
-        string cacheKey = "cmf-assistant-hsd-context:" + cpId.Trim();
+        string cacheKey = (evidenceLed ? "cmf-assistant-hsd-evidence-v1:" : "cmf-assistant-hsd-context:") + cpId.Trim();
         using (CmfAssistantResponseCache.Enter(cacheKey))
         {
             string cached = HttpRuntime.Cache[cacheKey] as string;
@@ -9864,8 +9864,8 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
         try
         {
             HsdArticleData article = HsdPortalService.FetchArticle(cpId.Trim());
-            if (article == null || !article.FetchSuccess) return string.Empty;
-            string context = HsdPortalService.FormatForAiContext(article, "Pending Sighting");
+            if (article == null || !article.FetchSuccess) return evidenceLed ? "External Evidence Status: Unavailable" : string.Empty;
+            string context = evidenceLed ? HsdPortalService.FormatForRecommendationContext(article) : HsdPortalService.FormatForAiContext(article, "Pending Sighting");
             context += "\nHSD Source Fingerprint: " + CmfAssistantResponseCache.Fingerprint(article);
             int refreshSeconds;
             if (!int.TryParse(System.Configuration.ConfigurationManager.AppSettings["CMF:AssistantHsdRefreshSeconds"], out refreshSeconds)) refreshSeconds = 60;
@@ -9875,12 +9875,12 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
         }
         catch
         {
-            return string.Empty;
+            return evidenceLed ? "External Evidence Status: Unavailable" : string.Empty;
         }
         }
     }
 
-    private static string BuildPendingRecommendationContext(string platformTable, string cpId)
+    private static string BuildPendingRecommendationContext(string platformTable, string cpId, bool evidenceLed = false)
     {
         if (string.IsNullOrWhiteSpace(cpId)) return string.Empty;
         string resolvedPlatform = NormalizePlatformForLookup(platformTable);
@@ -9892,7 +9892,7 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
             builder.AppendLine(dbContext);
         }
 
-        string hsdContext = BuildPendingHsdContext(cpId);
+        string hsdContext = BuildPendingHsdContext(cpId, evidenceLed);
         if (!string.IsNullOrWhiteSpace(hsdContext) && builder.ToString().IndexOf(hsdContext, StringComparison.OrdinalIgnoreCase) < 0)
         {
             if (builder.Length > 0) builder.AppendLine();
@@ -10663,7 +10663,7 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
                         {
                             var request = (Label)gridRow.FindControl("PendingRequestValue");
                             var date = (Label)gridRow.FindControl("PendingAskDateValue");
-                            value = HttpUtility.HtmlDecode(request.Text) + "\n" + date.Text;
+                            value = HttpUtility.HtmlDecode(request.Text) + "\n" + HttpUtility.HtmlDecode(date.Text);
                         }
                         else
                         {
@@ -12294,7 +12294,7 @@ firstPatternCaseStatements +
     }
 
     // Resolves display names for owner aliases using a session-scoped cache; only hits AD for uncached aliases.
-    private Dictionary<string, string> ResolveOwnerDisplayNamesWithCache(DataTable dt, string[] ownerColumns)
+    private Dictionary<string, string> ResolveOwnerDisplayNamesWithCache(DataTable dt, string[] ownerColumns, bool requireDirectoryLookup = false)
     {
         var cache = Session["OwnerDisplayCache"] as Dictionary<string, string>
                     ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -12306,10 +12306,12 @@ firstPatternCaseStatements +
             {
                 if (!dt.Columns.Contains(col) || r[col] == DBNull.Value) continue;
                 string raw = r[col].ToString().Trim();
+                if (requireDirectoryLookup && (raw.IndexOf(',') >= 0 || raw.IndexOf(';') >= 0 || raw.Any(char.IsWhiteSpace))) continue;
                 if (raw.Contains("\\")) raw = raw.Substring(raw.LastIndexOf('\\') + 1);
                 if (raw.Contains("@")) raw = raw.Split('@')[0];
                 raw = raw.Trim();
-                if (!string.IsNullOrEmpty(raw) && !cache.ContainsKey(raw))
+                if (!string.IsNullOrEmpty(raw) && (!cache.ContainsKey(raw) ||
+                    (requireDirectoryLookup && string.Equals(cache[raw], raw, StringComparison.OrdinalIgnoreCase))))
                     needed.Add(raw);
             }
         }
@@ -12319,7 +12321,7 @@ firstPatternCaseStatements +
             ScriptManager sm = ScriptManager.GetCurrent(this);
             bool isAsyncPostback = sm != null && sm.IsInAsyncPostBack;
 
-            if (isAsyncPostback)
+            if (isAsyncPostback && !requireDirectoryLookup)
             {
                 foreach (string alias in needed)
                 {
@@ -12338,12 +12340,26 @@ firstPatternCaseStatements +
 
             foreach (string alias in needed)
             {
-                UserPrincipal up = null;
-                if (ctxGar != null) up = UserPrincipal.FindByIdentity(ctxGar, IdentityType.SamAccountName, alias);
-                if (up == null && ctxAmr != null) up = UserPrincipal.FindByIdentity(ctxAmr, IdentityType.SamAccountName, alias);
-                if (up == null && ctxCcr != null) up = UserPrincipal.FindByIdentity(ctxCcr, IdentityType.SamAccountName, alias);
-                if (up == null && ctxGer != null) up = UserPrincipal.FindByIdentity(ctxGer, IdentityType.SamAccountName, alias);
-                cache[alias] = (up != null && !string.IsNullOrWhiteSpace(up.DisplayName)) ? up.DisplayName.Trim() : alias;
+                string displayName = null;
+                foreach (PrincipalContext context in new[] { ctxGar, ctxAmr, ctxCcr, ctxGer })
+                {
+                    if (context == null) continue;
+                    try
+                    {
+                        using (UserPrincipal principal = UserPrincipal.FindByIdentity(context, IdentityType.SamAccountName, alias))
+                        {
+                            if (principal != null && !string.IsNullOrWhiteSpace(principal.DisplayName))
+                            {
+                                displayName = principal.DisplayName;
+                                break;
+                            }
+                        }
+                    }
+                    catch (PrincipalException) { }
+                    catch (UnauthorizedAccessException) { }
+                    catch (System.Runtime.InteropServices.COMException) { }
+                }
+                cache[alias] = displayName ?? alias;
             }
 
             if (ctxGar != null) ctxGar.Dispose();
@@ -12370,6 +12386,14 @@ firstPatternCaseStatements +
         using (SqlConnection con = new SqlConnection(connectionString))
         {
             con.Open();
+            string pendingIdstMappingSql = string.Join(" UNION ALL ", pendingPlatforms.Select(platform =>
+            {
+                string mappingTable = platform.IndexOf("NVL", StringComparison.OrdinalIgnoreCase) >= 0 ? "idst_mapping_table_NVL"
+                    : platform.IndexOf("PTL", StringComparison.OrdinalIgnoreCase) >= 0 ? "idst_mapping_table_PTL"
+                    : platform.IndexOf("WCL", StringComparison.OrdinalIgnoreCase) >= 0 ? "idst_mapping_table_WCL"
+                    : "idst_mapping_table";
+                return "SELECT '" + platform + "' AS source_platform, component, idst_display_name FROM [dbo].[" + mappingTable + "]";
+            }));
             string main_query;
             if (isOverallSelection)
             {
@@ -12404,6 +12428,7 @@ firstPatternCaseStatements +
                 a.days_active AS days_open,
                 d.customer_owner,
                 a.idst, 
+                ISNULL(m.idst_display_name, a.idst) AS idst_display_name,
                 d.customer_detail, 
                 d.date_cmf_ask, 
                 d.cmf_request, 
@@ -12419,6 +12444,8 @@ firstPatternCaseStatements +
             LEFT JOIN issue_source AS a
                 ON d.cp_id = a.cp_id
                AND d.source_platform = a.source_platform
+            LEFT JOIN (" + pendingIdstMappingSql + @") AS m
+                ON m.component = a.component_group AND m.source_platform = d.source_platform
             WHERE d.status NOT IN ('complete', 'rejected')
             ORDER BY TRY_CONVERT(datetime, d.date_cmf_ask) DESC, d.cp_id DESC";
             }
@@ -12437,6 +12464,7 @@ firstPatternCaseStatements +
                 a.days_active AS days_open,
                 d.customer_owner,
                 a.idst, 
+                ISNULL(m.idst_display_name, a.idst) AS idst_display_name,
                 d.customer_detail, 
                 d.date_cmf_ask, 
                 d.cmf_request, 
@@ -12450,6 +12478,7 @@ firstPatternCaseStatements +
                 END AS pending_reason
             FROM " + designTable + @" AS d
             JOIN " + allComponentsTable + @" AS a ON d.cp_id = a.cp_id
+            LEFT JOIN (" + pendingIdstMappingSql + @") AS m ON m.component = a.component_group
             WHERE d.status NOT IN ('complete', 'rejected')
             ORDER BY d.date_cmf_ask DESC";
             }
@@ -12461,27 +12490,23 @@ firstPatternCaseStatements +
                     System.Data.DataTable dt = new System.Data.DataTable();
                     sda.Fill(dt);
 
-                    var ownerMap = ResolveOwnerDisplayNamesWithCache(dt, new[] { "customer_owner" });
+                    var ownerMap = ResolveOwnerDisplayNamesWithCache(dt, new[] { "customer_owner" }, true);
 
                     // Process data rows to replace customer_owner with display names
                     foreach (DataRow row in dt.Rows)
                     {
-                        string raw = (row["customer_owner"] == DBNull.Value) ? string.Empty : row["customer_owner"].ToString().Trim();
-                        if (string.IsNullOrEmpty(raw))
-                        {
-                            row["customer_owner"] = "N/A";
-                        }
-                        else
+                        string originalOwner = Convert.ToString(row["customer_owner"]);
+                        string raw = originalOwner.Trim();
+                        if (!string.IsNullOrEmpty(raw) && raw.IndexOf(',') < 0 && raw.IndexOf(';') < 0 && !raw.Any(char.IsWhiteSpace))
                         {
                             if (raw.Contains("\\")) raw = raw.Substring(raw.LastIndexOf('\\') + 1);
                             if (raw.Contains("@")) raw = raw.Split('@')[0];
                             raw = raw.Trim();
 
                             string actualName;
-                            if (ownerMap.TryGetValue(raw, out actualName))
+                            if (ownerMap.TryGetValue(raw, out actualName) &&
+                                !string.Equals(actualName, raw, StringComparison.OrdinalIgnoreCase))
                                 row["customer_owner"] = actualName;
-                            else
-                                row["customer_owner"] = raw;
                         }
                     }
 

@@ -1003,6 +1003,9 @@ body #pendingTabShell .cmf-pending-page-title {
 
 body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns th {
     font-weight: 700 !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
 }
 
 body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns td,
@@ -1011,14 +1014,23 @@ body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns td :is(a, span:n
 }
 
 body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns {
-    min-width: 0 !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: none !important;
+    table-layout: auto !important;
 }
 
 body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns th,
 body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns td {
-    width: calc(7.142857% - 14.285714px) !important;
+    width: auto !important;
     text-align: center !important;
     vertical-align: middle !important;
+}
+
+body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns td,
+body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns td :is(a, span, button, div, strong, small) {
+    word-break: normal !important;
+    overflow-wrap: normal !important;
 }
 
 body #pendingTabShell #GridView_cmf_pending .pending-id-actions,
@@ -1027,12 +1039,7 @@ body #pendingTabShell #GridView_cmf_pending .pending-ai-rec-btn {
     justify-content: center !important;
 }
 
-body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns .pending-field-title,
-body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns .pending-field-impact {
-    width: calc(14.285714% - 28.571428px) !important;
-}
-
-body #pendingTabShell #GridView_cmf_pending :is(.pending-field-title, .pending-field-impact) .pending-cell-text {
+body #pendingTabShell #GridView_cmf_pending .pending-cell-text {
     display: block !important;
     -webkit-line-clamp: unset !important;
     line-clamp: unset !important;
@@ -1040,13 +1047,9 @@ body #pendingTabShell #GridView_cmf_pending :is(.pending-field-title, .pending-f
     height: auto !important;
     overflow: visible !important;
     white-space: pre-wrap !important;
-    overflow-wrap: anywhere !important;
+    text-overflow: clip !important;
+    overflow-wrap: normal !important;
     cursor: default !important;
-}
-
-body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns th:nth-child(n+11),
-body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns td:nth-child(n+11) {
-    width: calc(5.357143% + 13.285714px) !important;
 }
 
 body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns .pending-field-reason,
@@ -1182,11 +1185,6 @@ body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns .pending-field-a
         padding-left: 0 !important;
         padding-right: 0 !important;
     }
-}
-
-body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns th:first-child,
-body #pendingTabShell #GridView_cmf_pending.cmf-pending-columns td:first-child {
-    width: 104px !important;
 }
 
 body #pendingTabShell #GridView_cmf_pending .pending-id-actions > a,

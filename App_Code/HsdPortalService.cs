@@ -202,6 +202,21 @@ public static class HsdPortalService
         return sb.ToString().Trim();
     }
 
+    public static string FormatForRecommendationContext(HsdArticleData data)
+    {
+        if (data == null || !data.FetchSuccess) return "External Evidence Status: Unavailable";
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("External Evidence Status: Retrieved");
+        builder.AppendLine("Source Coverage: Bounded. This contains the returned technical text, not exhaustive source history or decoded attachments. Omitted material does not prove a fact is absent.");
+        foreach (string field in new[] { "Title", "Description", "Component", "Priority", "Exposure", "CustomerImpact", "Reproducibility", "SysdebugForum", "StepsToReproduce", "ExpectedBehavior", "ActualBehavior", "WhatHappened", "WhatShouldHaveHappened", "CustomerDetail", "CustomerSummary", "MandatoryFields", "Board", "Processor", "SocStepping", "MeSku", "DebugLogAttached", "SystemScopeFilename", "InvestigationHistory", "FixDescription", "FixedVersion", "ClosedReason", "UpdatedDate" })
+        {
+            string value = Convert.ToString(typeof(HsdArticleData).GetProperty(field).GetValue(data, null));
+            AppendIfSet(builder, field, value);
+        }
+        foreach (string comment in data.Comments ?? new List<string>()) AppendIfSet(builder, "Technical comment", comment);
+        return builder.ToString();
+    }
+
     public static string FormatForDebugSummary(HsdArticleData data, string sectionLabel)
     {
         if (data == null || !data.FetchSuccess) return string.Empty;

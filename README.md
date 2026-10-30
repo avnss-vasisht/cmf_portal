@@ -134,6 +134,8 @@ Do not commit real API keys, tokens, passwords, or internal connection strings.
 
 The app expects its Web Forms dependencies to be available at runtime. If a runtime error mentions a missing assembly, restore or copy the required DLL into `bin/` based on the error message.
 
+Owner display names use the real .NET Framework `System.DirectoryServices.AccountManagement` assembly configured in `Web.config`. Corporate directory access is required to resolve account aliases. CMF Pending preserves the original owner value if resolution is unavailable; do not replace the directory implementation with a no-op stub or infer names from aliases.
+
 ## Run Locally With IIS Express
 
 Open a PowerShell terminal in the project root and run:
@@ -229,6 +231,37 @@ Config/CMF Rules, visible in admin mode only
 ```
 
 The portal resolves platform options dynamically from the shared platform catalog.
+
+## Evidence-Led CMF Recommendations
+
+Recommendation policy was changed on October 30, 2026 to assess fix ownership from technical evidence. The meanings below are the product-owner-specified meanings, not the previous score-band approval meanings:
+
+- `CMF_OK`: evidence supports an OEM design/implementation fault that the OEM must correct.
+- `CMF_REJECT`: evidence supports an Intel design/component/firmware/software fault that Intel must correct. This does not mean the problem is harmless or low severity.
+- `CMF_REVIEW`: evidence is inconclusive/conflicting, ownership cannot be established, the two assessment passes disagree, or an AI/evidence check fails. Human judgment is required.
+- `CMF_INCOMPLETE`: identified decision-critical factual inputs are genuinely absent. The initial assessment and evidence-review pass must corroborate the gap and explain its decision relevance. Missing causal analysis alone is review, not incomplete.
+
+All six risk metrics remain part of the assessment and retain their weights. The weighted score is advisory: no numeric threshold or CX override assigns the tag. A score needs an exact source excerpt; an unverifiable metric is shown as `N/A`, not a fabricated low score. A complete overall score is shown only when all six metrics have supported numeric values. A citation-check failure does not establish that the source information is absent. Detection distinguishes spontaneous ordinary-use/idle failures (5), ordinary daily transitions such as resume (4), less-frequent workflows (3), stress-only cases (2), and special/debug-only setups (1). Visibility alone does not turn a triggered resume failure into level 5.
+
+The service requests a structured assessment and then a separate evidence-review call using the same configured provider/model. This is a second AI check, not independent human verification. Final ownership tags require a quoted causal finding or a controlled comparison identifying responsibility; single-OEM scope, RVP reproduction, assigned contacts and component names alone are not sufficient. Reasoning remains short, complete, evidence-based bullets, with the final bullet explaining the tag rather than a score threshold. Model-proposed tags, risk considerations, citations and review status remain available in the response for inspection. The recommendation drawer exposes source-matched technical excerpts beneath the reasoning, HTML-escaped and only for completed evidence reviews. Finding an exact quote confirms its presence, not the truth or interpretation of the underlying finding.
+
+Only recommendations use the full technical text returned by the HSD service, without the additional shared-summary truncation. Source retrieval can still omit older comments, attachment contents or other records. Bounded-source incompleteness therefore requires an explicit source statement supporting the absence, not merely a blank field or omitted history; failed HSD retrieval requires manual review instead of an asserted absence. Scores, ownership and absence claims remain fallible model judgments even when their quoted text exists. All tags remain recommendations requiring reviewer confirmation; no saved decision is updated automatically.
+
+Both assessment passes must corroborate the same factual gap type and field, not just reuse a field name. A bounded-source absence quote must also address that fact type: a statement about missing reproduction conditions cannot confirm missing diagnostics. This conservative topic check uses English terminology and may require manual review for unfamiliar wording. The incomplete-reasoning guard rejects direct assertions of unrelated missing log, recovery, or business-impact information when no such critical gap was confirmed; inability to assess a risk is not by itself a missing-field claim. These conservative checks request manual review when validation fails rather than asserting ownership or evidence absence. Neither wording check is a comprehensive semantic verifier. The model contract specifies string fields and boolean confirmation flags; malformed value types also require manual review rather than silent repair.
+
+Local deterministic regression checks (no model/database calls):
+
+```powershell
+(Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:8080/others/test_scripts/cmf_recommendation_contract.aspx').Content
+```
+
+The local-only test page also provides fixed synthetic end-to-end cases. The harness is in the existing Git-ignored `others/` folder and is not included in the versioned deployment. A POST intentionally makes model calls; use `oem`, `intel`, `review`, or `incomplete` as the scenario. `Match` reports tag agreement plus completed evidence review; `MetricMatrixMatches` separately reports agreement with the fixture's supporting metric rubric, so correct classification does not hide a scoring error:
+
+```powershell
+(Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:8080/others/test_scripts/cmf_recommendation_contract.aspx?scenario=oem' -Method POST).Content
+```
+
+These fixtures test policy behavior, not real-world accuracy. The earlier six historical examples must be re-evaluated with reviewer-confirmed ownership findings and decision-time evidence before claiming historical agreement or expanding reliance on recommendations. The earlier four-sighting comparison report describes the previous score-led implementation and is not an accuracy result for this policy. A broader, adjudicated, unseen evaluation set is needed to compare GPT, Gemini and Claude reliably. Provider/model configuration, SQA logic, database decisions and normal decision workflows are not changed by this recommendation policy.
 
 ## Configuration Notes
 

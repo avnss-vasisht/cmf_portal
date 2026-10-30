@@ -22802,7 +22802,7 @@ td:nth-child(odd), th:nth-child(odd) {
             if (pendingWrap) {
                 pendingWrap.style.setProperty('max-height', 'min(64vh, 640px)', 'important');
                 pendingWrap.style.setProperty('min-height', '0', 'important');
-                pendingWrap.style.setProperty('overflow-x', 'hidden', 'important');
+                pendingWrap.style.setProperty('overflow-x', 'auto', 'important');
                 pendingWrap.style.setProperty('overflow-y', 'auto', 'important');
                 pendingWrap.style.setProperty('scrollbar-gutter', 'auto', 'important');
             }
@@ -22979,12 +22979,12 @@ td:nth-child(odd), th:nth-child(odd) {
             var score = normalizeWeightedCmfScore(result.OverallQualityScore || 0);
             var scorePercent = Math.max(0, Math.min(100, score * 20));
             var rules = normalizeCmfDimensionScores(result.RuleScores || []);
-            var missing = extractCmfMissingInformation(result.Evidence || '', rules, payload);
+            var missing = result.EvidenceReviewStatus ? getCmfDecisionGaps(result) : extractCmfMissingInformation(result.Evidence || '', rules, payload);
             var reasons = buildCmfRecommendationReasoning(recommendation, score, rules, result.Evidence || '', payload);
             var impact = extractCmfImpactSentence(result.Evidence || '', payload);
             var symptom = extractCmfSymptomEvidence(rules, reasons);
-            var reviewerActions = buildCmfReviewerActions(recommendation, missing, rules, impact);
-            var scoreDisplay = formatWeightedCmfScore(score) || '0.0';
+            var reviewerActions = result.NextSteps ? String(result.NextSteps).split(/\n+/) : buildCmfReviewerActions(recommendation, missing, rules, impact);
+            var scoreDisplay = formatWeightedCmfScore(score) || 'N/A';
 
             var html = '<div class="cmf-rec-assessment-shell">';
             html += '<section class="cmf-rec-summary-band">';
@@ -23923,7 +23923,7 @@ td:nth-child(odd), th:nth-child(odd) {
 
         function renderCmfScorePanel(scoreDisplay, scorePercent, recommendation) {
             return '<div class="cmf-rec-score-panel" style="--score-percent:' + escapeHtml(scorePercent) + '%">' +
-                '<div class="cmf-rec-score-top"><span class="cmf-rec-score-label">Weighted evidence score</span><span class="cmf-rec-score-value">' + escapeHtml(scoreDisplay) + '/5</span></div>' +
+                '<div class="cmf-rec-score-top"><span class="cmf-rec-score-label">Supporting risk score</span><span class="cmf-rec-score-value">' + escapeHtml(scoreDisplay === 'N/A' ? scoreDisplay : scoreDisplay + '/5') + '</span></div>' +
                 '<div class="cmf-rec-score-track" aria-hidden="true"><div class="cmf-rec-score-fill"></div></div>' +
                 '<div class="cmf-rec-score-caption">' + escapeHtml(buildCmfScoreCaption(recommendation)) + '</div>' +
             '</div>';
@@ -23931,10 +23931,10 @@ td:nth-child(odd), th:nth-child(odd) {
 
         function buildCmfScoreCaption(recommendation) {
             var rec = String(recommendation || '').toUpperCase();
-            if (rec === 'CMF_OK') return 'Meets the CMF threshold; verify no blocking evidence is missing.';
-            if (rec === 'CMF_REVIEW') return 'Near or above threshold, but reviewer judgment is needed.';
-            if (rec === 'CMF_INCOMPLETE') return 'Evidence is not complete enough for a final CMF decision.';
-            return 'Below the CMF threshold based on current evidence.';
+            if (rec === 'CMF_OK') return 'OEM-owned correction recommended; reviewer confirmation required.';
+            if (rec === 'CMF_REVIEW') return 'Manual judgment is needed before assigning fix ownership.';
+            if (rec === 'CMF_INCOMPLETE') return 'Verified decision-critical information is needed.';
+            return 'Intel-owned correction recommended; reviewer confirmation required.';
         }
 
         function extractCmfSymptomEvidence(rules, reasons) {
@@ -23955,12 +23955,12 @@ td:nth-child(odd), th:nth-child(odd) {
 
         function normalizeCmfDimensionScores(ruleScores) {
             var defaults = [
-                { RuleId: 'S', RuleName: 'Severity', Score: '0', Evaluation: 'Missing symptom severity evidence.' },
-                { RuleId: 'O', RuleName: 'Occurrence', Score: '0', Evaluation: 'Missing occurrence or reproduction frequency.' },
-                { RuleId: 'D', RuleName: 'Detection', Score: '0', Evaluation: 'Missing customer encounter or usage visibility.' },
-                { RuleId: 'R', RuleName: 'Recovery', Score: '0', Evaluation: 'Missing workaround or recovery evidence.' },
-                { RuleId: 'B', RuleName: 'Business Impact', Score: '0', Evaluation: 'Missing milestone or business exposure evidence.' },
-                { RuleId: 'CX', RuleName: 'Customer Experience', Score: '0', Evaluation: 'Missing customer-experience evidence.' }
+                { RuleId: 'S', RuleName: 'Severity', Score: '', Evaluation: 'Severity not established.' },
+                { RuleId: 'O', RuleName: 'Occurrence', Score: '', Evaluation: 'Occurrence not established.' },
+                { RuleId: 'D', RuleName: 'Detection', Score: '', Evaluation: 'Detection not established.' },
+                { RuleId: 'R', RuleName: 'Recovery', Score: '', Evaluation: 'Recovery not established.' },
+                { RuleId: 'B', RuleName: 'Business Impact', Score: '', Evaluation: 'Business impact not established.' },
+                { RuleId: 'CX', RuleName: 'Customer Experience', Score: '', Evaluation: 'Customer experience not established.' }
             ];
             var map = {};
             for (var i = 0; i < ruleScores.length; i++) {
@@ -23980,10 +23980,10 @@ td:nth-child(odd), th:nth-child(odd) {
             var html = '<div class="cmf-rec-dimension-grid">';
             for (var i = 0; i < rules.length; i++) {
                 var rule = rules[i] || {};
-                var score = normalizeDimensionScore(rule.Score || '1');
+                var score = normalizeDimensionScore(rule.Score);
                 html += '<div class="cmf-rec-dimension-card"><div class="cmf-rec-dimension-head">';
                 html += '<span class="cmf-rec-dimension-name">' + escapeHtml(rule.RuleId || '') + ' ' + escapeHtml(rule.RuleName || 'Score') + '</span>';
-                html += '<span class="cmf-rec-dimension-score">' + escapeHtml(score) + '/5</span></div>';
+                html += '<span class="cmf-rec-dimension-score">' + escapeHtml(score ? score + '/5' : 'N/A') + '</span></div>';
                 html += '<div class="cmf-rec-dimension-eval">' + escapeHtml(buildConciseCmfRuleEvaluation(rule, parseInt(score, 10))) + '</div></div>';
             }
             return html + '</div>';
@@ -23994,10 +23994,10 @@ td:nth-child(odd), th:nth-child(odd) {
             html += '<th>Metric Name</th><th>Score</th><th>Contributing Factor</th></tr></thead><tbody>';
             for (var i = 0; i < rules.length; i++) {
                 var rule = rules[i] || {};
-                var score = normalizeDimensionScore(rule.Score || '1');
+                var score = normalizeDimensionScore(rule.Score);
                 html += '<tr>';
                 html += '<td><strong>' + escapeHtml(buildCmfMetricDisplayName(rule)) + '</strong></td>';
-                html += '<td><span class="cmf-rec-metric-score">' + escapeHtml(score) + '/5</span></td>';
+                html += '<td><span class="cmf-rec-metric-score">' + escapeHtml(score ? score + '/5' : 'N/A') + '</span></td>';
                 html += '<td>' + escapeHtml(extractCmfContributingFactor(rule.Evaluation || '')) + '</td>';
                 html += '</tr>';
             }
@@ -24010,18 +24010,31 @@ td:nth-child(odd), th:nth-child(odd) {
             var recommendation = normalizeCmfRecommendationLabel(result.Recommendation || 'CMF_REVIEW');
             var rules = normalizeCmfDimensionScores(result.RuleScores || []);
             var score = calculateDisplayedCmfScore(rules);
-            if (!score) score = normalizeWeightedCmfScore(result.OverallQualityScore || 0);
-            var scoreDisplay = formatWeightedCmfScore(score) || '0.0';
-            var scorePercent = Math.max(0, Math.min(100, (parseFloat(scoreDisplay) / 5) * 100));
+            if (!score && !result.EvidenceReviewStatus) score = normalizeWeightedCmfScore(result.OverallQualityScore || 0);
+            if (result.EvidenceReviewStatus && result.ScoredMetricCount !== 6) score = 0;
+            var scoreDisplay = formatWeightedCmfScore(score) || 'N/A';
+            var scorePercent = score ? Math.max(0, Math.min(100, (parseFloat(scoreDisplay) / 5) * 100)) : 0;
             var reasons = buildCmfAssistantRecommendationReasoning(recommendation, score, rules, result.Evidence || '', payload);
             var html = '<div class="cmf-assistant-rec-shell">';
             html += '<div class="cmf-assistant-rec-top">';
-            html += '<div class="cmf-assistant-overall-score"><span>Overall Score</span><div class="cmf-assistant-score-ring" style="--score-percent:' + escapeHtml(scorePercent.toFixed(2)) + '"><div class="cmf-assistant-score-ring-value">' + escapeHtml(scoreDisplay) + '/5</div></div></div>';
+            html += '<div class="cmf-assistant-overall-score"><span>Supporting Risk Score</span><div class="cmf-assistant-score-ring" style="--score-percent:' + escapeHtml(scorePercent.toFixed(2)) + '"><div class="cmf-assistant-score-ring-value">' + escapeHtml(score ? scoreDisplay + '/5' : 'N/A') + '</div></div></div>';
             html += renderCmfMetricChips(rules);
             html += '</div>';
             html += '<div class="cmf-assistant-reasoning-box"><h4>Reasoning</h4>' + renderCmfReasoningBullets(reasons) + '</div>';
+            html += renderCmfDecisionSources(result);
+            if (result.EvidenceReviewStatus === 'NeedsReview') html += '<div class="ai-summary-meta-row">' + escapeHtml(result.Message || 'Manual evidence review required.') + '</div>';
             html += '</div>';
             return html;
+        }
+
+        function renderCmfDecisionSources(result) {
+            var assessment = (result || {}).Assessment || {};
+            if (!assessment.EvidenceReviewCompleted || result.EvidenceReviewStatus !== 'Completed') return '';
+            var excerpts = (assessment.OwnershipEvidence || []).filter(function (finding) { return finding && finding.Quote; });
+            if (!excerpts.length) return '';
+            var html = '<details class="cmf-assistant-reasoning-box"><summary>Technical source excerpts</summary><ul>';
+            for (var index = 0; index < excerpts.length; index++) html += '<li>' + escapeHtml(excerpts[index].Quote) + '</li>';
+            return html + '</ul></details>';
         }
 
         function renderCmfReasoningBullets(items) {
@@ -24045,9 +24058,10 @@ td:nth-child(odd), th:nth-child(odd) {
             var html = '<div class="cmf-assistant-metric-grid" aria-label="Individual metric scores">';
             for (var i = 0; i < rules.length; i++) {
                 var rule = rules[i] || {};
-                var score = parseInt(normalizeDimensionScore(rule.Score || '1'), 10);
+                var scoreText = normalizeDimensionScore(rule.Score);
+                var score = scoreText ? parseInt(scoreText, 10) : 0;
                 html += '<div class="cmf-assistant-metric-chip ' + escapeHtml(getCmfMetricScoreClass(score)) + '">';
-                html += '<div class="cmf-assistant-metric-main"><span class="cmf-assistant-metric-name">' + escapeHtml(buildCmfMetricDisplayName(rule)) + '</span><span class="cmf-assistant-metric-value">' + escapeHtml(score) + '/5</span></div>';
+                html += '<div class="cmf-assistant-metric-main"><span class="cmf-assistant-metric-name">' + escapeHtml(buildCmfMetricDisplayName(rule)) + '</span><span class="cmf-assistant-metric-value">' + escapeHtml(scoreText ? scoreText + '/5' : 'N/A') + '</span></div>';
                 html += '<div class="cmf-assistant-metric-factor">' + escapeHtml(extractBriefCmfContributingFactor(rule)) + '</div>';
                 html += '</div>';
             }
@@ -24057,55 +24071,26 @@ td:nth-child(odd), th:nth-child(odd) {
         function calculateDisplayedCmfScore(rules) {
             var weights = { S: 0.25, O: 0.15, D: 0.20, R: 0.10, B: 0.15, CX: 0.15 };
             var total = 0;
-            var hasMetric = false;
+            var metricCount = 0;
+            var seen = {};
             for (var i = 0; i < (rules || []).length; i++) {
                 var rule = rules[i] || {};
                 var id = String(rule.RuleId || '').toUpperCase();
                 if (!weights.hasOwnProperty(id)) continue;
-                var score = parseInt(normalizeDimensionScore(rule.Score || '1'), 10);
+                var scoreText = normalizeDimensionScore(rule.Score);
+                if (!scoreText || seen[id]) return 0;
+                var score = parseInt(scoreText, 10);
                 total += score * weights[id];
-                hasMetric = true;
+                seen[id] = true;
+                metricCount++;
             }
-            return hasMetric ? total : 0;
+            return metricCount === 6 ? total : 0;
         }
 
         function buildCmfAssistantRecommendationReasoning(recommendation, score, rules, evidenceText, payload) {
-            var rec = normalizeCmfRecommendationLabel(recommendation || 'CMF_REVIEW');
             var modelReasoning = buildCmfModelReasoningBullets(evidenceText, payload);
             if (modelReasoning.length) return modelReasoning;
-            var scored = [];
-            var factorMap = {};
-            for (var i = 0; i < (rules || []).length; i++) {
-                var rule = rules[i] || {};
-                var ruleScore = parseInt(normalizeDimensionScore(rule.Score || '1'), 10);
-                var id = String(rule.RuleId || '').toUpperCase();
-                factorMap[String(rule.RuleId || '').toUpperCase()] = extractBriefCmfContributingFactor(rule);
-                scored.push({ id: id || String(rule.RuleName || 'Metric'), score: ruleScore });
-            }
-
-            var issueFact = buildCmfReasoningIssueBullet(evidenceText, payload, factorMap);
-            var impactFact = buildCmfReasoningImpactBullet(evidenceText, payload, scored);
-            var recoveryFact = buildCmfReasoningRecoveryBullet(factorMap, scored);
-            var scoreJudgment = buildCmfReasoningScoreJudgment(rec, score, scored);
-            var result = [];
-            if (rec === 'CMF_OK') {
-                result.push(issueFact);
-                result.push(impactFact);
-                result.push(recoveryFact + ' ' + scoreJudgment);
-            } else if (rec === 'CMF_REVIEW') {
-                result.push(issueFact);
-                result.push(impactFact);
-                result.push(scoreJudgment + ' Confirm the weaker evidence before approving or rejecting the tag.');
-            } else if (rec === 'CMF_INCOMPLETE') {
-                result.push(issueFact);
-                result.push(impactFact);
-                result.push(scoreJudgment + ' Add missing impact, repro, recovery, or customer evidence before final disposition.');
-            } else {
-                result.push(issueFact);
-                result.push(impactFact);
-                result.push(scoreJudgment + ' Current evidence supports CMF_REJECT unless stronger customer-impact or business-gating proof is added.');
-            }
-            return limitCmfReasoningWords(result, 140);
+            return ['No verified decision explanation is available; manual evidence review is required.'];
         }
 
         function buildCmfModelReasoningBullets(evidenceText, payload) {
@@ -24415,7 +24400,7 @@ td:nth-child(odd), th:nth-child(odd) {
         function normalizeDimensionScore(value) {
             var raw = String(value || '').replace('/100', '').replace('/5', '').replace('%', '').trim();
             var num = parseFloat(raw);
-            if (isNaN(num)) return '1';
+            if (isNaN(num) || num <= 0) return '';
             if (num > 5) num = Math.round(num / 20);
             num = Math.max(1, Math.min(5, Math.round(num)));
             return String(num);
@@ -24460,44 +24445,18 @@ td:nth-child(odd), th:nth-child(odd) {
         }
 
         function buildCmfRecommendationReasoning(recommendation, score, rules, evidenceText, payload) {
-            var rec = String(recommendation || '').toUpperCase();
-            var strengths = [];
-            var gaps = [];
-            var conflicts = /conflict|conflicting|borderline/i.test(evidenceText || '');
+            var modelReasoning = buildCmfModelReasoningBullets(evidenceText || '', payload || {});
+            if (modelReasoning.length) return modelReasoning;
+            return ['No verified decision explanation is available; manual evidence review is required.'];
+        }
 
-            for (var i = 0; i < (rules || []).length; i++) {
-                var rule = rules[i] || {};
-                var ruleName = String(rule.RuleName || rule.RuleId || 'criterion').toLowerCase();
-                var ruleScore = parseInt(normalizeDimensionScore(rule.Score || '1'), 10);
-                var evaluation = sanitizeCmfDisplaySentence(rule.Evaluation || '', 240);
-                if (ruleScore >= 4) {
-                    strengths.push(ruleName + ' is strong: ' + evaluation);
-                } else if (ruleScore <= 2) {
-                    gaps.push(ruleName + ' is weak: ' + evaluation);
-                } else {
-                    gaps.push(ruleName + ' needs reviewer judgment: ' + evaluation);
-                }
-            }
-
-            var issueFact = extractCmfSymptomEvidence(rules, []) || firstUsefulText(payload.title, 'The issue has limited symptom detail.');
-            var scoreText = formatWeightedCmfScore(score) || '0';
-            var reasoning = [];
-            reasoning.push('The recommendation is based on the failure evidence and the weighted S/O/D/R/B/CX score, not just the row fields: ' + sanitizeCmfDisplaySentence(issueFact, 260));
-
-            if (rec === 'CMF_OK') {
-                reasoning.push('CMF_OK is supported because the weighted evidence score is ' + scoreText + '/5 and the strongest criteria are ' + summarizeCmfReasonList(strengths, 'severity and business impact') + '.');
-                reasoning.push(gaps.length ? 'Before approval, the reviewer should still confirm ' + summarizeCmfReasonList(gaps, 'any lower-scored criteria') + '.' : 'No decision-critical scoring gaps are visible from the supplied evidence.');
-            } else if (rec === 'CMF_REVIEW') {
-                reasoning.push('CMF_REVIEW is appropriate because the score is near or above the decision band but at least one criterion still needs judgment: ' + summarizeCmfReasonList(gaps, 'the borderline criteria') + '.');
-                reasoning.push(conflicts ? 'The explanation flags conflicting evidence, so the reviewer should resolve that conflict before approving or rejecting the CMF tag.' : 'The reviewer should confirm whether the weaker criteria are real gaps or simply missing details in the current record.');
-            } else if (rec === 'CMF_INCOMPLETE') {
-                reasoning.push('CMF_INCOMPLETE is appropriate because the current record does not provide enough decision-critical evidence across ' + summarizeCmfReasonList(gaps, 'the required criteria') + '.');
-                reasoning.push('The next action is to update the missing evidence, then rerun the recommendation so the score reflects the actual customer risk.');
-            } else {
-                reasoning.push('CMF_REJECT is supported only if the weak criteria remain low after review: ' + summarizeCmfReasonList(gaps, 'the low-scored criteria') + '.');
-                reasoning.push('The reviewer should confirm that no customer, launch, recovery, or business-impact evidence is missing before rejecting the CMF request.');
-            }
-            return reasoning.slice(0, 4);
+        function getCmfDecisionGaps(result) {
+            var assessment = result.Assessment || {};
+            if (!assessment.EvidenceReviewCompleted) return ['Any decision-critical information gaps require manual verification; no absence has been confirmed.'];
+            var gaps = (assessment.MissingEvidence || []).filter(function (gap) {
+                return gap && gap.ConfirmedAbsent && gap.Field && gap.WhyItMatters;
+            }).map(function (gap) { return gap.Field + ': ' + gap.WhyItMatters; });
+            return gaps.length ? gaps : ['No verified decision-critical information gaps identified.'];
         }
 
         function summarizeCmfReasonList(items, fallback) {
@@ -24867,7 +24826,7 @@ td:nth-child(odd), th:nth-child(odd) {
                 pendingCellResizeObserver.observe(table);
             }
             formatPendingCustomerLogos();
-            var cells = document.querySelectorAll('#GridView_cmf_pending td.pending-field-title, #GridView_cmf_pending td.pending-field-impact, #GridView_cmf_pending td.pending-field-why, #GridView_cmf_pending td.pending-field-days-open');
+            var cells = table.querySelectorAll('td.pending-field-title, td.pending-field-impact, td.pending-field-why, td.pending-field-days-open, td.pending-field-date');
             cells.forEach(function (cell) {
                 var text = cell.querySelector('.pending-cell-text');
                 if (!text) {
@@ -24882,13 +24841,12 @@ td:nth-child(odd), th:nth-child(odd) {
                     cell.appendChild(content);
                 }
                 if (!cell.getClientRects().length) return;
-                var clipped = !cell.matches('.pending-field-title, .pending-field-impact') && text.scrollHeight > text.clientHeight + 1;
-                configureCellPreview(text, clipped);
+                configureCellPreview(text, false);
             });
-            table.querySelectorAll('.pending-field-request, .pending-field-date').forEach(function (text) {
+            table.querySelectorAll('.pending-field-request').forEach(function (text) {
                 text.classList.add('pending-cell-text');
                 if (!text.getClientRects().length) return;
-                configureCellPreview(text, text.scrollWidth > text.clientWidth + 1);
+                configureCellPreview(text, false);
             });
         }
 
@@ -24946,7 +24904,7 @@ td:nth-child(odd), th:nth-child(odd) {
         }
 
         var PendingColumnPicker = (function () {
-            var storageKey = 'cmf_pending_column_layout_v1';
+            var storageKey = 'cmf_pending_column_layout_v3';
             var draft = null;
             var cachedLayout = null;
             function notice(message) {
@@ -24985,13 +24943,16 @@ td:nth-child(odd), th:nth-child(odd) {
                 var items = columns();
                 if (!items.length) return;
                 var state = layout(items);
-                var selected = state.order.filter(function (index) { return state.hidden.indexOf(index) < 0; });
                 var table = document.getElementById('GridView_cmf_pending');
                 var headers = Array.from(table.querySelectorAll('th'));
-                var weights = selected.reduce(function (total, index) {
-                    var header = headers.find(function (item) { return Number(item.dataset.pendingColumnIndex) === index; });
-                    return total + (header.matches('.pending-field-title,.pending-field-impact') ? 2 : 1);
-                }, 0);
+                var widths = {
+                    'Issue ID': 116, 'Issue Title': 240, 'Customer Detail': 140,
+                    'Component': 150, 'Component Group': 130, 'iDST': 120,
+                    'Owner': 130, 'RVP Repro': 90, 'Occurrence': 124,
+                    'CMF Request / Ask Date': 150, 'Why CMF Change': 160,
+                    'Pending Reason': 100, 'Impact': 180, 'Days Open': 76,
+                    'AI CMF Recommendation': 144
+                };
                 Array.from(table.rows).forEach(function (row) {
                     var cells = Array.from(row.cells);
                     if (cells.length !== items.length) return;
@@ -24999,8 +24960,9 @@ td:nth-child(odd), th:nth-child(odd) {
                         var cell = cells.find(function (item) { return Number(item.dataset.pendingColumnIndex) === index; });
                         cell.classList.toggle('pending-column-hidden', state.hidden.indexOf(index) >= 0);
                         var header = headers.find(function (item) { return Number(item.dataset.pendingColumnIndex) === index; });
-                        cell.style.setProperty('width', ((header.matches('.pending-field-title,.pending-field-impact') ? 2 : 1) * 100 / weights) + '%', 'important');
-                        cell.style.setProperty('min-width', '0', 'important');
+                        var width = widths[header.textContent.trim()] || 120;
+                        cell.style.setProperty('width', width + 'px', 'important');
+                        cell.style.setProperty('min-width', width + 'px', 'important');
                         cell.style.setProperty('max-width', 'none', 'important');
                         row.appendChild(cell);
                     });
@@ -25320,7 +25282,7 @@ td:nth-child(odd), th:nth-child(odd) {
 </script>
     <script src="Scripts/cmf-portal-main.js?v=20261028-organic-merge"></script>
 
-    <link rel="stylesheet" href="Content/cmf-portal-theme.css?v=20261029-pending-full-text-columns-2" />
+    <link rel="stylesheet" href="Content/cmf-portal-theme.css?v=20261029-pending-compact-columns-5" />
 
 </head>
 
@@ -26600,10 +26562,11 @@ Submit
                                             </ItemTemplate>
                                         </asp:TemplateField>
                                         <asp:BoundField DataField="title" HeaderText="Issue Title" ItemStyle-CssClass="pending-field-title" HeaderStyle-CssClass="pending-field-title" />
-                                        <asp:BoundField DataField="component" HeaderText="Component" ItemStyle-CssClass="pending-field-component" />
-                                        <asp:BoundField DataField="customer_owner" HeaderText="Owner" ItemStyle-CssClass="pending-field-owner" />
                                         <asp:BoundField DataField="customer_detail" HeaderText="Customer Detail" ItemStyle-CssClass="pending-field-customer" />
-                                        <asp:BoundField DataField="idst" HeaderText="iDST" ItemStyle-CssClass="pending-field-idst" />
+                                        <asp:BoundField DataField="component" HeaderText="Component" ItemStyle-CssClass="pending-field-component" />
+                                        <asp:BoundField DataField="component_group" HeaderText="Component Group" ItemStyle-CssClass="pending-field-component-group" />
+                                        <asp:BoundField DataField="idst_display_name" HeaderText="iDST" ItemStyle-CssClass="pending-field-idst" />
+                                        <asp:BoundField DataField="customer_owner" HeaderText="Owner" ItemStyle-CssClass="pending-field-owner" />
                                         <asp:TemplateField HeaderText="RVP Repro" ItemStyle-CssClass="pending-field-rvp">
                                             <ItemTemplate><span class="pending-rvp-status" data-rvp="<%#: string.IsNullOrWhiteSpace(Convert.ToString(Eval("repro_on_rvp"))) ? "unknown" : Convert.ToString(Eval("repro_on_rvp")).Trim() %>"><%#: string.IsNullOrWhiteSpace(Convert.ToString(Eval("repro_on_rvp"))) ? "unknown" : Convert.ToString(Eval("repro_on_rvp")).Trim() %></span></ItemTemplate>
                                         </asp:TemplateField>
@@ -26613,13 +26576,13 @@ Submit
                                                 <div class="pending-request-date">
                                                     <asp:Label ID="PendingStaleBadge" runat="server" CssClass="pending-stale-badge" Text="Stale" Visible='<%# IsPendingRequestStale(Eval("date_cmf_ask")) %>' ToolTip="CMF ask is more than 2 days old" />
                                                     <asp:Label ID="PendingRequestValue" runat="server" CssClass='<%# IsPendingRequestStale(Eval("date_cmf_ask")) ? "pending-field-request pending-request-stale" : "pending-field-request" %>' Text='<%# HttpUtility.HtmlEncode(Convert.ToString(Eval("cmf_request"))) %>' />
-                                                    <asp:Label ID="PendingAskDateValue" runat="server" CssClass="pending-field-date" Text='<%# Eval("date_cmf_ask", "{0:dd-MMM-yyyy}") %>' />
+                                                    <asp:Label ID="PendingAskDateValue" runat="server" CssClass="pending-field-date pending-cell-text" Text='<%# Eval("date_cmf_ask", "{0:dd-MMM-yyyy HH:mm:ss}") %>' />
                                                 </div>
                                             </ItemTemplate>
                                         </asp:TemplateField>
-                                        <asp:BoundField DataField="impact" HeaderText="Impact" ItemStyle-CssClass="pending-field-impact" HeaderStyle-CssClass="pending-field-impact" />
                                         <asp:BoundField DataField="why_cmf_change" HeaderText="Why CMF Change" ItemStyle-CssClass="pending-field-why" />
                                         <asp:BoundField DataField="pending_reason" HeaderText="Pending Reason" ItemStyle-CssClass="pending-field-reason" HeaderStyle-CssClass="pending-field-reason" />
+                                        <asp:BoundField DataField="impact" HeaderText="Impact" ItemStyle-CssClass="pending-field-impact" HeaderStyle-CssClass="pending-field-impact" />
                                         <asp:BoundField DataField="days_open" HeaderText="Days Open" ItemStyle-CssClass="pending-field-days-open" HeaderStyle-CssClass="pending-field-days-open" NullDisplayText="N/A" />
                                         <asp:TemplateField HeaderText="AI CMF Recommendation" ItemStyle-CssClass="pending-field-ai-recommendation" HeaderStyle-CssClass="pending-field-ai-recommendation">
                                             <ItemTemplate>
