@@ -129,6 +129,17 @@ public static class CmfAssistantConfigService
         {
             return cfg.GnaiApiKey.Trim();
         }
+
+        try
+        {
+            string appSetting = ConfigurationManager.AppSettings["GNAI:ApiKey"];
+            if (!string.IsNullOrWhiteSpace(appSetting) && !appSetting.StartsWith("REPLACE", StringComparison.OrdinalIgnoreCase))
+            {
+                return appSetting.Trim();
+            }
+        }
+        catch { }
+
         return string.Empty;
     }
 
@@ -142,6 +153,27 @@ public static class CmfAssistantConfigService
         {
             return cfg.DatabaseConnectionString.Trim();
         }
+
+        try
+        {
+            string connName = (cfg != null && !string.IsNullOrWhiteSpace(cfg.DatabaseConnectionName))
+                ? cfg.DatabaseConnectionName.Trim()
+                : "gfxitt";
+
+            string appSettingName = ConfigurationManager.AppSettings["Database:ConnectionName"];
+            if (!string.IsNullOrWhiteSpace(appSettingName))
+            {
+                connName = appSettingName.Trim();
+            }
+
+            ConnectionStringSettings conn = ConfigurationManager.ConnectionStrings[connName];
+            if (conn != null && !string.IsNullOrWhiteSpace(conn.ConnectionString) && !conn.ConnectionString.StartsWith("REPLACE", StringComparison.OrdinalIgnoreCase))
+            {
+                return conn.ConnectionString.Trim();
+            }
+        }
+        catch { }
+
         return string.Empty;
     }
 
