@@ -3,16 +3,11 @@
   "gnai": {
     "endpoint": "https://gnai.intel.com/api/providers/anthropic/v1/messages",
     "anthropicEndpoint": "https://gnai.intel.com/api/providers/anthropic/v1/messages",
-    "openaiEndpoint": "https://gnai.intel.com/api/providers/openai/v1/chat/completions",
-    "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJhdXRoc2VydmljZSIsInN1YiI6InBkbiIsImF1ZCI6WyJhcnRpZmFjdG9yeSIsImd0YSIsImd0YXgiLCJnbmFpIiwiYnVpbGQtcmVnaXN0cnkiLCJnZnh3bCJdLCJleHAiOjE4MDE1NDQ3MjYsInNjb3BlcyI6WyJhcHA6YXJ0aWZhY3RvcnkiLCJhcHA6Z3RhIiwiYXBwOmd0YXgiLCJhcHA6Z25haSIsImFwcDpidWlsZC1yZWdpc3RyeSIsImFwcDpnZnh3bCJdfQ.Tx8wf9_V7u7l6uUIwrzA8tIr1nl0_29zjx8vUysu3jA",
     "primaryModel": "claude-4-5-sonnet",
     "fastSummaryModel": "claude-4-5-haiku",
     "fallbackModels": [
-      "claude-4-5-haiku",
-      "gpt-5-mini"
-    ],
-    "proxy": "",
-    "requestTimeoutSeconds": 30
+      "claude-4-5-haiku"
+    ]
   },
   "hsd": {
     "enabled": true,
@@ -25,11 +20,11 @@
     "cacheRefreshSeconds": 120,
     "skipCommentEndpointsWhenHistoryPresent": true
   },
-  "database": {
-    "connectionName": "gfxitt",
-    "connectionString": "Data Source=sql1115-bg1-in.gar.corp.intel.com,3181;Initial Catalog=gfxitt_db;User ID=gfxitt_db_so;Password=sJeDsReW7HrBhDh;MultipleActiveResultSets=True;Connect Timeout=60;",
-    "providerName": "System.Data.SqlClient",
-    "fallbackToWebConfig": true
+  "reports": {
+    "pythonExecutable": "C:\\Program Files\\Python314\\python.exe"
+  },
+  "ui": {
+    "syncfusionLicenseKey": "YOUR_SYNCFUSION_LICENSE_KEY"
   },
   "plugins": {
     "feedbackMemory": {
