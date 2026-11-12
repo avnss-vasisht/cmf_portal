@@ -9,6 +9,30 @@ const page = fs.readFileSync(path.join(root, 'CMF_Web_portal.aspx'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'CMF_Web_portal.aspx.cs'), 'utf8');
 const theme = fs.readFileSync(path.join(root, 'Content', 'cmf-portal-theme.css'), 'utf8');
 
+test('summary top-row format headings retain LOS only on unique counts', () => {
+    assert.equal((page.match(/<span class="ccip-header-format">Unique\(LOS\)\+Duplicate<\/span>/g) || []).length, 2);
+    assert.doesNotMatch(page, /Unique\(LOS\)\+Duplicate\(LOS\)/);
+    assert.match(page, /Impl\/Vrf\\'d<span class="ccip-header-format">Unique\+Duplicate<\/span>/);
+});
+
+test('component and design summaries abbreviate verified in display headings without changing source keys', () => {
+    const definition = page.match(/var renderColumns = columns\.map\(function \(column\) \{[\s\S]*?\}\);/);
+    assert.ok(definition);
+    const columns = ['Ingredient', 'Milestone:::Open', 'Milestone:::Impl/Verified', 'Impl/Verified'];
+    const context = vm.createContext({ columns, isComponentSummary: true, isDesignSummary: false });
+    vm.runInContext(definition[0], context);
+    assert.deepEqual(Array.from(context.renderColumns), ['Ingredient', 'Milestone:::Open', "Milestone:::Impl/Vrf'd", "Impl/Vrf'd"]);
+    assert.equal(columns[2], 'Milestone:::Impl/Verified');
+    context.isComponentSummary = false;
+    context.isDesignSummary = true;
+    vm.runInContext(definition[0], context);
+    assert.deepEqual(Array.from(context.renderColumns), ['Ingredient', 'Milestone:::Open', "Milestone:::Impl/Vrf'd", "Impl/Vrf'd"]);
+    assert.equal(columns[3], 'Impl/Verified');
+    context.isDesignSummary = false;
+    vm.runInContext(definition[0], context);
+    assert.deepEqual(Array.from(context.renderColumns), columns);
+});
+
 test('collapsed-menu dashboard keeps chart rendering and pointer targets in unscaled CSS coordinates', () => {
     const compact = page.match(/\.portal-layout-shell\.main-menu-collapsed #homeWelcomePanel \.ccip-dashboard \{([^}]*)\}/);
     assert.ok(compact);
@@ -20,18 +44,273 @@ test('collapsed-menu dashboard keeps chart rendering and pointer targets in unsc
     assert.doesNotMatch(compact[1], /width: calc\(100% \/ /);
 });
 
-test('shared dashboard table scrollbars keep their geometry stable on hover', () => {
+test('shared dashboard table scrollbars match the visible OEM scrollbar and stay stable on hover', () => {
     const base = page.match(/#homeLegacyTablesGrid \.ccip-live-table-wrap,[\s\S]*?#homeLegacyOverview \.ccip-inline-side-stack \.ccip-live-table-wrap \{([^}]*)\}/);
     assert.ok(base);
     assert.match(base[1], /scrollbar-gutter: stable;/);
-    assert.match(base[1], /scrollbar-width: thin;/);
+    assert.match(base[1], /scrollbar-width: auto;/);
+    assert.match(base[1], /scrollbar-color: auto;/);
     const scrollbar = page.match(/#homeLegacyTablesGrid \.ccip-live-table-wrap::-webkit-scrollbar,[\s\S]*?#homeLegacyOverview \.ccip-inline-side-stack \.ccip-live-table-wrap::-webkit-scrollbar \{([^}]*)\}/);
     assert.ok(scrollbar);
     assert.match(scrollbar[1], /width: 8px;/);
     assert.match(scrollbar[1], /height: 8px;/);
     const hover = page.match(/#homeLegacyTablesGrid \.ccip-live-table-wrap:hover,[\s\S]*?#homeLegacyOverview \.ccip-inline-side-stack \.ccip-live-table-wrap:hover \{([^}]*)\}/);
     assert.ok(hover);
-    assert.match(hover[1], /scrollbar-width: thin;/);
+    assert.match(hover[1], /scrollbar-width: auto;/);
+    assert.match(hover[1], /scrollbar-color: auto;/);
+    const thumb = page.match(/#homeLegacyTablesGrid \.ccip-live-table-wrap::-webkit-scrollbar-thumb,[\s\S]*?#homeLegacyOverview \.ccip-inline-side-stack \.ccip-live-table-wrap::-webkit-scrollbar-thumb \{([^}]*)\}/);
+    assert.ok(thumb);
+    assert.match(thumb[1], /background: #cbd3dd;/);
+    assert.match(thumb[1], /border-radius: 999px;/);
+    const track = page.match(/#homeLegacyTablesGrid \.ccip-live-table-wrap::-webkit-scrollbar-track,[\s\S]*?#homeLegacyOverview \.ccip-inline-side-stack \.ccip-live-table-wrap::-webkit-scrollbar-track \{([^}]*)\}/);
+    assert.ok(track);
+    assert.match(track[1], /background: transparent;/);
+    const component = page.match(/#homeComponentSummaryTable\.ccip-live-table-wrap \{([^}]*)\}/);
+    assert.ok(component);
+    assert.match(component[1], /scrollbar-width: auto !important;/);
+    assert.match(component[1], /scrollbar-color: auto !important;/);
+});
+
+test('Overall pending age legend sits above the scrollable breakdown', () => {
+    assert.match(page, /<div class="overall-pending-bottom">\s*<div id="homeOverallPendingLegend"[^>]*><\/div>\s*<div id="homeOverallPendingBreakdown"[^>]*><\/div>/);
+    const layout = page.match(/\.overall-pending-bottom \{([^}]*)\}/);
+    assert.ok(layout);
+    assert.match(layout[1], /grid-template-rows: auto minmax\(0, 1fr\);/);
+    const legend = page.match(/#homeOverallPendingLegend \{([^}]*)\}/);
+    assert.ok(legend);
+    assert.match(legend[1], /justify-self: end;/);
+});
+
+test('platform pending threshold legend sits opposite its title above the table', () => {
+    const card = page.match(/<section class="ccip-card ccip-inline-summary-card ccip-pending-summary-card">([\s\S]*?)<\/section>/);
+    assert.ok(card);
+    assert.match(card[1], /<div class="ccip-card-head">\s*<h3[^>]*>[\s\S]*?<\/h3>\s*<div class="component-summary-legend overall-pending-legend pending-summary-threshold-legend"[^>]*><\/div>\s*<\/div>\s*<div id="homePendingSummaryTable"/);
+    assert.equal((card[1].match(/pending-summary-threshold-legend/g) || []).length, 1);
+    const legend = page.match(/#homeLegacyTablesGrid \.ccip-pending-summary-card \.pending-summary-threshold-legend \{([^}]*)\}/);
+    assert.ok(legend);
+    assert.match(legend[1], /margin-left: auto;/);
+    assert.match(legend[1], /margin-right: var\(--ccip-pending-scrollbar-width, 0px\);/);
+    assert.match(legend[1], /flex-shrink: 0;/);
+});
+
+test('component summary zero counts retain metric styling without links or hover behavior', () => {
+    const start = page.indexOf('            function hasPositiveComponentMetricValue(');
+    const end = page.indexOf('            function parseComponentOpenMetricParts(', start);
+    assert.ok(start >= 0 && end > start);
+    const context = vm.createContext({ escapeHtml: String });
+    vm.runInContext(page.slice(start, end), context);
+    for (const [issueType, value] of [
+        ['OpenCombined', 0], ['OpenCombined', '0'], ['OpenCombined', '0(0)+0(0)'],
+        ['ImplementedCombined', '0'], ['ImplementedCombined', '0+0']
+    ]) {
+        const html = context.buildComponentSummaryMetricLinkHtml('HW', 'PV', issueType, value);
+        assert.equal(html, '<span class="ccip-component-summary-link">0</span>');
+        assert.doesNotMatch(html, /<a\b|href=|onclick=|tabindex=|role=/);
+    }
+    for (const [issueType, value, display] of [
+        ['OpenCombined', '2(1)+0(0)', '2(1)'], ['ImplementedCombined', '3+0', '3']
+    ]) {
+        const html = context.buildComponentSummaryMetricLinkHtml('HW', 'PV', issueType, value);
+        assert.match(html, /^<a href="javascript:void\(0\);" class="ccip-component-summary-link"/);
+        assert.ok(html.includes('onclick="return showCMFIssues('));
+        assert.ok(html.endsWith('>' + display + '</a>'));
+    }
+    const style = page.match(/\.ccip-component-summary-link \{([^}]*)\}/);
+    assert.ok(style);
+    assert.match(style[1], /color: #1d4ed8;/);
+    assert.match(style[1], /font-weight: 800;/);
+    assert.match(style[1], /text-decoration: none;/);
+    assert.match(page, /a\.ccip-component-summary-link:hover,\s*a\.ccip-component-summary-link:focus/);
+    assert.doesNotMatch(page, /^\.ccip-component-summary-link:(?:hover|focus)/m);
+});
+
+test('Design Summary zero counts retain metric styling without links or pointer behavior', () => {
+    const start = page.indexOf('        function buildDesignSummaryMetricLinkHtml(');
+    const end = page.indexOf('        function renderOverallOemTable(', start);
+    assert.ok(start >= 0 && end > start);
+    const context = vm.createContext({ escapeHtml: String });
+    vm.runInContext(page.slice(start, end), context);
+    for (const design of ['Design A', 'Total']) {
+        for (const column of ['NVLH_PV', 'Impl/Verified', "Impl/Vrf'd"]) {
+            for (const value of [0, '0', ' 0 ']) {
+                const html = context.buildDesignSummaryMetricLinkHtml(design, column, value);
+                const totalClass = design === 'Total' ? ' is-total' : '';
+                assert.equal(html, '<span class="ccip-design-metric-link' + totalClass + '">0</span>');
+                assert.doesNotMatch(html, /<a\b|href=|onclick=|tabindex=|role=/);
+            }
+            const html = context.buildDesignSummaryMetricLinkHtml(design, column, 2);
+            const handler = column === 'Impl/Verified' ? 'showImplementedVerifiedDetailsModal' : 'showDriverDetailsModal';
+            assert.match(html, /^<a href="javascript:void\(0\);" class="ccip-design-metric-link/);
+            assert.ok(html.includes('onclick="return ' + handler + '('));
+            assert.ok(html.endsWith('>2</a>'));
+        }
+    }
+    for (const value of ['', null, undefined]) {
+        assert.equal(context.buildDesignSummaryMetricLinkHtml('Design A', 'NVLH_PV', value), '');
+    }
+    const style = page.match(/\.ccip-design-metric-link \{([^}]*)\}/);
+    assert.ok(style);
+    assert.match(style[1], /color: #1d4ed8;/);
+    assert.match(style[1], /font-weight: 700;/);
+    assert.match(style[1], /text-decoration: none;/);
+    assert.doesNotMatch(style[1], /cursor: pointer/);
+    assert.match(page, /a\.ccip-design-metric-link \{\s*cursor: pointer;/);
+    assert.match(page, /a\.ccip-design-metric-link:hover \{/);
+    assert.doesNotMatch(page, /^\.ccip-design-metric-link:hover/m);
+});
+
+test('Overall component summary sizes columns to fit both header rows', () => {
+    const rule = page.match(/#homeLegacyTablesGrid \.ccip-live-table\.ccip-component-summary-table \{([^}]*)\}/);
+    assert.ok(rule);
+    assert.match(rule[1], /table-layout: auto;/);
+});
+
+test('Design Summary fills available width while preserving each existing column minimum', () => {
+    const wrappers = page.match(/#homeLegacyTablesGrid \.ccip-inline-side-stack \.ccip-inline-summary-card \.ccip-live-table-wrap \{([^}]*)\}/);
+    assert.ok(wrappers);
+    assert.match(wrappers[1], /width: 100%;/);
+    const gutters = page.match(/#homeLegacyTablesGrid #homeComponentSummaryTable,\s*#homeLegacyTablesGrid #homePendingSummaryTable \{([^}]*)\}/);
+    assert.ok(gutters);
+    assert.match(gutters[1], /scrollbar-gutter: auto;/);
+    const sizing = page.match(/                var designOtherColCount = Math\.max\(1, columns\.length - 1\);[\s\S]*?html \+= '<\/colgroup>';/);
+    assert.ok(sizing);
+    const columns = ['Design Name', 'SW Image Freeze', 'Support Model', 'NVLH_PV', 'NVLH_QS', "Impl/Vrf'd"];
+    const headerWidths = [108, 104, 65, 67, 77];
+    const context = vm.createContext({
+        columns,
+        renderColumns: columns,
+        tableClasses: 'ccip-live-table ccip-design-summary-table',
+        host: { clientWidth: 828 },
+        document: { createElement: () => ({ getContext: () => ({
+            measureText: text => ({ width: headerWidths[columns.slice(1).map(column => column.toUpperCase()).indexOf(text)] - 16 - (text.length - 1) * 0.2 - 0.25 })
+        }) }) }
+    });
+    vm.runInContext(sizing[0], context);
+    assert.match(context.html, /style="width:100%; min-width:724px; table-layout:fixed;"/);
+    const widths = Array.from(context.html.matchAll(/<col style="width:([\d.]+)px; min-width:([\d.]+)px;">/g), match => [Number(match[1]), Number(match[2])]);
+    assert.deepEqual(widths, [231, 108, 104, 65, 67, 77, 72].map(width => [width, width]));
+    assert.doesNotMatch(context.html, /max-width:/);
+    const scrollLayout = page.match(/#homeLegacyTablesGrid \.ccip-summary-canvas \.ccip-design-summary-card #homeDesignSummaryTable \{([^}]*)\}/);
+    assert.ok(scrollLayout);
+    assert.match(scrollLayout[1], /scrollbar-gutter: auto;/);
+    const hover = page.match(/#homeLegacyTablesGrid \.ccip-summary-canvas \.ccip-design-summary-card #homeDesignSummaryTable\.ccip-hover-width-lock \{([^}]*)\}/);
+    assert.ok(hover);
+    assert.match(hover[1], /overflow-x: auto;/);
+    assert.doesNotMatch(page, /#homeDesignSummaryTable\.ccip-hover-width-lock \.ccip-live-table \{/);
+});
+
+test('Component Open CMF fills available width and grows its minimum for extra milestone columns', () => {
+    const sizing = page.match(/                var firstHeader = String\(renderColumns\[0\][\s\S]*?html \+= '<\/colgroup>';/);
+    assert.ok(sizing);
+    const wrapper = page.match(/#homeLegacyTablesGrid \.ccip-inline-side-stack \.ccip-inline-summary-card \.ccip-live-table-wrap \{([^}]*)\}/);
+    assert.ok(wrapper);
+    assert.match(wrapper[1], /overflow-x: auto;/);
+    const groupedColumns = [1, 2, 4, 8, 12].map(count => ['Ingredient', ...Array.from({ length: count }, (_, index) => [
+        'Milestone_' + (index + 1) + ':::Open',
+        'Milestone_' + (index + 1) + ":::Impl/Vrf'd"
+    ]).flat()]);
+    for (const renderColumns of [
+        ['Ingredient', 'Open', 'Impl/Verified'],
+        ...groupedColumns
+    ]) {
+        const context = vm.createContext({ renderColumns, hasMilestoneColumns: renderColumns[1].includes(':::'), tableClasses: 'ccip-live-table ccip-component-summary-table' });
+        vm.runInContext(sizing[0], context);
+        assert.match(context.html, /style="width:100%; min-width:calc\(92px \+ [\d.]+ch\);"/);
+        assert.equal((context.html.match(/<col style=/g) || []).length, renderColumns.length);
+        assert.match(context.html, /<col style="width:92px; min-width:92px;">/);
+        const minimum = context.html.match(/min-width:calc\(92px \+ ([\d.]+)ch\)/);
+        assert.ok(minimum);
+        assert.equal(Number(minimum[1]), Number(((renderColumns.length - 1) * context.uniformDataColCh).toFixed(1)));
+        const metricColumns = Array.from(context.html.matchAll(/<col style="width:([\d.]+)ch; min-width:([\d.]+)ch;">/g));
+        assert.equal(metricColumns.length, renderColumns.length - 1);
+        assert.ok(metricColumns.every(column => Number(column[1]) === context.uniformDataColCh && column[1] === column[2]));
+        assert.doesNotMatch(context.html, /max-width:|NaN|undefined/);
+    }
+});
+
+test('CMF Pending Count fills available width while retaining count and iDST column minima', () => {
+    const sizing = page.match(/                var pendingFirstColPx = 94;[\s\S]*?html \+= '<\/colgroup>';/);
+    assert.ok(sizing);
+    for (const columns of [['Ingredient', 'CMF Pending'], ['Ingredient', 'iDST Name', 'CMF Pending']]) {
+        const context = vm.createContext({ columns, renderColumns: columns, pendingValueColumnIndex: columns.length - 1, tableClasses: 'ccip-live-table' });
+        vm.runInContext(sizing[0], context);
+        assert.match(context.html, /style="width:100%; min-width:calc\(94px \+ [\d.]+ch \+ [\d.]+ch\); table-layout:auto;"/);
+        assert.equal((context.html.match(/<col style=/g) || []).length, columns.length);
+        assert.match(context.html, /<col style="width:94px; min-width:94px;">/);
+        assert.doesNotMatch(context.html, /max-width:|NaN|undefined/);
+    }
+});
+
+test('pending threshold legend tracks only the required scrollbar gutter and reuses its observer', () => {
+    const definition = page.match(/        function applyPendingSummaryLegendGutter\([^)]*\) \{[\s\S]*?\r?\n        \}/);
+    assert.ok(definition);
+    const properties = new Map();
+    const card = { style: { setProperty: (name, value) => properties.set(name, value) } };
+    const host = { offsetWidth: 420, clientWidth: 420, closest: () => card };
+    const observers = [];
+    const context = vm.createContext({ ResizeObserver: class {
+        constructor(callback) { this.callback = callback; observers.push(this); }
+        observe(element) { assert.equal(element, host); }
+    } });
+    vm.runInContext(definition[0], context);
+    context.applyPendingSummaryLegendGutter(host);
+    assert.equal(properties.get('--ccip-pending-scrollbar-width'), '0px');
+    host.clientWidth = 412;
+    observers[0].callback();
+    assert.equal(properties.get('--ccip-pending-scrollbar-width'), '8px');
+    host.clientWidth = 420;
+    context.applyPendingSummaryLegendGutter(host);
+    assert.equal(properties.get('--ccip-pending-scrollbar-width'), '0px');
+    assert.equal(observers.length, 1);
+    assert.match(page, /if \(isPendingSummary\) \{\s*applyPendingSummaryLegendGutter\(host\);/);
+});
+
+test('Design Summary keeps dynamic column minima aligned when milestones are removed, added or renamed', () => {
+    const sizing = page.match(/                var designOtherColCount = Math\.max\(1, columns\.length - 1\);[\s\S]*?html \+= '<\/colgroup>';/);
+    assert.ok(sizing);
+    const milestoneSets = [
+        [],
+        ['NVLH_PV'],
+        ['NVLH_QS'],
+        ['NVLH_QS', 'NVLH_PV'],
+        ['Customer_Qualification_Release_WW48', 'Beta'],
+        Array.from({ length: 12 }, (_, index) => 'Platform_Milestone_' + (index + 1))
+    ];
+    for (const milestones of milestoneSets) {
+        const columns = ['Design Name', 'SW Image Freeze', 'Support Model', ...milestones, 'Impl/Verified'];
+        const renderColumns = columns.map(column => column === 'Impl/Verified' ? "Impl/Vrf'd" : column);
+        for (const availableWidth of [0, 360, 828, 1200]) {
+            for (const canvasAvailable of [true, false]) {
+                const context = vm.createContext({
+                    columns, renderColumns,
+                    tableClasses: 'ccip-live-table ccip-design-summary-table',
+                    host: { clientWidth: availableWidth },
+                    document: { createElement: () => ({ getContext: () => canvasAvailable ? {
+                        measureText: text => ({ width: text.length * 6.5 })
+                    } : null }) }
+                });
+                vm.runInContext(sizing[0], context);
+                const widths = Array.from(context.html.matchAll(/<col style="width:([\d.]+)px; min-width:([\d.]+)px;">/g), match => [Number(match[1]), Number(match[2])]);
+                const firstMinimum = availableWidth > 0 ? Math.max(180, Math.floor(availableWidth * 0.28)) : 220;
+                const expected = [firstMinimum, ...renderColumns.slice(1).map(header => canvasAvailable
+                    ? Math.max(64, Math.ceil(header.length * 6.5 + (header.length - 1) * 0.2 + 16))
+                    : Math.max(64, header.length * 7 + 16)), 72];
+                const scenario = JSON.stringify({ milestones, availableWidth, canvasAvailable });
+                assert.equal(widths.length, columns.length + 1, 'Column groups must match data columns plus Edit: ' + scenario);
+                assert.deepEqual(widths, expected.map(width => [width, width]), 'Each width must follow its current heading, not its previous position: ' + scenario);
+                const minimumTotal = Number(context.html.match(/min-width:(\d+)px; table-layout:fixed/)[1]);
+                assert.equal(minimumTotal, expected.reduce((sum, width) => sum + width, 0), 'Table minimum must include every current column exactly once: ' + scenario);
+                assert.match(context.html, /style="width:100%;/);
+                assert.doesNotMatch(context.html, /NaN|undefined|max-width:/);
+            }
+        }
+    }
+});
+
+test('Overall component summary centers only its second-row headings', () => {
+    const rule = page.match(/#homeLegacyTablesGrid \.ccip-live-table\.ccip-component-summary-table \.ccip-component-sub-header \{([^}]*)\}/);
+    assert.ok(rule);
+    assert.match(rule[1], /text-align: center;/);
 });
 
 test('component summary subheaders use unscaled CSS heights and resize observation instead of scroll corrections', () => {
@@ -158,7 +437,263 @@ test('ingredient risk heatmap orders platforms by descending total without misal
     assert.ok(host.innerHTML.includes('No heatmap data available.'));
 });
 
-test('OEM rolling-week trends display signed request counts and red increases instead of percentages', () => {
+test('ingredient risk heatmap projects separate unique and duplicate open counts within the same scope', () => {
+    const projection = server.match(/private void PopulateOverallComponentRiskHeatmap\([\s\S]*?\r?\n    \}/);
+    assert.ok(projection);
+    const source = projection[0];
+    assert.match(source, /SUM\(CASE WHEN cmf_request = 'cmf_ok' THEN 1 ELSE 0 END\) AS open_unique_count/);
+    assert.match(source, /SUM\(CASE WHEN cmf_request = 'cmf_duplicate' THEN 1 ELSE 0 END\) AS open_duplicate_count/);
+    assert.match(source, /cmf_request = 'cmf_ok' AND[^\n]*AS open_unique_los_count/);
+    assert.match(source, /cmf_request = 'cmf_duplicate' AND[^\n]*AS open_duplicate_los_count/);
+    assert.match(source, /WHERE status = 'open'\s+AND cmf_request IN \('cmf_ok', 'cmf_duplicate'\)/);
+    assert.match(source, /ISNULL\(LTRIM\(RTRIM\(drivers\)\), ''\) <> ''/);
+    assert.match(source, /sysdebug LIKE '%customer_must_fix%'/);
+    assert.match(source, /GetDashboardDateFilter\(\)\.BuildPredicate\(null\)/);
+    assert.match(source, /CmfPlatformCatalog\.CreateReadCommand\(sql, connection\)/);
+    assert.match(source, /if \(count <= 0 && duplicateCount <= 0\)/);
+    assert.match(source, /row\.DuplicateValues\.Add\(duplicateValue\)/);
+    assert.match(source, /row\.DuplicateStatusBreakdowns\.Add\(BuildHeatmapOpenUniqueTooltip\(duplicateValue, duplicateLosValue, true\)\)/);
+});
+
+test('ingredient risk heatmap record types update counts, LOS, ordering and drilldowns independently', () => {
+    assert.match(page, /id="homeOverallHeatmapUnique" checked="checked"/);
+    assert.match(page, /id="homeOverallHeatmapDuplicates" autocomplete="off"/);
+    const unique = { checked: true };
+    const duplicates = { checked: false };
+    let markup = '';
+    let scroll = { scrollTop: 145, scrollLeft: 92 };
+    const host = {
+        get innerHTML() { return markup; },
+        set innerHTML(value) { markup = value; scroll = { scrollTop: 0, scrollLeft: 0 }; },
+        querySelectorAll: () => [],
+        querySelector: selector => selector === '.component-summary-heatmap-scroll' ? scroll : null
+    };
+    let popup;
+    const context = vm.createContext({
+        document: { getElementById: id => ({ homeOverallHeatmap: host, homeOverallHeatmapUnique: unique, homeOverallHeatmapDuplicates: duplicates })[id] },
+        window: { CMF_PORTAL: { overallRiskSubtractLos: true } },
+        normalizeComponentRiskThresholds: () => ({ low: 0, med: 3, high: 6 }),
+        getOverallHeatClassFromOpenUniqueByThreshold: value => 'risk-' + value,
+        escapeHtml: value => String(value),
+        openSummaryIssueLinksPopup: (metric, label, options) => { popup = options; }
+    });
+    for (const name of ['renderOverallHeatmap', 'openOverallHeatmapIssueLinksPopup']) {
+        const definition = page.match(new RegExp('        function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n        \\}'));
+        assert.ok(definition);
+        vm.runInContext(definition[0], context);
+    }
+    const snapshot = {
+        HeatmapPlatforms: ['Alpha', 'Beta'],
+        ComponentRiskHeatmap: [
+            { Ingredient: 'Driver', Values: [2, 4], DuplicateValues: [6, 1], StatusBreakdowns: ['Open Unique: 2\nLOS: 1', 'Open Unique: 4\nLOS: 2'], DuplicateStatusBreakdowns: ['Open Duplicates: 6\nLOS: 3', 'Open Duplicates: 1\nLOS: 1'] },
+            { Ingredient: 'Duplicate Only', Values: [0, 0], DuplicateValues: [0, 2], StatusBreakdowns: ['No issues', 'No issues'], DuplicateStatusBreakdowns: ['No issues', 'Open Duplicates: 2\nLOS: 1'] }
+        ]
+    };
+    const original = JSON.stringify(snapshot);
+    const cases = [
+        { unique: true, duplicates: false, headers: ['Beta', 'Alpha'], values: ['4 (2)', '2 (1)'], risks: [2, 1] },
+        { unique: true, duplicates: true, headers: ['Alpha', 'Beta'], values: ['8 (4)', '5 (3)', '0', '2 (1)'], risks: [4, 2, 0, 1] },
+        { unique: false, duplicates: true, headers: ['Alpha', 'Beta'], values: ['6 (3)', '1 (1)', '0', '2 (1)'], risks: [3, 0, 0, 1] },
+        { unique: false, duplicates: false, headers: ['Alpha', 'Beta'], values: ['0', '0'], risks: [0, 0] }
+    ];
+    context.renderOverallHeatmap(snapshot);
+    for (const selected of cases) {
+        unique.checked = selected.unique;
+        duplicates.checked = selected.duplicates;
+        duplicates.onchange();
+        const headers = Array.from(markup.matchAll(/class="overall-heatmap-platform">([^<]*)/g), match => match[1]);
+        const tiles = Array.from(markup.matchAll(/<div class="overall-heatmap-tile ([^"]*)"([^>]*)>([^<]*)<\/div>/g));
+        assert.deepEqual(headers, selected.headers);
+        assert.deepEqual(tiles.map(tile => tile[3]), selected.values);
+        assert.deepEqual(tiles.map(tile => Number(tile[1].match(/risk-(\d+)/)[1])), selected.risks);
+        assert.equal(scroll.scrollTop, 145);
+        assert.equal(scroll.scrollLeft, 92);
+        if (!selected.unique && !selected.duplicates) {
+            assert.ok(tiles.every(tile => !tile[2].includes('data-heatmap-clickable')));
+        }
+        context.openOverallHeatmapIssueLinksPopup('Driver', headers[0]);
+        assert.equal(popup.includeUnique, selected.unique);
+        assert.equal(popup.includeDuplicates, selected.duplicates);
+        assert.equal(popup.ingredient, 'Driver');
+        assert.equal(popup.platformLabel, headers[0]);
+        assert.equal(JSON.stringify(snapshot), original);
+    }
+    unique.checked = true;
+    duplicates.checked = false;
+    context.renderOverallHeatmap({ HeatmapPlatforms: ['Alpha'], ComponentRiskHeatmap: [{ Ingredient: 'Updated', Values: [9] }] });
+    unique.onchange();
+    assert.ok(markup.includes('>Updated</div>'));
+    assert.ok(markup.includes('>9</div>'));
+    assert.ok(!markup.includes('>Driver</div>'));
+    assert.match(page, /includeUnique: sourceType === 'overall-heatmap' \? popupOptions.includeUnique !== false : true/);
+    assert.match(page, /includeDuplicates: sourceType === 'overall-heatmap' \? popupOptions.includeDuplicates === true/);
+});
+
+test('OEM duplicate counts share dashboard scope but stay separate from unique metrics and trends', () => {
+    const definition = server.match(/    private void PopulateOverallOemSummary\([^)]*\)[\s\S]*?\r?\n    \}/);
+    assert.ok(definition);
+    const sql = definition[0];
+    assert.match(sql, /IN \('cmf_ok', 'cmf_duplicate'\)/);
+    assert.match(sql, /FROM issue_base\s+WHERE request_norm = 'cmf_ok'/);
+    assert.match(sql, /duplicate_agg AS \([\s\S]*?FROM issue_base\s+WHERE request_norm = 'cmf_duplicate'/);
+    assert.match(sql, /status_norm NOT IN \('complete', 'rejected', 'implemented', 'future'\)[^\n]*AS duplicate_open_issues/);
+    assert.match(sql, /status_norm IN \('implemented', 'future'\)[^\n]*AS duplicate_implemented/);
+    assert.match(sql, /status_norm IN \('complete', 'rejected'\)[^\n]*AS duplicate_closed/);
+    assert.match(sql, /FULL OUTER JOIN duplicate_agg d\s+ON d.oem = COALESCE\(i.oem, p.oem\)/);
+    assert.match(sql, /LEFT JOIN trend_agg t ON t.oem = c.oem\s+AND \(c.total_issues > 0 OR c.cmf_pending > 0\)/);
+    assert.match(sql, /trend_base AS \([\s\S]*?cmf_request, ''\)\)\)\) = 'cmf_ok'/);
+    for (const [index, field] of ['DuplicateTotalIssues', 'DuplicateOpenIssues', 'DuplicateImplemented', 'DuplicateClosed'].entries()) {
+        assert.ok(server.includes('public int ' + field + ' { get; set; }'));
+        assert.ok(sql.includes('row.' + field + ' = ReadInt(reader, ' + (index + 12) + ');'));
+    }
+});
+
+test('OEM record-type checkboxes default to unique and support all four count and link selections', () => {
+    const uniqueInput = page.match(/<input\b[^>]*id="homeOverallOemUnique"[^>]*>/);
+    assert.ok(uniqueInput);
+    assert.match(uniqueInput[0], /checked="checked"/);
+    assert.match(uniqueInput[0], /aria-controls="homeOverallOemTable"/);
+    const input = page.match(/<input\b[^>]*id="homeOverallOemDuplicates"[^>]*>/);
+    assert.ok(input);
+    assert.doesNotMatch(input[0], /\bchecked\b/);
+    assert.match(input[0], /aria-controls="homeOverallOemTable"/);
+    const host = { innerHTML: '', scrollTop: 137 };
+    const uniqueCheckbox = { checked: true };
+    const checkbox = { checked: false };
+    const context = vm.createContext({
+        document: { getElementById: id => id === 'homeOverallOemUnique' ? uniqueCheckbox : (id === 'homeOverallOemDuplicates' ? checkbox : host) },
+        escapeHtml: value => String(value),
+        renderOverallOemNameCell: value => String(value)
+    });
+    const definition = page.match(/        function renderOverallOemTable\([^)]*\) \{[\s\S]*?\r?\n        \}/);
+    assert.ok(definition);
+    vm.runInContext(definition[0], context);
+    const rows = [
+        { OemName: 'Duplicate only', DuplicateTotalIssues: 3, DuplicateOpenIssues: 3 },
+        { OemName: 'Mixed', TotalIssues: 3, Closed: 1, Implemented: 1, OpenIssues: 1, CmfPending: 2,
+            AvgResolutionDays: 10, TrendCount: -1, RecentRequestCount: 1, PreviousRequestCount: 2,
+            DuplicateTotalIssues: 4, DuplicateClosed: 2, DuplicateImplemented: 1, DuplicateOpenIssues: 1 }
+    ];
+    context.renderOverallOemTable(rows);
+    const original = host.innerHTML;
+    assert.doesNotMatch(original, /overall-oem-duplicate-note|Duplicate only/);
+    assert.ok(original.includes('Mixed%7C%7Ctotal%7C%7Cunique'));
+    checkbox.checked = true;
+    checkbox.onchange();
+    assert.ok(host.innerHTML.includes('Duplicate only'));
+    assert.doesNotMatch(host.innerHTML, /overall-oem-duplicate-note/);
+    assert.ok(host.innerHTML.indexOf('Duplicate only') < host.innerHTML.indexOf('Mixed'));
+    const metricValues = html => Array.from(html.matchAll(/<(?:a|span)[^>]*class="overall-oem-metric-link [^"]*"[^>]*>(\d+)<\/(?:a|span)>/g), match => Number(match[1]));
+    const total = host.innerHTML.match(/<tr class="overall-oem-total-row">([\s\S]*?)<\/tr>/)[1];
+    assert.deepEqual(metricValues(total), [10, 3, 2, 5, 2]);
+    const mixed = host.innerHTML.match(/<tr><td>[^]*?Mixed[^]*?<\/tr>/)[0];
+    assert.deepEqual(metricValues(mixed).slice(-5), [7, 3, 2, 2, 2]);
+    const duplicateOnly = host.innerHTML.match(/<tr><td>[^]*?Duplicate only[^]*?<\/tr>/)[0];
+    assert.deepEqual(metricValues(duplicateOnly), [3, 0, 0, 3, 0]);
+    assert.ok(duplicateOnly.includes('class="overall-oem-metric-link overall-oem-metric-open" onclick='));
+    assert.ok(host.innerHTML.includes('Mixed%7C%7Ctotal%7C%7Call'));
+    assert.ok(total.includes('__all_oems__%7C%7Copen%7C%7Call'));
+    assert.ok(total.includes('<td>10.0</td>'));
+    assert.ok(total.includes('last 7 days (including today): 1; previous 7 days: 2; change: -1.'));
+    assert.equal(host.scrollTop, 137);
+    assert.equal(rows[0].OemName, 'Duplicate only', 'Rendering must not reorder snapshot rows.');
+    uniqueCheckbox.checked = false;
+    uniqueCheckbox.onchange();
+    const duplicateTotal = host.innerHTML.match(/<tr class="overall-oem-total-row">([\s\S]*?)<\/tr>/)[1];
+    assert.deepEqual(metricValues(duplicateTotal), [7, 2, 1, 4, 2]);
+    assert.ok(host.innerHTML.includes('Mixed%7C%7Ctotal%7C%7Cduplicates'));
+    assert.ok(duplicateTotal.includes('__all_oems__%7C%7Copen%7C%7Cduplicates'));
+    assert.ok(duplicateTotal.includes('<td>10.0</td>'));
+    assert.equal(host.scrollTop, 137);
+    checkbox.checked = false;
+    checkbox.onchange();
+    const emptyTotal = host.innerHTML.match(/<tr class="overall-oem-total-row">([\s\S]*?)<\/tr>/)[1];
+    assert.deepEqual(metricValues(emptyTotal), [0, 0, 0, 0, 2]);
+    assert.doesNotMatch(host.innerHTML, /class="overall-oem-name-link"|<a[^>]*class="overall-oem-metric-link overall-oem-metric-(?:total|closed|implemented|open)"/);
+    uniqueCheckbox.checked = true;
+    uniqueCheckbox.onchange();
+    assert.equal(host.innerHTML, original);
+    assert.equal(host.scrollTop, 137);
+    checkbox.checked = true;
+    context.renderOverallOemTable([{ OemName: 'Refreshed', TotalIssues: 1, DuplicateTotalIssues: 7 }]);
+    checkbox.onchange();
+    assert.deepEqual(metricValues(host.innerHTML), [8, 0, 0, 0, 0, 8, 0, 0, 0, 0]);
+    assert.doesNotMatch(host.innerHTML, /Mixed/);
+    context.renderOverallOemTable([{ OemName: 'No duplicates', TotalIssues: 1 }]);
+    assert.doesNotMatch(host.innerHTML, /overall-oem-duplicate-note/);
+    context.renderOverallOemTable([]);
+    assert.ok(host.innerHTML.includes('No OEM/customer summary data available.'));
+});
+
+test('OEM drilldowns and exports honor selected record types while retaining legacy combined tokens', () => {
+    const drilldown = server.match(/    private DataTable GetOemSummaryModalData\([^)]*\)[\s\S]*?\r?\n    \}/);
+    assert.ok(drilldown);
+    assert.match(drilldown[0], /recordTypeParts\.Length >= 3 && string\.Equals\(recordTypeParts\[2\], "unique", StringComparison\.OrdinalIgnoreCase\)/);
+    assert.match(drilldown[0], /recordTypeParts\.Length >= 3 && string\.Equals\(recordTypeParts\[2\], "duplicates", StringComparison\.OrdinalIgnoreCase\)/);
+    assert.match(drilldown[0], /recordTypeParts\.Length >= 3 && string\.Equals\(recordTypeParts\[2\], "none", StringComparison\.OrdinalIgnoreCase\)/);
+    assert.match(drilldown[0], /whereClause\.Append\(uniqueOnly\s+\? "AND [^\n]*= 'cmf_ok' "\s+: duplicatesOnly\s+\? "AND [^\n]*= 'cmf_duplicate' "/);
+    assert.match(drilldown[0], /: noRecordTypes\s+\? "AND 1 = 0 "\s+: "AND [^\n]*IN \('cmf_ok', 'cmf_duplicate'\) "/);
+    assert.match(server, /return GetOemSummaryModalData\(oem\);/);
+});
+
+test('OEM record-type controls align with the table edge inside its scrollbar gutter', () => {
+    const controls = page.match(/\.overall-oem-record-type-toggles \{([^}]*)\}/);
+    assert.ok(controls);
+    assert.match(controls[1], /margin-left: auto;/);
+    assert.match(controls[1], /margin-right: 8px;/);
+    assert.match(page, /\.overall-oem-table-wrap \{[^}]*scrollbar-gutter: stable;/);
+});
+
+test('OEM table matches Design Summary cell borders with stable sticky-header geometry', () => {
+    const table = page.match(/\.overall-oem-table \{([^}]*)\}/);
+    assert.ok(table);
+    assert.match(table[1], /border-collapse: separate;/);
+    assert.match(table[1], /border-spacing: 0;/);
+    assert.match(table[1], /border-radius: 0;/);
+    const header = page.match(/\.overall-oem-table th \{([^}]*)\}/);
+    assert.ok(header);
+    assert.match(header[1], /position: sticky;/);
+    assert.match(header[1], /top: 0;/);
+    assert.match(header[1], /border: 1px solid #d9dde5;/);
+    assert.match(header[1], /border-left: 0;/);
+    assert.match(header[1], /background-clip: padding-box;/);
+    const cell = page.match(/\.overall-oem-table td \{([^}]*)\}/);
+    assert.ok(cell);
+    assert.match(cell[1], /border: 1px solid #d9dde5;/);
+    assert.match(cell[1], /border-top: 0;/);
+    assert.match(cell[1], /border-left: 0;/);
+    assert.match(page, /\.overall-oem-table th,\s*\.overall-oem-table td \{\s*border-left: 0 !important;/);
+    assert.match(page, /\.overall-oem-table-wrap \{[^}]*scrollbar-gutter: stable;/);
+    const total = page.match(/\.overall-oem-table tbody tr\.overall-oem-total-row td \{([^}]*)\}/);
+    assert.ok(total);
+    assert.doesNotMatch(total[1], /border-/);
+    assert.match(total[1], /background: #f8fafc;/);
+});
+
+test('OEM zero counts retain metric styling without links or hover underlines', () => {
+    const host = { innerHTML: '' };
+    const context = vm.createContext({
+        document: { getElementById: () => host },
+        escapeHtml: value => String(value),
+        renderOverallOemNameCell: value => String(value)
+    });
+    const definition = page.match(/        function renderOverallOemTable\([^)]*\) \{[\s\S]*?\r?\n        \}/);
+    assert.ok(definition);
+    vm.runInContext(definition[0], context);
+    context.renderOverallOemTable([
+        { OemName: 'Empty', TotalIssues: 0, Closed: 0, Implemented: 0, OpenIssues: 0, CmfPending: 0 },
+        { OemName: 'Mixed', TotalIssues: 2, Closed: 1, Implemented: 0, OpenIssues: 1, CmfPending: 0 }
+    ]);
+    assert.equal((host.innerHTML.match(/<span class="overall-oem-metric-link [^"]*">0<\/span>/g) || []).length, 9);
+    const links = Array.from(host.innerHTML.matchAll(/<a[^>]*class="overall-oem-metric-link [^"]*"[^>]*>([^<]*)<\/a>/g));
+    assert.equal(links.length, 6);
+    assert.ok(links.every(link => Number(link[1]) > 0 && link[0].includes('showDetailsModal3')));
+    assert.match(page, /a\.overall-oem-metric-link:hover\s*\{[^}]*text-decoration: underline;/);
+    assert.match(page, /span\.overall-oem-metric-link\s*\{\s*cursor: default;/);
+    assert.doesNotMatch(page, /(?:^|\n)\.overall-oem-metric-link:hover\s*\{/);
+});
+
+test('OEM rolling-week trends omit minus signs on decreases and preserve signed tooltips', () => {
     const host = { innerHTML: '' };
     const context = vm.createContext({
         document: { getElementById: () => host },
@@ -175,10 +710,12 @@ test('OEM rolling-week trends display signed request counts and red increases in
         { OemName: 'New', OpenIssues: 0, TrendCount: 2, RecentRequestCount: 2, PreviousRequestCount: 0 }
     ]);
     const trends = Array.from(host.innerHTML.matchAll(/<span class="overall-oem-trend ([^"]*)" title="([^"]*)">[\s\S]*?<span class="overall-oem-trend-value">([^<]*)<\/span>/g));
-    assert.deepEqual(trends.map(trend => trend[3]), ['+5', '-3', '0', '+2']);
-    assert.deepEqual(trends.map(trend => trend[1]), ['overall-trend-up', 'overall-trend-down', 'overall-trend-flat', 'overall-trend-up']);
+    assert.deepEqual(trends.map(trend => trend[3]), ['+5', '3', '0', '+2', '+4']);
+    assert.deepEqual(trends.map(trend => trend[1]), ['overall-trend-up', 'overall-trend-down', 'overall-trend-flat', 'overall-trend-up', 'overall-trend-up']);
     assert.ok(trends[0][2].includes('last 7 days (including today): 15; previous 7 days: 10; change: +5'));
+    assert.ok(trends[1][2].includes('last 7 days (including today): 7; previous 7 days: 10; change: -3'));
     assert.ok(trends[3][2].includes('previous 7 days: 0; change: +2'));
+    assert.ok(trends[4][2].includes('last 7 days (including today): 26; previous 7 days: 22; change: +4'));
     assert.ok(trends.every(trend => !trend[3].includes('%')));
     assert.ok(host.innerHTML.includes('(7d vs Previous 7d)'));
     assert.match(page, /\.overall-oem-trend\s*\{[^}]*display:\s*inline-flex;[^}]*column-gap:\s*0\.5em;[^}]*justify-content:\s*center;/);
@@ -189,6 +726,37 @@ test('OEM rolling-week trends display signed request counts and red increases in
     assert.match(page, /\.overall-trend-down\s*\{\s*color:\s*#067647;/);
     context.renderOverallOemTable([]);
     assert.ok(host.innerHTML.includes('No OEM/customer summary data available.'));
+});
+
+test('OEM total trend compares summed rolling windows for increases, decreases and flat totals', () => {
+    const host = { innerHTML: '' };
+    const context = vm.createContext({
+        document: { getElementById: () => host },
+        escapeHtml: value => String(value),
+        renderOverallOemNameCell: value => String(value)
+    });
+    const definition = page.match(/        function renderOverallOemTable\([^)]*\) \{[\s\S]*?\r?\n        \}/);
+    assert.ok(definition);
+    vm.runInContext(definition[0], context);
+    for (const scenario of [
+        { counts: [[10, 2], [1, 8]], recent: 11, previous: 10, value: '+1', tone: 'up', signed: '+1' },
+        { counts: [[2, 7], [3, 4]], recent: 5, previous: 11, value: '6', tone: 'down', signed: '-6' },
+        { counts: [[2, 4], [4, 2]], recent: 6, previous: 6, value: '0', tone: 'flat', signed: '0' },
+        { counts: [[5, 0], [2, 0]], recent: 7, previous: 0, value: '+7', tone: 'up', signed: '+7' },
+        { counts: [[0, 0]], recent: 0, previous: 0, value: '0', tone: 'flat', signed: '0' }
+    ]) {
+        context.renderOverallOemTable(scenario.counts.map(([recent, previous], index) => ({
+            OemName: 'OEM ' + index, RecentRequestCount: recent, PreviousRequestCount: previous,
+            TrendCount: recent - previous
+        })));
+        const total = host.innerHTML.match(/<tr class="overall-oem-total-row">([\s\S]*?)<\/tr>/);
+        assert.ok(total);
+        assert.ok(total[1].includes('overall-trend-' + scenario.tone));
+        assert.ok(total[1].includes('<span class="overall-oem-trend-value">' + scenario.value + '</span>'));
+        assert.ok(total[1].includes('last 7 days (including today): ' + scenario.recent
+            + '; previous 7 days: ' + scenario.previous + '; change: ' + scenario.signed + '.'));
+        assert.doesNotMatch(total[1], /overall-oem-total-trend">-|%/);
+    }
 });
 
 test('OEM request trends use fixed rolling windows separately from dashboard-filtered totals', () => {
@@ -367,8 +935,77 @@ test('AI Insights Overall finding labels use compact teal badges with softly rou
     assert.match(page, /Content\/cmf-dashboard-insights\.css\?v=14/);
 });
 
+test('all Overall sections use 9px padding and matching border corners and shadow', () => {
+    const selected = page.match(/#homeOverallLayoutV2 > \.overall-ai-span-card,\s*#homeOverallLayoutV2 > \.overall-row-second,\s*#homeOverallLayoutV2 > \.overall-row-summary > \.overall-summary-card,\s*#homeOverallLayoutV2 > \.overall-summary-side-card\.overall-summary-side-span,\s*#homeOverallLayoutV2 > \.overall-row-third \{([^}]*)\}/);
+    const reference = page.match(/^\.overall-row \{([^}]*)\}/m);
+    assert.ok(selected);
+    assert.ok(reference);
+    assert.match(selected[1], /(?:^|\n)\s*padding: 9px !important;/);
+    for (const property of ['border', 'border-radius', 'box-shadow']) {
+        const declaration = new RegExp('(?:^|\\n)\\s*' + property + ':\\s*([^;]+);');
+        const actual = selected[1].match(declaration);
+        const expected = reference[1].match(declaration);
+        assert.ok(actual);
+        assert.ok(expected);
+        assert.match(actual[1], /!important$/);
+        assert.equal(actual[1].replace(/\s*!important$/, ''), expected[1], property + ' must match the bottom section');
+    }
+});
+
+test('equivalent platform containers match the Overall section padding border corners and shadow', () => {
+    const platform = page.match(/#homeLegacyTopLayout #homeLegacySummarySection \.overall-summary-side-card,\s*#homeLegacyTopLayout #homeLegacySummarySection \.overall-summary-card,\s*#homeLegacyTopLayout #homeLegacyOverview \.ccip-dashboard-left,\s*#homeLegacyTopLayout #homeLegacyAiHealthCard,\s*#homeLegacyTablesGrid \.ccip-summary-canvas \{([^}]*)\}/);
+    const overall = page.match(/#homeOverallLayoutV2 > \.overall-row-third \{([^}]*)\}/);
+    assert.ok(platform);
+    assert.ok(overall);
+    for (const property of ['padding', 'border', 'border-radius', 'box-shadow']) {
+        const declaration = new RegExp('(?:^|\\n)\\s*' + property + ':\\s*([^;]+);');
+        const actual = platform[1].match(declaration);
+        const expected = overall[1].match(declaration);
+        assert.ok(actual);
+        assert.ok(expected);
+        assert.equal(actual[1], expected[1], property + ' must match Overall');
+    }
+});
+
+test('platform bottom section matches the Overall section outer styling', () => {
+    const platform = page.match(/#homeLegacyTablesGrid \.ccip-summary-canvas \{([^}]*)\}/);
+    const overall = page.match(/^\.overall-row \{([^}]*)\}/m);
+    assert.ok(platform);
+    assert.ok(overall);
+    for (const property of ['border', 'border-radius', 'background', 'box-shadow', 'padding']) {
+        const declaration = new RegExp('(?:^|\\n)\\s*' + property + ':\\s*([^;]+);');
+        const platformValue = platform[1].match(declaration);
+        const overallValue = overall[1].match(declaration);
+        assert.ok(platformValue, 'Platform must define ' + property);
+        assert.ok(overallValue, 'Overall must define ' + property);
+        assert.equal(platformValue[1], overallValue[1], property + ' must match Overall');
+    }
+});
+
+test('platform Q.Links fills the full two-row grid without changing its width', () => {
+    const grid = page.match(/\.ccip-specific-top-layout \{([^}]*)\}/);
+    assert.ok(grid);
+    assert.match(grid[1], /position: relative;/);
+    const summary = page.match(/#homeLegacyTopLayout #homeLegacySummarySection \{([^}]*)\}/);
+    assert.ok(summary);
+    assert.match(summary[1], /position: static;/);
+    const card = page.match(/#homeLegacyTopLayout #homeLegacySummarySection \.overall-summary-side-card \{([^}]*)\}/);
+    assert.ok(card);
+    assert.match(card[1], /grid-column: 1;/);
+    assert.match(card[1], /grid-row: 1 \/ span 2;/);
+    assert.match(card[1], /height: 100%;/);
+    assert.match(card[1], /min-height: 0;/);
+    assert.match(card[1], /max-height: none;/);
+    assert.match(card[1], /width: var\(--cmf-summary-side-card-width\) !important;/);
+    assert.match(card[1], /position: absolute;/);
+    assert.match(card[1], /left: 0;/);
+    assert.match(card[1], /top: 0;/);
+});
+
 test('AI Insights keeps content-independent card dimensions and internal scrolling', () => {
     const styles = fs.readFileSync(path.join(root, 'Content', 'cmf-dashboard-insights.css'), 'utf8');
+    assert.match(page, /#homeLegacyAiHealthCard \{\s*--ccip-ai-left-extend: 0px;\s*--ccip-ai-fixed-height: 100%;/);
+    assert.match(page, /@media \(max-width: 900px\) \{\s*#homeLegacyAiHealthCard \{\s*--ccip-ai-fixed-height: 503\.85px;/);
     assert.match(styles, /#homeOverallLayoutV2 > \.overall-ai-span-card,\s*#homeLegacyAiHealthCard\s*\{\s*position: relative;\s*contain: size;\s*overflow: hidden;/);
     assert.match(styles, /#homeLegacyAiHealthCard\s*\{\s*min-height: var\(--ccip-ai-fixed-height\) !important;\s*max-height: var\(--ccip-ai-fixed-height\) !important;/);
     assert.match(styles, /\.cmf-insights\s*\{[^}]*min-width: 0;[^}]*min-height: 0;[^}]*overflow: auto;/);
@@ -669,6 +1306,10 @@ test('AI Insights findings reuse the shared assistant sections without changing 
     assert.doesNotMatch(styles, /#homeOverallInsights \.ci-briefing/);
 });
 
+test('Overall platform button keeps shared rail spacing rather than separate right alignment', () => {
+    assert.doesNotMatch(theme, /\.platform-chip\[data-platform="CMF_OVERALL_ALL_COMPONENTS_TABLE"\]\s*\{[^}]*margin-left:\s*auto;/);
+});
+
 test('dashboard date controls share the platform row and align to the visible AI card across scales', () => {
     assert.match(page, /<div class="dashboard-platform-toolbar">\s*<div class="platform-chip-rail"[^>]*><\/div>\s*<div class="dashboard-date-filter">/);
     const definition = page.match(/        function syncDashboardPlatformToolbarWidth\([^)]*\) \{[\s\S]*?\r?\n        \}/);
@@ -714,6 +1355,11 @@ test('milestone Total CMFs opens all milestones through the scoped detail and ex
     context.renderMilestoneSummaryPie(host, { Rows: [['QS', '47'], ['Beta', '12'], ['Total', '59']] });
     assert.match(host.innerHTML, /milestone-stacked-total">Total CMFs: <a[^>]*showDriverIssues\(decodeURIComponent\('__all_milestones__'\)\);">59<\/a>/);
     assert.match(host.innerHTML, /showDriverIssues\(decodeURIComponent\('QS'\)\)/);
+    assert.match(host.innerHTML, /<span class="overall-break-name">QS<\/span><span class="overall-break-pct">\(80%\)<\/span><\/span>/);
+    assert.match(host.innerHTML, /<span class="overall-break-name">Beta<\/span><span class="overall-break-pct">\(20%\)<\/span><\/span>/);
+    const metrics = Array.from(host.innerHTML.matchAll(/<span class="overall-break-metrics">([\s\S]*?)<\/span>/g), match => match[1]);
+    assert.equal(metrics.length, 2);
+    assert.ok(metrics.every(metric => /^<strong class="overall-break-count"><a[^>]*>\d+<\/a><\/strong>$/.test(metric)));
     const query = server.match(/    private DataTable GetDriverIssuesData\([^)]*\)[\s\S]*?\r?\n    \}/);
     assert.ok(query);
     assert.match(query[0], /allMilestones \? ResolveDashboardPlatformSelection\(\) : selectedPlatform/);
@@ -849,6 +1495,7 @@ test('Overall trend stacks week-end balances and retains weekly clustered bars a
     const specificView = { value: 'line' };
     const chart = {
         setOption: option => options.push(option),
+        getOption: () => undefined,
         on() {}, off() {}, resize() {},
         getZr: () => ({ on() {}, off() {} }),
         containPixel: () => true,
@@ -896,10 +1543,14 @@ test('Overall trend stacks week-end balances and retains weekly clustered bars a
     assert.equal(contour.data[0].value, 132);
     assert.equal(contour.data[0].weekOffset, 5);
     assert.equal(JSON.stringify(options[0].legend.data), JSON.stringify(['Open', 'Implemented']));
+    assert.deepEqual(Array.from(options[0].legend.data, options[0].legend.formatter), ['Open', 'Implemented']);
     assert.ok(options[0].series.every(series => !series.label));
     assert.equal(options[0].grid.top, 30);
-    assert.equal(options[0].grid.left, 10, 'Let containLabel reserve the Y-axis width without a redundant left gutter.');
-    assert.equal(options[0].grid.right, 28, 'Reserve space for the last WW label.');
+    assert.equal(options[0].grid.left, 30, 'Reserve a compact stable gutter with room for two-digit issue counts.');
+    assert.equal(options[0].grid.containLabel, false, 'Automatic label sizing must not shift work-week positions.');
+    assert.equal(options[0].grid.bottom, 29, 'Reserve space for work-week labels explicitly.');
+    assert.equal(options[0].grid.right, 20, 'Reserve only the space needed for the last WW label.');
+    assert.equal(options[0].yAxis.minInterval, 1, 'Overall backlog uses whole-number issue ticks.');
     assert.equal(options[0].xAxis.axisLabel.showMinLabel, true);
     assert.equal(options[0].xAxis.axisLabel.showMaxLabel, true);
     assert.equal(options[0].xAxis.axisLabel.hideOverlap, true);
@@ -921,6 +1572,7 @@ test('Overall trend stacks week-end balances and retains weekly clustered bars a
     const bars = options[1];
     assert.equal(bars.series[0].type, 'bar');
     assert.equal(bars.series[1].type, 'bar');
+    assert.deepEqual(Array.from(bars.series, series => bars.legend.formatter(series.name)), ['Opened', 'Closed']);
     assert.equal(bars.tooltip.formatter, undefined);
     assert.equal(bars.color[0], '#0369a1');
     assert.equal(bars.color[1], '#16a34a');
@@ -930,8 +1582,11 @@ test('Overall trend stacks week-end balances and retains weekly clustered bars a
     assert.equal(bars.series[1].itemStyle.color, '#dcfce7');
     assert.equal(bars.series[1].itemStyle.borderColor, '#16a34a');
     assert.equal(bars.grid.top, 40);
-    assert.equal(bars.grid.left, 10);
-    assert.equal(bars.grid.right, 24);
+    assert.equal(bars.grid.left, 30);
+    assert.equal(bars.grid.containLabel, false);
+    assert.equal(bars.grid.bottom, 29);
+    assert.equal(bars.grid.right, 12);
+    assert.equal(bars.yAxis.minInterval, 1, 'Overall weekly flow uses whole-number issue ticks.');
     for (const series of bars.series) {
         assert.equal(series.label.show, true);
         assert.equal(series.label.position, 'top');
@@ -954,11 +1609,14 @@ test('Overall trend stacks week-end balances and retains weekly clustered bars a
     assert.equal(options[3].series[0].type, 'line');
     assert.equal(options[3].series[0].data[0].value, 80);
     assert.equal(options[3].series[1].data[0].value, 40);
+    assert.deepEqual(Array.from(options[3].legend.data, options[3].legend.formatter), ['Open', 'Implemented']);
     view.value = 'bar';
     context.renderHomeTrendChart(snapshot, 'homeTrendChart', 'specificChart', 6);
     assert.equal(options[4].series[0].type, 'line');
     assert.equal(options[4].series[0].name, 'Implemented');
     assert.equal(options[4].series[1].name, 'Open');
+    assert.deepEqual(Array.from(options[4].legend.data, options[4].legend.formatter), ['Open', 'Implemented']);
+    assert.equal(options[4].yAxis.minInterval, 1, 'Platform backlog uses whole-number issue ticks.');
     assert.equal(options[4].series[0].data[0].value, 86);
     assert.equal(options[4].series[1].data[0].value, 46);
     assert.equal(options[4].tooltip.formatter([
@@ -974,7 +1632,7 @@ test('Overall trend stacks week-end balances and retains weekly clustered bars a
     const legendHandler = chart.__cmfTrendLegendHandler;
     legendHandler({ selected: { Open: false, Implemented: true } });
     const implementedOption = options.pop();
-    assert.equal(implementedOption.grid.left, 10);
+    assert.equal(implementedOption.grid.left, 30);
     const implementedOnly = implementedOption.series[0];
     assert.equal(implementedOnly.id, 'cmf-backlog-contour');
     assert.equal(implementedOnly.data[0].value, 86);
@@ -982,11 +1640,12 @@ test('Overall trend stacks week-end balances and retains weekly clustered bars a
     assert.equal(options.pop().series[0].data[0].value, 46);
     legendHandler({ selected: { Open: false, Implemented: false } });
     const hiddenOption = options.pop();
-    assert.equal(hiddenOption.grid.left, 28, 'Retain first-WW clearance when the empty chart has no Y-axis labels.');
-    assert.equal(hiddenOption.series[0].data.length, 0, 'No contour or baseline remains when both areas are deselected.');
+    assert.equal(hiddenOption.grid.left, 30, 'Retain the two-digit gutter for the zero-level contour.');
+    assert.equal(hiddenOption.series[0].data.length, 6, 'Keep a contour point for each week when both areas are deselected.');
+    assert.ok(hiddenOption.series[0].data.every(point => point.value === 0));
     legendHandler({ selected: { Open: true, Implemented: true } });
     const restoredOption = options.pop();
-    assert.equal(restoredOption.grid.left, 10);
+    assert.equal(restoredOption.grid.left, 30);
     assert.equal(restoredOption.series[0].data[0].value, 132);
     chart.__cmfTrendZrClickHandler({ offsetX: 10, offsetY: 10 });
     assert.deepEqual(popups[2], ['Open and Implemented', 'WW6', 5]);
@@ -995,6 +1654,8 @@ test('Overall trend stacks week-end balances and retains weekly clustered bars a
     assert.equal(chart.__cmfTrendLegendHandler, null, 'Weekly bars remove the contour legend listener.');
     assert.equal(options[5].series[0].type, 'bar');
     assert.equal(options[5].series[1].name, 'Closed');
+    assert.deepEqual(Array.from(options[5].series, series => options[5].legend.formatter(series.name)), ['Opened', 'Closed']);
+    assert.equal(options[5].yAxis.minInterval, 1, 'Platform weekly flow uses whole-number issue ticks.');
     assert.equal(options[5].series[0].data[0].value, 7);
     assert.equal(options[5].series[1].data[0].value, 6);
     assert.ok(options[5].series.every(series => !series.stack && series.barMaxWidth === 18));
@@ -1005,6 +1666,7 @@ test('Overall trend stacks week-end balances and retains weekly clustered bars a
 
 ['homeOverallTrendChart', 'homeTrendChart'].forEach(hostId => test('filtered ' + hostId + ' trends disable the week selector and preserve the full filtered timeline and week offsets', () => {
     let option;
+    let legendSelected = {};
     const popups = [];
     const view = { value: 'line' };
     const dateMode = { value: '7days' };
@@ -1013,6 +1675,7 @@ test('Overall trend stacks week-end balances and retains weekly clustered bars a
     const rangeSelectorId = hostId === 'homeOverallTrendChart' ? 'homeOverallTrendRange' : 'homeSpecificTrendRange';
     const chart = {
         setOption: value => { option = value; },
+        getOption: () => ({ legend: [{ selected: legendSelected }] }),
         on() {}, off() {}, resize() {},
         getZr: () => ({ on() {}, off() {} }),
         containPixel: () => true,
@@ -1108,6 +1771,79 @@ test('Overall trend stacks week-end balances and retains weekly clustered bars a
         context.renderHomeTrendChart({ Trend: trend }, hostId, 'trendChart', 6);
         const expected = trend.length === 12 ? ['WW11'] : trend.map(item => item.WeekLabel);
         assert.deepEqual(Array.from(option.xAxis.data), expected);
+    }
+    dateMode.value = 'all';
+    for (const chartType of ['line', 'bar']) {
+        view.value = chartType;
+        for (const trend of [[], emptySnapshot.Trend, [{ WeekLabel: 'Zero', WeekEndOpenIssues: 0, WeekEndImplementedIssues: 0, NewIssues: 0, ResolvedIssues: 0 }]]) {
+            delete context.window.CMF_PORTAL['lastHomeDashboardKey_' + hostId];
+            context.renderHomeTrendChart({ Trend: trend }, hostId, 'trendChart', 6);
+            assert.equal(option.yAxis.show, false, 'Raw empty data hides the vertical axis in either view.');
+            assert.equal(option.yAxis.axisLabel.show, false, 'Hidden vertical-axis labels must not change the plotting width.');
+            const emptyLeft = 30;
+            assert.equal(option.grid.left, emptyLeft, 'Reserve the same two-digit gutter for empty charts.');
+            assert.equal(option.grid.containLabel, false);
+            assert.deepEqual(Array.from(option.xAxis.data), trend.slice(-6).map(item => item.WeekLabel));
+            if (chartType === 'line') {
+                assert.equal(option.series[2].data.length, 0, 'Raw empty data has no zero-level contour or markers.');
+                for (const selected of [
+                    { Open: false, Implemented: true },
+                    { Open: false, Implemented: false },
+                    { Open: true, Implemented: false },
+                    { Open: true, Implemented: true }
+                ]) {
+                    chart.__cmfTrendLegendHandler({ selected });
+                    assert.equal(option.grid.left, emptyLeft, 'Legend changes preserve the empty chart gutter.');
+                    assert.equal(option.series[0].data.length, 0, 'Legend changes cannot restore a contour for raw empty data.');
+                }
+            }
+        }
+        delete context.window.CMF_PORTAL['lastHomeDashboardKey_' + hostId];
+        context.renderHomeTrendChart({ Trend: [{
+            WeekLabel: 'Populated', WeekEndOpenIssues: 0, WeekEndImplementedIssues: 2, NewIssues: 0, ResolvedIssues: 2
+        }] }, hostId, 'trendChart', 6);
+        const populatedOption = option;
+        assert.equal(populatedOption.yAxis.show, true, 'A chart with issues retains its vertical axis.');
+        assert.equal(populatedOption.yAxis.axisLabel.show, true);
+        assert.equal(populatedOption.yAxis.minInterval, 1);
+        if (chartType === 'line') {
+            for (const selected of [
+                { Open: true, Implemented: false },
+                { Open: false, Implemented: true },
+                { Open: false, Implemented: false },
+                { Open: true, Implemented: true }
+            ]) {
+                chart.__cmfTrendLegendHandler({ selected });
+                assert.equal(option.yAxis, undefined, 'Legend filtering must not change vertical-axis visibility.');
+                const expected = selected.Implemented ? 2 : 0;
+                assert.equal(option.series[0].data.length, 1, 'Legend filtering retains the contour even when both areas are deselected.');
+                assert.equal(option.series[0].data[0].value, expected);
+            }
+            assert.equal(populatedOption.yAxis.show, true);
+        }
+    }
+    const rangeSnapshot = { Trend: Array.from({ length: 12 }, (_, index) => ({
+        WeekLabel: 'WW' + index, WeekEndOpenIssues: 2, WeekEndImplementedIssues: 3, NewIssues: 2, ResolvedIssues: 3
+    })) };
+    for (const chartType of ['line', 'bar']) {
+        view.value = chartType;
+        for (const openSelected of [false, true]) {
+            for (const secondSelected of [false, true]) {
+                legendSelected = { Open: openSelected, [chartType === 'line' ? 'Implemented' : 'Closed']: secondSelected };
+                delete context.window.CMF_PORTAL['lastHomeDashboardKey_' + hostId];
+                for (const weeks of [6, 12, 6]) {
+                    context.renderHomeTrendChart(rangeSnapshot, hostId, 'trendChart', weeks);
+                    assert.equal(JSON.stringify(option.legend.selected), JSON.stringify(legendSelected), 'Week-range changes retain every legend selection combination.');
+                    assert.equal(option.xAxis.data.length, weeks);
+                    if (chartType === 'line') {
+                        const contour = option.series.find(series => series.id === 'cmf-backlog-contour');
+                        const expected = (openSelected ? 2 : 0) + (secondSelected ? 3 : 0);
+                        assert.equal(contour.data.length, weeks);
+                        assert.ok(contour.data.every(point => point.value === expected), 'The rebuilt contour reflects the preserved legend selections.');
+                    }
+                }
+            }
+        }
     }
 }));
 
