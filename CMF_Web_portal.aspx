@@ -24374,7 +24374,32 @@ td:nth-child(odd), th:nth-child(odd) {
             parsed.querySelectorAll('script, style').forEach(function (node) { node.remove(); });
             parsed.querySelectorAll('br').forEach(function (node) { node.replaceWith('\n'); });
             parsed.querySelectorAll('p, div, li, tr').forEach(function (node) { node.append('\n'); });
-            evidence = stripSqaSourceLabels(parsed.body.textContent).replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n').trim();
+            evidence = parsed.body.textContent;
+            var primarySources = {
+                'Title': ['DB Title', 'HSD Title', 'HSD Subject', 'Title', 'Subject'],
+                'Reproducibility / Failure Rate': ['DB Reproducibility', 'HSD Reproducibility', 'Reproducibility', 'RVP Repro', 'DB RVP Repro'],
+                'Processor': ['Processor', 'HSD Processor'],
+                'SoC Stepping': ['SoC Stepping', 'SOC Stepping', 'Stepping'],
+                'Impact': ['DB Impact', 'Impact', 'Customer Impact', 'Customer Summary'],
+                'Steps to Reproduce': ['Repro Steps', 'Steps to Reproduce'],
+                'Exposure / Priority': ['Priority', 'Exposure'],
+                'ME SKU': ['ME SKU', 'ME_SKU']
+            };
+            var sourcePattern = /\b(DB Title|HSD Title|HSD Subject|Title occurrence signal|Title|Subject|DB Reproducibility|HSD Reproducibility|Reproducibility|DB RVP Repro|RVP Repro|HSD Processor|Processor|SoC Stepping|SOC Stepping|Stepping|DB Impact|Impact|Customer Impact|Customer Summary|Customer Detail|Repro Steps|Steps to Reproduce|What Happened|Problem Description|Priority|Exposure|Must Fix For|Drivers|ME SKU|ME_SKU|System Scope Filename):\s*/gi;
+            var sources = [];
+            var match;
+            while ((match = sourcePattern.exec(evidence)) !== null) sources.push({ label: match[1], start: match.index, valueStart: sourcePattern.lastIndex });
+            var preferred = primarySources[field && field.fieldName] || [];
+            var direct = sources.filter(function (source) { return preferred.some(function (label) { return label.toLowerCase() === source.label.toLowerCase(); }); });
+            var selected = direct.length ? direct : sources.filter(function (source) { return !/^(?:DB Title|HSD Title|HSD Subject|Title occurrence signal|Title|Subject)$/i.test(source.label); });
+            if (sources.length) {
+                var values = selected.map(function (source) {
+                    var index = sources.indexOf(source);
+                    return evidence.slice(source.valueStart, index + 1 < sources.length ? sources[index + 1].start : evidence.length).trim();
+                }).filter(function (value, index, values) { return value && values.indexOf(value) === index; });
+                evidence = values.join('\n');
+            }
+            evidence = stripSqaSourceLabels(evidence).replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n').trim();
             if (!evidence || /^no usable value found/i.test(evidence)) return 'Not found in HSD';
             return evidence;
         }
