@@ -31,6 +31,8 @@ public class CmfRecommendationRuleScore
     public string RuleName { get; set; }
     public string Score { get; set; }
     public string Evaluation { get; set; }
+    public string MatchConfidence { get; set; }
+    public string BorderlineNote { get; set; }
 }
 
 public class CmfRecommendationResponse
@@ -45,6 +47,8 @@ public class CmfRecommendationResponse
     public int ThresholdScore { get; set; }
     public string NextSteps { get; set; }
     public List<CmfRecommendationRuleScore> RuleScores { get; set; }
+    public bool UsedFallback { get; set; }
+    public string HsdWarning { get; set; }
     public string Message { get; set; }
 
     public CmfRecommendationResponse()
@@ -67,6 +71,8 @@ public class SightingQualityAssessmentResponse
 {
     public bool Success { get; set; }
     public string CpId { get; set; }
+    public string PromotedId { get; set; }
+    public string MergeId { get; set; }
     public int QualityScore { get; set; }
     public int BaselineScore { get; set; }
     public string Tier { get; set; }
@@ -74,6 +80,7 @@ public class SightingQualityAssessmentResponse
     public List<SightingQualityFieldAssessment> Fields { get; set; }
     public List<SightingQualityDimensionScore> DimensionScores { get; set; }
     public CmfRecommendationResponse CompletenessRecommendation { get; set; }
+    public string HsdWarning { get; set; }
     public string Message { get; set; }
 
     public SightingQualityAssessmentResponse()
@@ -150,7 +157,6 @@ public static class CmfRecommendationService
         "Steps to Reproduce",
         "Exposure / Priority"
     }, StringComparer.OrdinalIgnoreCase);
-        private const string RulesRelativePath = "~/App_Data/cmf-recommendation-rules.txt";
         private const string DefaultRulesText = @"CMF Recommendation Scoring Policy (5 Categories / 4-Point Scale)
 
     Score each category from 1 to 4 using the rubric below. Do not infer absent facts. Missing decision-critical evidence routes to CMF_INCOMPLETE.
@@ -229,7 +235,7 @@ public static class CmfRecommendationService
         bool mergedTargetHasCmf;
         hsdContext = EnrichContextWithMergedTargetHsd(cpId, title, cmfRequest, impact, hsdContext, out duplicateDetail, out duplicatedTargetId, out mergedTargetHasCmf);
 
-        string hash = ComputeHash("cmf-recommendation-live-context-v93-clean-why-score-bullet|" + GetAiProviderCacheSignature() + "|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + rules + "|" + feedbackMemory + "|" + hsdContext + "|sqa:" + string.Join(",", missingSqaFields.ToArray()));
+        string hash = ComputeHash("cmf-recommendation-live-context-v101-borderline-calibrated|" + GetAiProviderCacheSignature() + "|" + cpId + "|" + title + "|" + component + "|" + cmfRequest + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + rules + "|" + feedbackMemory + "|" + hsdContext + "|sqa:" + string.Join(",", missingSqaFields.ToArray()));
         string cacheKey = "cmf-recommendation:" + hash;
 
         using (CmfAssistantResponseCache.Enter(cacheKey))
@@ -252,11 +258,21 @@ public static class CmfRecommendationService
             llmPrompt,
             "You are a senior CMF reviewer. Read all supplied HSD fields, database columns, comments, merged/duplicated ticket details, and image readouts. Score all 5 metrics (S, O, D, B, RVP) from 1 to 4 strictly using the active CMF rules, generate concise 2-5 word metric factors grounded in the issue facts, follow the priority order (CMF_DUPLICATE > CMF_INCOMPLETE > CMF_OK / CMF_REVIEW / CMF_REJECT), and write clear, simple, everyday English reasoning points for reviewers.");
 
+        string hsdWarning = DetectHsdEvidenceWarning(hsdContext);
         if (!hasModelRecommendation)
         {
-            CmfRecommendationResponse fallbackResult = BuildFallbackRecommendationResponse(cpId, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, rules, hsdContext, modelError, missingSqaFields);
-            SetCached(cacheKey, fallbackResult, DateTime.UtcNow.AddSeconds(60));
-            return fallbackResult;
+            // Disable inaccurate keyword fallback; surface a clear retry error with concise diagnostic detail (AUD-07, AUD-22, AUD-24).
+            System.Diagnostics.Trace.TraceWarning("CMF recommendation AI call failed for {0}: {1}", cpId, modelError);
+            string detail = string.IsNullOrWhiteSpace(modelError) ? string.Empty : (" (" + (modelError.Length > 140 ? modelError.Substring(0, 140) + "..." : modelError) + ")");
+            return new CmfRecommendationResponse
+            {
+                Success = false,
+                UsedFallback = false,
+                HsdWarning = hsdWarning,
+                CpId = cpId,
+                Title = title,
+                Message = "AI analysis failed or model response failed. Please click Retry." + detail
+            };
         }
 
         // Parse structured LLM response
@@ -266,6 +282,8 @@ public static class CmfRecommendationService
         EnsureCompleteModelRuleScores(result, title, component, cmfRequest, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, hsdContext);
         SanitizeRecommendationResponse(result);
         result.Success = true;
+        result.UsedFallback = false;
+        result.HsdWarning = hsdWarning;
         result.CpId = cpId;
         result.Title = title;
         result.OverallQualityScore = CalculateOverallQualityScore(result.RuleScores, rules);
@@ -314,9 +332,27 @@ public static class CmfRecommendationService
         // Priority 3: Core CMF disposition using active rules + permutation analysis
         else
         {
-            result.Recommendation = ResolveCmfDisposition(rawFirstPassTag, result.OverallQualityScore, parsedThresholdScore, result.RuleScores, cpId, title, cmfRequest, impact, hsdContext, rules);
-            result.Evidence = BuildSinglePassAlignedReasoning(result.Recommendation, rawFirstPassTag, rawFirstPassReasoning, result.RuleScores, title, component, impact, reproducibility, hsdContext, reproOnRvp, rules);
-            result.NextSteps = BuildNextSteps(result.Recommendation, result.RuleScores);
+            string resolvedTag = ResolveCmfDisposition(rawFirstPassTag, result.OverallQualityScore, parsedThresholdScore, result.RuleScores, cpId, title, cmfRequest, impact, hsdContext, rules);
+            List<CmfRecommendationRuleScore> borderlineCritical = GetBorderlineDecisionMetrics(result.RuleScores);
+            if (borderlineCritical.Count > 0 && !string.Equals(resolvedTag, "CMF_REVIEW", StringComparison.OrdinalIgnoreCase))
+            {
+                // Edge-case safeguard: ONLY when a decision-critical metric (S or B) has no direct match in the scoring guidelines,
+                // route to CMF_REVIEW instead of auto-approving/auto-rejecting on an unlisted scenario.
+                result.Recommendation = "CMF_REVIEW";
+                result.Evidence = BuildBorderlineReviewReasoning(borderlineCritical, result.RuleScores, hsdContext);
+                result.NextSteps = "Review the borderline metric(s) in CMF committee and consider adding this scenario to the Scoring Guidelines.";
+            }
+            else
+            {
+                result.Recommendation = resolvedTag;
+                result.Evidence = BuildSinglePassAlignedReasoning(result.Recommendation, rawFirstPassTag, rawFirstPassReasoning, result.RuleScores, title, component, impact, reproducibility, hsdContext, reproOnRvp, rules);
+                if (borderlineCritical.Count > 0)
+                {
+                    string gapNote = BuildGuidelineGapBullet(borderlineCritical);
+                    if (!string.IsNullOrWhiteSpace(gapNote)) result.Evidence += "\n" + gapNote;
+                }
+                result.NextSteps = BuildNextSteps(result.Recommendation, result.RuleScores);
+            }
         }
         result.Message = "AI recommendation generated.";
 
@@ -428,7 +464,7 @@ public static class CmfRecommendationService
         string customerOwner = SafeText(request.CustomerOwner);
         string hsdContext = SafeText(request.HsdContext);
         string currentSightingContext = IsolateCurrentSightingQualityContext(hsdContext, cpId);
-        string cacheKey = "sqa-gap-assessment:v24:" + ComputeHash(GetAiProviderCacheSignature() + "|" + cpId + "|" + title + "|" + component + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + currentSightingContext);
+        string cacheKey = "sqa-gap-assessment:v29:" + ComputeHash(GetAiProviderCacheSignature() + "|" + cpId + "|" + title + "|" + component + "|" + impact + "|" + idst + "|" + reproOnRvp + "|" + reproducibility + "|" + customerDetail + "|" + customerOwner + "|" + currentSightingContext);
 
         using (CmfAssistantResponseCache.Enter(cacheKey))
         {
@@ -439,17 +475,99 @@ public static class CmfRecommendationService
         }
 
         SightingQualityAssessmentResponse parsed = BuildFallbackSightingQualityAssessment(cpId, title, component, impact, idst, reproOnRvp, reproducibility, customerDetail, customerOwner, currentSightingContext);
+
+        // Hybrid SQA: 7 fields are deterministic. For 'Steps to Reproduce', ONLY when to_reproduce is blank or missing steps,
+        // call the LLM to read Problem Description and determine if clear reproduction steps exist (Present) or not (Missing).
+        SightingQualityFieldAssessment stepsField = FindQualityField(parsed, "Steps to Reproduce");
+        if (stepsField != null && !string.Equals(stepsField.Status, "Present", StringComparison.OrdinalIgnoreCase))
+        {
+            Dictionary<string, string> ctxMap = ParseSimpleContextMap(currentSightingContext);
+            string descText = FirstContextValue(ctxMap, "Problem Description", "Description", "What Happened");
+            if (HasUsefulQualityValue(descText))
+            {
+                EvaluateReproStepsFromDescriptionWithLlm(cpId, title, descText, stepsField);
+            }
+        }
+
         parsed.Message = "Sighting quality assessment generated.";
 
         parsed.Success = true;
         parsed.CpId = cpId;
+        parsed.HsdWarning = DetectHsdEvidenceWarning(hsdContext);
         ApplySightingQualityScoreModel(parsed);
         ApplySightingQualityAssessmentSummary(parsed);
         SanitizeSightingQualityAssessment(parsed);
         parsed.CompletenessRecommendation = BuildSightingQualityCompletenessRecommendation(parsed, title);
-        if (CmfAssistantResponseCache.HasVerifiedSource(currentSightingContext)) CmfAssistantResponseCache.Write(cacheKey, parsed);
-        SetCachedSightingQualityAssessment(cacheKey, parsed, DateTime.UtcNow.AddHours(2));
+        bool hasVerifiedHsd = string.IsNullOrWhiteSpace(parsed.HsdWarning) && CmfAssistantResponseCache.HasVerifiedSource(currentSightingContext);
+        if (hasVerifiedHsd)
+        {
+            CmfAssistantResponseCache.Write(cacheKey, parsed);
+            SetCachedSightingQualityAssessment(cacheKey, parsed, DateTime.UtcNow.AddHours(2));
+        }
         return parsed;
+        }
+    }
+
+    private static void EvaluateReproStepsFromDescriptionWithLlm(string cpId, string title, string hsdDescription, SightingQualityFieldAssessment stepsField)
+    {
+        try
+        {
+            StringBuilder prompt = new StringBuilder();
+            prompt.AppendLine("The sighting's dedicated 'to_reproduce' (Steps to Reproduce) field is blank or incomplete.");
+            prompt.AppendLine("Read the HSD sighting Description section below and decide ONLY whether it contains clear, understandable steps/scenario sufficient for an engineer to reproduce the issue.");
+            prompt.AppendLine("Return STRICT JSON ONLY with keys: status ('Present' or 'Missing'), stepsSummary (concise extracted steps if Present, or empty string if Missing), characteristic (short reason if Missing, or 'Steps to reproduce were fetched from the HSD Description' if Present).");
+            prompt.AppendLine("Example: {\"status\":\"Present\",\"stepsSummary\":\"1. Connect TBT5 SSD. 2. Run CrystalDiskMark benchmark. 3. Observe throughput drop.\",\"characteristic\":\"Steps to reproduce were fetched from the HSD Description\"}");
+            prompt.AppendLine();
+            prompt.AppendLine("Sighting ID: " + SafeDisplay(cpId));
+            prompt.AppendLine("Title: " + SafeDisplay(title));
+            prompt.AppendLine("HSD Description:");
+            prompt.AppendLine(hsdDescription);
+
+            string rawOut;
+            string err;
+            bool ok = TryGenerateWithGitHubModel(
+                cpId, title, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty,
+                string.Empty, string.Empty, out rawOut, out err,
+                prompt.ToString(),
+                "You are a sighting quality evaluator. Determine strictly from the provided HSD Description section whether understandable reproduction steps are present. Return strict JSON only.");
+
+            if (!ok || string.IsNullOrWhiteSpace(rawOut))
+            {
+                System.Diagnostics.Trace.TraceWarning("EvaluateReproStepsFromDescriptionWithLlm failed for {0}: {1}", cpId, err);
+                return;
+            }
+
+            string trimmed = rawOut.Trim();
+            int fb = trimmed.IndexOf('{');
+            int lb = trimmed.LastIndexOf('}');
+            if (fb < 0 || lb <= fb) return;
+            var serializer = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
+            var dict = serializer.DeserializeObject(trimmed.Substring(fb, lb - fb + 1)) as Dictionary<string, object>;
+            if (dict == null) return;
+
+            string status = dict.ContainsKey("status") ? Convert.ToString(dict["status"]) : string.Empty;
+            string stepsSummary = dict.ContainsKey("stepsSummary") ? Convert.ToString(dict["stepsSummary"]) : string.Empty;
+            string characteristic = dict.ContainsKey("characteristic") ? Convert.ToString(dict["characteristic"]) : string.Empty;
+
+            if (string.Equals(status, "Present", StringComparison.OrdinalIgnoreCase))
+            {
+                stepsField.Status = "Present";
+                stepsField.Characteristic = "Steps to reproduce were fetched from the HSD Description (to_reproduce field was blank or incomplete)";
+                stepsField.Evidence = !string.IsNullOrWhiteSpace(stepsSummary)
+                    ? ("HSD Description: " + stepsSummary.Trim())
+                    : ("HSD Description: " + hsdDescription.Trim());
+                stepsField.Recommendation = "Steps to reproduce were fetched from the HSD Description (consider copying them into to_reproduce for clarity).";
+            }
+            else if (string.Equals(status, "Missing", StringComparison.OrdinalIgnoreCase))
+            {
+                stepsField.Status = "Missing";
+                stepsField.Characteristic = !string.IsNullOrWhiteSpace(characteristic) ? characteristic.Trim() : "No clear reproduction steps found in to_reproduce or HSD Description";
+                stepsField.Evidence = "No usable reproduction steps found in to_reproduce or HSD Description.";
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.TraceWarning("EvaluateReproStepsFromDescriptionWithLlm exception for {0}: {1}", cpId, ex.Message);
         }
     }
 
@@ -536,16 +654,6 @@ public static class CmfRecommendationService
     {
         try
         {
-            string path = ResolveRulesPath();
-            if (File.Exists(path))
-            {
-                string text = File.ReadAllText(path, Encoding.UTF8);
-                if (!string.IsNullOrWhiteSpace(text)) return text.Trim();
-            }
-        }
-        catch { }
-        try
-        {
             CmfAssistantUnifiedConfig cfg = CmfAssistantConfigService.GetConfig();
             if (cfg != null && !string.IsNullOrWhiteSpace(cfg.CompiledRulesText))
             {
@@ -558,32 +666,23 @@ public static class CmfRecommendationService
 
     public static void SaveActiveRulesText(string rulesText)
     {
-        try
-        {
-            string path = ResolveRulesPath();
-            string dir = Path.GetDirectoryName(path);
-            if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir))
-            {
-                Directory.CreateDirectory(dir);
-            }
-            File.WriteAllText(path, rulesText ?? string.Empty, Encoding.UTF8);
-        }
-        catch { }
+        // Rules are managed exclusively through App_Data/cmf-assistant-config.json (AUD-28).
         ClearRecommendationCache();
     }
 
     public static void ResetActiveRulesText()
     {
-        try
-        {
-            string path = ResolveRulesPath();
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch { }
         ClearRecommendationCache();
+    }
+
+    private static string DetectHsdEvidenceWarning(string hsdContext)
+    {
+        string ctx = SafeText(hsdContext);
+        if (string.IsNullOrWhiteSpace(ctx) || ctx.IndexOf("External Evidence Status: Unavailable", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return "Live HSD article data was unavailable; this recommendation is based on portal database fields only.";
+        }
+        return string.Empty;
     }
 
     public static void ClearRecommendationCache()
@@ -593,16 +692,6 @@ public static class CmfRecommendationService
             Cache.Clear();
         }
         CmfAssistantResponseCache.ClearRecommendations();
-    }
-
-    private static string ResolveRulesPath()
-    {
-        if (System.Web.HttpContext.Current != null)
-        {
-            return System.Web.HttpContext.Current.Server.MapPath(RulesRelativePath);
-        }
-
-        return Path.Combine(AppDomain.CurrentDomain.BaseDirectory ?? string.Empty, "App_Data", "cmf-recommendation-rules.txt");
     }
 
     private static CmfRecommendationResponse TryGetCached(string cacheKey)
@@ -734,22 +823,11 @@ public static class CmfRecommendationService
 
         if (useGnai)
         {
-            List<string> gnaiChain = ResolveGnaiModelChain(gnaiModel);
-            for (int i = 0; i < gnaiChain.Count; i++)
+            // Do not permanently blacklist the primary model or silently downgrade to a weaker fallback model (AUD-24).
+            string primaryModel = string.IsNullOrWhiteSpace(gnaiModel) ? "claude-sonnet-5-5" : gnaiModel.Trim();
+            if (TryExecuteModelRequest(gnaiEndpoint, gnaiToken, primaryModel, systemPrompt, prompt, true, out recommendation, out error))
             {
-                string candidateModel = gnaiChain[i];
-                lock (CacheSync)
-                {
-                    if (UnavailableGnaiModels.Contains(candidateModel)) continue;
-                }
-                if (TryExecuteModelRequest(gnaiEndpoint, gnaiToken, candidateModel, systemPrompt, prompt, true, out recommendation, out error))
-                {
-                    return true;
-                }
-                if (!string.IsNullOrWhiteSpace(error) && error.IndexOf("404", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    lock (CacheSync) { UnavailableGnaiModels.Add(candidateModel); }
-                }
+                return true;
             }
         }
         else
@@ -785,8 +863,7 @@ public static class CmfRecommendationService
                 payload = new
                 {
                     model = model,
-                    max_tokens = 1200,
-                    temperature = 0,
+                    max_tokens = 16384,
                     system = systemPrompt,
                     messages = new object[]
                     {
@@ -822,28 +899,54 @@ public static class CmfRecommendationService
             }
 
             string payloadJson = serializer.Serialize(payload);
-
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(resolvedEndpoint);
-            request.Method = "POST";
-            request.ContentType = "application/json";
-            request.Accept = "application/json";
-            request.Headers["Authorization"] = "Bearer " + apiKey;
-            request.UserAgent = "CMF-Portal-AI-Recommendation/1.0";
             int timeoutMilliseconds = ResolveAiRequestTimeoutMilliseconds();
-            request.Timeout = timeoutMilliseconds;
-            request.ReadWriteTimeout = timeoutMilliseconds;
-            ConfigureProxy(request);
-
-            using (StreamWriter writer = new StreamWriter(request.GetRequestStream()))
+            string responseBody = null;
+            int maxAttempts = 3;
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                writer.Write(payloadJson);
-            }
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(resolvedEndpoint);
+                request.Method = "POST";
+                request.ContentType = "application/json";
+                request.Accept = "application/json";
+                request.KeepAlive = false;
+                request.Headers["Authorization"] = "Bearer " + apiKey;
+                if (isAnthropicMessages) request.Headers["anthropic-version"] = "2023-06-01";
+                request.UserAgent = "CMF-Portal-AI-Recommendation/1.0";
+                request.Timeout = timeoutMilliseconds;
+                request.ReadWriteTimeout = timeoutMilliseconds;
+                ConfigureProxy(request);
 
-            string responseBody;
-            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
-            using (StreamReader reader = new StreamReader(response.GetResponseStream()))
-            {
-                responseBody = reader.ReadToEnd();
+                try
+                {
+                    using (StreamWriter writer = new StreamWriter(request.GetRequestStream()))
+                    {
+                        writer.Write(payloadJson);
+                    }
+
+                    using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                    using (StreamReader reader = new StreamReader(response.GetResponseStream()))
+                    {
+                        responseBody = reader.ReadToEnd();
+                    }
+                    break;
+                }
+                catch (WebException webEx)
+                {
+                    HttpWebResponse errResp = webEx.Response as HttpWebResponse;
+                    bool isTransient = errResp == null
+                        || (int)errResp.StatusCode == 429
+                        || (int)errResp.StatusCode == 502
+                        || (int)errResp.StatusCode == 503
+                        || (int)errResp.StatusCode == 504;
+                    if (isTransient && attempt < maxAttempts)
+                    {
+                        if (errResp != null) { try { errResp.Close(); } catch { } }
+                        System.Diagnostics.Trace.TraceWarning("CmfRecommendationService transient error (attempt {0}/{1}, status={2}): {3}", attempt, maxAttempts, webEx.Status, webEx.Message);
+                        System.Threading.Thread.Sleep(attempt == 1 ? 1000 : 2500);
+                        continue;
+                    }
+                    throw;
+                }
             }
 
             object raw = serializer.DeserializeObject(responseBody);
@@ -921,7 +1024,7 @@ public static class CmfRecommendationService
 
         if (response == null)
         {
-            return "Model request failed: no response from provider. Check access to the configured GNAI/GitHub endpoint.";
+            return "Model request failed (" + webEx.Status + "): no response from provider. Check access to the configured GNAI/GitHub endpoint.";
         }
 
         int statusCode = (int)response.StatusCode;
@@ -1163,6 +1266,8 @@ public static class CmfRecommendationService
         return new CmfRecommendationResponse
         {
             Success = true,
+            UsedFallback = true,
+            HsdWarning = DetectHsdEvidenceWarning(hsdContext),
             CpId = cpId,
             Title = title,
             Recommendation = decision,
@@ -1459,12 +1564,12 @@ public static class CmfRecommendationService
             CmfRecommendationRuleScore fallbackScore = FindMetricRule(fallbackScores, metricId);
             if (IsUsableModelMetricScore(modelScore))
             {
-                NormalizeModelMetricEvaluation(modelScore, hsdContext, title);
+                NormalizeModelMetricEvaluation(modelScore, hsdContext, title, reproducibility);
                 completed.Add(modelScore);
             }
             else if (fallbackScore != null)
             {
-                NormalizeModelMetricEvaluation(fallbackScore, hsdContext, title);
+                NormalizeModelMetricEvaluation(fallbackScore, hsdContext, title, reproducibility);
                 completed.Add(fallbackScore);
             }
         }
@@ -1481,7 +1586,7 @@ public static class CmfRecommendationService
         return score >= 1 && score <= 4 && !string.IsNullOrWhiteSpace(rule.Evaluation);
     }
 
-    private static void NormalizeModelMetricEvaluation(CmfRecommendationRuleScore rule, string hsdContext = "", string title = "")
+    private static void NormalizeModelMetricEvaluation(CmfRecommendationRuleScore rule, string hsdContext = "", string title = "", string reproducibilityField = "")
     {
         if (rule == null) return;
         rule.Score = NormalizeNumericScore(rule.Score);
@@ -1504,48 +1609,40 @@ public static class CmfRecommendationService
             return;
         }
 
-        string severityText = evaluation + " " + evidence + " " + factor + " " + SafeText(title);
-        bool isTbtUsb4TypeCLoss =
-            ContainsAny(severityText, new string[] {
-                "thunderbolt / usb4 / type-c loss", "dock not enumerated", "dock disconnect",
-                "tbt dock not recognized", "tbt dock cannot be recognized", "tbt dock/hub cannot be recognized",
-                "tbt dock/hub cannot be recongnized", "tbt port not recognized"
-            })
-            || (ContainsAny(severityText, new string[] { "tbt dock", "tbt port", "usb4", "type-c", "retimer" })
-                && ContainsAny(severityText, new string[] {
-                    "loss", "lost", "fail", "disconnect", "unrecognized", "not recognized",
-                    "cannot be recognized", "cannot be recongnized", "not enumerated", "enumeration fail", "dead"
-                }));
-
-        if (id == "S" && numericScore < 4 && (isTbtUsb4TypeCLoss || ContainsAny(severityText, new string[] {
-            "system hard hang", "hard hang", "system hang", "hang up", "system freeze", "hard freeze", "deadlock", "lockup",
-            "bsod", "bugcheck", "kernel crash", "unexpected reboot", "unexpected shutdown", "cannot boot", "cannot power", "no boot",
-            "data loss", "data corruption", "permanent damage", "port dead", "nvme ssd lost", "storage lost", "completely dead",
-            "completely unresponsive", "black screen", "blank screen", "screen blank" })))
+        // Occurrence (O) label comes strictly from the ticket's 'reproducibility' field only (never from description/comments).
+        if (id == "O")
         {
-            numericScore = 4;
-            rule.Score = "4";
+            string ticketRepro = SafeText(reproducibilityField);
+            if (string.IsNullOrWhiteSpace(ticketRepro) && !string.IsNullOrWhiteSpace(hsdContext))
+            {
+                System.Text.RegularExpressions.Match rm = System.Text.RegularExpressions.Regex.Match(
+                    hsdContext,
+                    @"(?:^|\n)\s*Reproducibility\s*:\s*([^\r\n]+)",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (rm.Success) ticketRepro = rm.Groups[1].Value.Trim();
+            }
+            if (!string.IsNullOrWhiteSpace(ticketRepro)
+                && !string.Equals(ticketRepro, "N/A", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(ticketRepro, "NA", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(ticketRepro, "none", StringComparison.OrdinalIgnoreCase))
+            {
+                string displayRepro = ticketRepro.Replace("_", " ").Trim();
+                rule.Evaluation = "Contributing factor: " + displayRepro + ". Evidence: Reproducibility field is " + ticketRepro + ".";
+            }
+            else
+            {
+                rule.Evaluation = "Contributing factor: Not stated in reproducibility field. Evidence: Reproducibility field is blank.";
+            }
+            return;
         }
 
-        if (id == "D" && numericScore == 4 && ContainsAny(evaluation + " " + evidence, new string[] { "toggle", "optional background-blur", "studio effect", "blur effect" }))
-        {
-            numericScore = 3;
-            rule.Score = "3";
-        }
+        // Preserve the LLM's guideline-based scores for S and D without silent post-hoc mutations (AUD-04, AUD-05).
 
-        // If the LLM already provided a specific, non-vague factor, clean and keep it.
-        // Otherwise, derive a concise factor from this rule's evidence or evaluation.
+        // Keep the LLM's grounded factor intact without discarding/fabricating (AUD-01, AUD-02, AUD-16).
         factor = BuildReviewerMetricFactor(id, factor, evidence, evaluation, numericScore);
         if (string.IsNullOrWhiteSpace(factor)) factor = BuildDimensionSpecificFactor(id, numericScore, evidence + " " + evaluation);
         if (string.IsNullOrWhiteSpace(evidence)) evidence = StripContributingFactorPrefix(evaluation);
         if (string.IsNullOrWhiteSpace(evidence)) evidence = "Verified from sighting context";
-
-        // Avoid raw underscore occurrence enums in Evidence so frontend displays the LLM's own concise factor
-        if (id == "O")
-        {
-            evidence = evidence.Replace("always_100%", "100% consistent").Replace("frequently_50%-90%", "50%-90% frequent")
-                .Replace("sporadic_10%-40%", "10%-40% occasional").Replace("very_sporadic_<10%", "under 10% rare");
-        }
 
         rule.Evaluation = "Contributing factor: " + factor + ". Evidence: " + evidence;
     }
@@ -1721,9 +1818,13 @@ public static class CmfRecommendationService
         }
         else if (metricId == "D")
         {
-            if (ContainsAny(lower, new string[] { "s0ix", "s3", "s4", "s5", "hibernate", "resume", "multi-monitor", "refresh rate", "dock", "plug", "unplug", "daisy chain", "reconnect" }))
-                return "S4 cycling";
-            if (ContainsAny(lower, new string[] { "boot to desktop", "cold boot", "warm restart", "reboot", "desktop idle", "oobe", "standard app", "video playback", "lock screen", "login" }))
+            if (ContainsAny(lower, new string[] { "benchmark", "crystaldiskmark", "cdm", "throughput", "read/write", "storage speed", "performance test" }))
+                return "Running performance test";
+            if (ContainsAny(lower, new string[] { "s0ix", "s3", "s4", "s5", "hibernate", "modern standby", "sleep cycling", "power cycling" }))
+                return "S4 / power-state cycling";
+            if (ContainsAny(lower, new string[] { "multi-monitor", "dock", "plug", "unplug", "daisy chain", "reconnect" }))
+                return "Peripheral / display connect flow";
+            if (ContainsAny(lower, new string[] { "boot to desktop", "cold boot", "desktop idle", "oobe", "lock screen", "login" }))
                 return "Desktop idle / normal boot";
             if (ContainsAny(lower, new string[] { "corner case", "corner-case", "niche", "multi-step", "synthetic", "stress", "3dmark", "furmark" }))
                 return "Corner-case stress flow";
@@ -1744,72 +1845,17 @@ public static class CmfRecommendationService
     private static string BuildDimensionSpecificFactor(string ruleId, int score, string contextText)
     {
         string id = SafeText(ruleId).ToUpperInvariant();
-        string matched = MatchCanonicalGuidelineCategory(id, contextText);
-        if (!string.IsNullOrWhiteSpace(matched)) return matched;
-
-        string lower = SafeText(contextText).ToLowerInvariant();
-
-        if (id == "O")
-        {
-            if (ContainsAny(lower, new string[] { "2/40", "5%", "5 percent" })) return "5% sporadic";
-            if (ContainsAny(lower, new string[] { "always_100", "100%", "always" })) return "100% consistent";
-            if (ContainsAny(lower, new string[] { "frequently", "50-90%", "50%-90%" })) return "50-90% frequent";
-            if (ContainsAny(lower, new string[] { "sporadic", "10-40%", "10%-40%" })) return "10-40% occasional";
-            if (ContainsAny(lower, new string[] { "very_sporadic", "<10%" })) return "Under 10% sporadic";
-            string humanized = HumanizeOccurrenceCategory(contextText);
-            if (!string.IsNullOrWhiteSpace(humanized)) return humanized;
-            if (score >= 4) return "50-90% frequent";
-            if (score == 3) return "10-40% occasional";
-            if (score == 2) return "5% sporadic";
-            return "Under 1% rare";
-        }
-
-        if (id == "S")
-        {
-            if (score >= 4) return "Critical feature failure";
-            if (score == 3) return "Intermittent display blank";
-            if (score == 2) return "Secondary feature degradation";
-            return "Minor cosmetic issue";
-        }
-
-        if (id == "D")
-        {
-            if (score >= 4) return "Desktop idle / normal boot";
-            if (score == 3) return "S4 cycling";
-            if (score == 2) return "Corner-case workflow";
-            return "Lab / test tool only";
-        }
-
-        if (id == "R")
-        {
-            if (ContainsAny(lower, new string[] { "no workaround", "no recovery", "no acceptable" })) return "No workaround available";
-            if (ContainsAny(lower, new string[] { "power-off", "power off", "power-cycle", "power cycle", "force shutdown", "forced shutdown", "hard reset", "power button" })) return "Needs forced power-off";
-            if (ContainsAny(lower, new string[] { "reboot", "restart", "warm boot" })) return "Requires system reboot";
-            if (ContainsAny(lower, new string[] { "unplug", "replug", "reconnect" })) return "Needs device reconnect";
-            if (score >= 4) return "Hard to recover in normal use";
-            if (score == 3) return "Manual reboot or reset needed";
-            return "Simple recovery or details missing";
-        }
-
-        if (id == "B")
-        {
-            if (score >= 4) return "P1 showstopper";
-            if (score == 3) return "Validation gate delayed";
-            if (score == 2) return "Low business exposure";
-            return "No customer program impact";
-        }
-
-        if (id == "CX")
-        {
-            if (ContainsAny(lower, new string[] { "hang", "freeze", "unusable", "crash", "bsod", "black screen" })) return "Laptop becomes unusable";
-            if (score >= 5) return "Core user feature unusable";
-            if (score == 4) return "Disrupts normal everyday use";
-            if (score == 3) return "Noticeable intermittent glitch";
-            return "Little or no end-user disruption";
-        }
+        // Never substitute hardcoded symptom/trigger/business labels in CMF Analysis; rely strictly on LLM guideline-matched factors.
+        if (id == "O") return "Occurrence details in sighting";
+        if (id == "S") return "Severity details in sighting";
+        if (id == "D") return "Trigger scenario in sighting";
+        if (id == "R") return "Recovery details in sighting";
+        if (id == "B") return "Business impact in sighting";
+        if (id == "CX") return "Customer experience in sighting";
 
         if (id == "RVP")
         {
+            string lower = SafeText(contextText).ToLowerInvariant();
             if (score >= 4 || ContainsAny(lower, new string[] { "yes", "reproduced on rvp", "reproduces on rvp" })) return "Confirmed on RVP";
             if (score == 1 || ContainsAny(lower, new string[] { "no", "not on rvp", "not reproduced" })) return "Isolated to customer unit";
             return "Status unconfirmed on RVP";
@@ -1853,7 +1899,12 @@ public static class CmfRecommendationService
             @"^(?:(?:low|medium|moderate|high|very\s+high|frequent|very\s+frequent|critical)\s*[-:]|workaround clarity$|functional impact evidence$|business exposure$|customer visibility$|repro frequency$|detection evidence$|missing evidence$)",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-        if (!string.IsNullOrWhiteSpace(compact) && compact.Length >= 3 && compact.Length <= 40 && !generic && !IsVagueMetricFactor(compact))
+        if (!string.IsNullOrWhiteSpace(compact) && compact.Length >= 3 && compact.Length <= 100 && !generic && !IsVagueMetricFactor(compact))
+        {
+            return compact;
+        }
+
+        if (!string.IsNullOrWhiteSpace(compact) && compact.Length > 100 && !generic && !IsVagueMetricFactor(compact))
         {
             return compact;
         }
@@ -2195,53 +2246,49 @@ public static class CmfRecommendationService
         return s + ".";
     }
 
+    private static string FormatRecommendingBullet(string rawBody, string expectedTag, string fallbackBody)
+    {
+        string body = SafeText(rawBody);
+        body = System.Text.RegularExpressions.Regex.Replace(body, @"^-\s*", string.Empty).Trim();
+        body = System.Text.RegularExpressions.Regex.Replace(body, @"^\*\*AI\s+Recommendation\s*:\*\*\s*", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
+        body = StripNextStepSentences(body);
+        if (string.IsNullOrWhiteSpace(body)
+            || (!string.IsNullOrWhiteSpace(expectedTag) && body.IndexOf(expectedTag, StringComparison.OrdinalIgnoreCase) < 0)
+            || IsNextStepInsteadOfJustification(body))
+        {
+            return "- " + fallbackBody.TrimEnd('.') + ".";
+        }
+
+        // Normalize lead-in so every bullet starts cleanly with "Recommending **CMF_XXX** ..." instead of "CMF_XXX applies because..." or "Recommend CMF_XXX..."
+        body = System.Text.RegularExpressions.Regex.Replace(
+            body,
+            @"^(?:Approve\s+as\s+|Recommend(?:ing)?\s+(?:tagging\s+as\s+|as\s+)?|Tag\s+as\s+)?\*{0,2}(CMF_(?:OK|REVIEW|REJECT|INCOMPLETE|DUPLICATE))\*{0,2}(?:\s+tag)?\s+(?:applies\s+|is\s+recommended\s+)?",
+            "Recommending **$1** ",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (!body.StartsWith("Recommending ", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(expectedTag))
+        {
+            body = "Recommending **" + expectedTag + "** because " + LowerFirst(body);
+        }
+        return "- " + body.TrimEnd('.') + ".";
+    }
+
     private static string BuildAlignedDuplicateReasoning(string rawFirstPassTag, string rawFirstPassReasoning, List<CmfRecommendationRuleScore> ruleScores, string rules, string duplicateDetail, string duplicatedTargetId, bool mergedTargetHasCmf, string reproOnRvp, string hsdContext)
     {
         string displayedScore = FormatDisplayedFourPointScore(ruleScores, rules);
-        string severityFactor = ExtractContributingFactorValueFromRule(ruleScores, "S");
-        string detectionFactor = ExtractContributingFactorValueFromRule(ruleScores, "D");
-        bool rvpYes = ResolveIsRvpReproYes(reproOnRvp, hsdContext, ruleScores);
-
-        string fallback1 = "**Why the score is " + displayedScore + ":** " + BuildScoreTradeoffReasoningSentence(displayedScore, "CMF_DUPLICATE", ruleScores, rvpYes);
         string targetLabel = !string.IsNullOrWhiteSpace(duplicatedTargetId)
             ? ("sighting " + duplicatedTargetId)
             : "an existing primary sighting";
-        string fallback2 = "**AI Recommendation:** Recommend **CMF_DUPLICATE** as engineering analysis confirms the underlying failure mechanism for " + LowerFirst(severityFactor) + " is identical to and actively tracked under merged primary sighting " + targetLabel + ", where customer_must_fix is explicitly committed in sysdebug.";
+        string fallbackBody = "Recommending **CMF_DUPLICATE** because this sighting has merge ID " + targetLabel + " under the client platform tenant and its sysdebug field already includes the CMF ask/customer_must_fix status.";
 
-        string candidateRaw = rawFirstPassReasoning;
-        string formatted = EnforceTwoPointReasoningTemplate(candidateRaw, displayedScore, fallback1, fallback2);
+        string formatted = EnforceTwoPointReasoningTemplate(rawFirstPassReasoning, displayedScore, string.Empty, "**AI Recommendation:** " + fallbackBody);
         string[] lines = formatted.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        if (lines.Length == 2)
+        string aiRecLine = lines.Length >= 2 ? lines[1] : (lines.Length == 1 ? lines[0] : string.Empty);
+        if (!string.IsNullOrWhiteSpace(duplicatedTargetId) && aiRecLine.IndexOf(duplicatedTargetId, StringComparison.OrdinalIgnoreCase) < 0)
         {
-            string p1Body = System.Text.RegularExpressions.Regex.Replace(lines[0], @"^-\s*\*\*Why\s+the\s+score\s+is\s+[^*:]+:\*\*\s*", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
-            p1Body = SanitizeWhyScoreBullet(p1Body, displayedScore);
-            if (string.IsNullOrWhiteSpace(p1Body))
-            {
-                lines[0] = "- " + fallback1;
-            }
-            else
-            {
-                lines[0] = "- **Why the score is " + displayedScore + ":** " + char.ToUpperInvariant(p1Body[0]) + p1Body.Substring(1);
-            }
-
-            string p2Body = System.Text.RegularExpressions.Regex.Replace(lines[1], @"^-\s*\*\*AI\s+Recommendation\s*:\*\*\s*", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
-            p2Body = StripNextStepSentences(p2Body);
-            if (string.IsNullOrWhiteSpace(p2Body)
-                || p2Body.IndexOf("CMF_DUPLICATE", StringComparison.OrdinalIgnoreCase) < 0
-                || (!string.IsNullOrWhiteSpace(duplicatedTargetId) && p2Body.IndexOf(duplicatedTargetId, StringComparison.OrdinalIgnoreCase) < 0)
-                || IsNextStepInsteadOfJustification(p2Body))
-            {
-                lines[1] = "- " + fallback2;
-            }
-            else
-            {
-                lines[1] = "- **AI Recommendation:** " + p2Body.TrimEnd('.') + ".";
-            }
-
-            formatted = string.Join("\n", lines);
+            aiRecLine = string.Empty;
         }
-
-        return AiSummaryService.PolishPlainSectionGrammar(formatted);
+        string singleBullet = FormatRecommendingBullet(aiRecLine, "CMF_DUPLICATE", fallbackBody);
+        return AiSummaryService.PolishPlainSectionGrammar(singleBullet);
     }
 
     private static string BuildAlignedIncompleteReasoning(string rawFirstPassTag, string rawFirstPassReasoning, List<string> missingFields, List<CmfRecommendationRuleScore> ruleScores, string rules, string title, string component, string impact, string reproducibility, string hsdContext, string reproOnRvp)
@@ -2250,42 +2297,17 @@ public static class CmfRecommendationService
         string missingList = JoinReadableList(missingFields);
         string severityFactor = ExtractContributingFactorValueFromRule(ruleScores, "S");
         string detectionFactor = ExtractContributingFactorValueFromRule(ruleScores, "D");
-        bool rvpYes = ResolveIsRvpReproYes(reproOnRvp, hsdContext, ruleScores);
 
-        string fallback1 = "**Why the score is " + displayedScore + ":** " + BuildScoreTradeoffReasoningSentence(displayedScore, "CMF_INCOMPLETE", ruleScores, rvpYes);
-        string fallback2 = "**AI Recommendation:** Recommend **CMF_INCOMPLETE** because " + missingList + (missingFields.Count == 1 ? " is" : " are") + " missing from the sighting, preventing full assessment of " + LowerFirst(severityFactor) + " during " + LowerFirst(detectionFactor) + ".";
+        string fallbackBody = "Recommending **CMF_INCOMPLETE** because " + missingList + (missingFields.Count == 1 ? " is" : " are") + " missing from the sighting, preventing full assessment of " + LowerFirst(severityFactor) + " during " + LowerFirst(detectionFactor) + ".";
 
-        string candidateRaw = rawFirstPassReasoning;
-        string formatted = EnforceTwoPointReasoningTemplate(candidateRaw, displayedScore, fallback1, fallback2);
+        string formatted = EnforceTwoPointReasoningTemplate(rawFirstPassReasoning, displayedScore, string.Empty, "**AI Recommendation:** " + fallbackBody);
         string[] lines = formatted.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        if (lines.Length == 2)
-        {
-            string p1Body = System.Text.RegularExpressions.Regex.Replace(lines[0], @"^-\s*\*\*Why\s+the\s+score\s+is\s+[^*:]+:\*\*\s*", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
-            p1Body = SanitizeWhyScoreBullet(p1Body, displayedScore);
-            if (string.IsNullOrWhiteSpace(p1Body))
-            {
-                lines[0] = "- " + fallback1;
-            }
-            else
-            {
-                lines[0] = "- **Why the score is " + displayedScore + ":** " + char.ToUpperInvariant(p1Body[0]) + p1Body.Substring(1);
-            }
+        string aiRecLine = lines.Length >= 2 ? lines[1] : (lines.Length == 1 ? lines[0] : string.Empty);
+        string singleBullet = FormatRecommendingBullet(aiRecLine, "CMF_INCOMPLETE", fallbackBody);
 
-            string p2Body = System.Text.RegularExpressions.Regex.Replace(lines[1], @"^-\s*\*\*AI\s+Recommendation\s*:\*\*\s*", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
-            p2Body = StripNextStepSentences(p2Body);
-            if (string.IsNullOrWhiteSpace(p2Body) || p2Body.IndexOf("CMF_INCOMPLETE", StringComparison.OrdinalIgnoreCase) < 0 || IsNextStepInsteadOfJustification(p2Body))
-            {
-                lines[1] = "- " + fallback2;
-            }
-            else
-            {
-                lines[1] = "- **AI Recommendation:** " + p2Body.TrimEnd('.') + ".";
-            }
-
-            formatted = string.Join("\n", lines);
-        }
-
-        return AiSummaryService.PolishPlainSectionGrammar(formatted);
+        string mergeCallout = BuildMergeIdNonDuplicateCallout(hsdContext);
+        if (!string.IsNullOrWhiteSpace(mergeCallout)) singleBullet += "\n" + mergeCallout;
+        return AiSummaryService.PolishPlainSectionGrammar(singleBullet);
     }
 
     private static string BuildSinglePassAlignedReasoning(string decision, string rawFirstPassTag, string rawFirstPassReasoning, List<CmfRecommendationRuleScore> ruleScores, string title, string component, string impact, string reproducibility, string hsdContext, string reproOnRvp = "", string rules = null)
@@ -2295,67 +2317,138 @@ public static class CmfRecommendationService
         string displayedScore = FormatDisplayedFourPointScore(ruleScores, rules);
         string dupDetail;
         bool hasDuplicateEvidence = HasDuplicateIssueEvidence(string.Empty, title, string.Empty, impact, hsdContext, out dupDetail);
-        bool rvpYes = ResolveIsRvpReproYes(reproOnRvp, hsdContext, ruleScores);
 
         string fallbackNarrative = NormalizeCmfRecommendationNarrative(BuildReviewerStyleRecommendationReasoning(finalDecision, ruleScores, title, component, impact, reproducibility, hsdContext, reproOnRvp));
         string[] fbLines = fallbackNarrative.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        string fb1 = fbLines.Length > 0 ? fbLines[0] : ("**Why the score is " + displayedScore + ":** " + BuildScoreTradeoffReasoningSentence(displayedScore, finalDecision, ruleScores, rvpYes));
-        string fb2 = fbLines.Length > 1 ? fbLines[1] : ("**AI Recommendation:** Recommend **" + finalDecision + "** based on the active CMF rules.");
+        string rawFb2 = fbLines.Length > 1 ? fbLines[1] : ("Recommending **" + finalDecision + "** based on the active CMF rules.");
+        string fallbackBody = FormatRecommendingBullet(rawFb2, finalDecision, "Recommending **" + finalDecision + "** based on the active CMF rules.").TrimStart('-', ' ');
 
+        string singleBullet = "- " + fallbackBody;
         if (!string.Equals(finalDecision, "CMF_DUPLICATE", StringComparison.OrdinalIgnoreCase)
             && !string.IsNullOrWhiteSpace(rawFirstPassReasoning))
         {
             bool hasHallucinatedDuplicate = !hasDuplicateEvidence && rawFirstPassReasoning.IndexOf("duplicate", StringComparison.OrdinalIgnoreCase) >= 0;
-            if (!hasHallucinatedDuplicate)
+            bool tagOverridden = !string.Equals(finalDecision, modelDecision, StringComparison.OrdinalIgnoreCase);
+            if (!hasHallucinatedDuplicate && !tagOverridden)
             {
-                string twoPoints = EnforceTwoPointReasoningTemplate(rawFirstPassReasoning, displayedScore, fb1, fb2);
+                string twoPoints = EnforceTwoPointReasoningTemplate(rawFirstPassReasoning, displayedScore, string.Empty, "**AI Recommendation:** " + fallbackBody);
                 string[] lines = twoPoints.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                if (lines.Length == 2)
-                {
-                    bool tagOverridden = !string.Equals(finalDecision, modelDecision, StringComparison.OrdinalIgnoreCase);
-                    string p1 = System.Text.RegularExpressions.Regex.Replace(lines[0], @"^-\s*\*\*Why\s+the\s+score\s+is\s+[^*:]+:\*\*\s*", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
-                    p1 = SanitizeWhyScoreBullet(p1, displayedScore);
-                    if (string.IsNullOrWhiteSpace(p1))
-                    {
-                        lines[0] = "- " + fb1;
-                    }
-                    else
-                    {
-                        lines[0] = "- **Why the score is " + displayedScore + ":** " + char.ToUpperInvariant(p1[0]) + p1.Substring(1);
-                    }
-                    string p2 = System.Text.RegularExpressions.Regex.Replace(lines[1], @"^-\s*\*\*AI\s+Recommendation\s*:\*\*\s*", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
-                    p2 = StripNextStepSentences(p2);
-                    if (string.IsNullOrWhiteSpace(p2) || IsNextStepInsteadOfJustification(p2) || tagOverridden)
-                    {
-                        lines[1] = "- " + fb2;
-                    }
-                    else
-                    {
-                        lines[1] = "- **AI Recommendation:** " + p2.TrimEnd('.') + ".";
-                    }
-                    twoPoints = string.Join("\n", lines);
-                }
-                return AiSummaryService.PolishPlainSectionGrammar(twoPoints);
+                string aiRecLine = lines.Length >= 2 ? lines[1] : (lines.Length == 1 ? lines[0] : string.Empty);
+                singleBullet = FormatRecommendingBullet(aiRecLine, finalDecision, fallbackBody);
             }
         }
 
-        return AiSummaryService.PolishPlainSectionGrammar("- " + fb1 + "\n- " + fb2);
+        string mergeCallout = BuildMergeIdNonDuplicateCallout(hsdContext);
+        if (!string.IsNullOrWhiteSpace(mergeCallout)) singleBullet += "\n" + mergeCallout;
+        return AiSummaryService.PolishPlainSectionGrammar(singleBullet);
+    }
+
+    private static string BuildMergeIdNonDuplicateCallout(string hsdContext)
+    {
+        string ctx = SafeText(hsdContext);
+        if (string.IsNullOrWhiteSpace(ctx)) return string.Empty;
+
+        System.Text.RegularExpressions.Match idMatch = System.Text.RegularExpressions.Regex.Match(
+            ctx, @"(?:^|\n)\s*Duplicated\s+Target\s+Sighting\s+ID\s*:\s*(\d{8,14})\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (!idMatch.Success) return string.Empty;
+
+        string targetId = idMatch.Groups[1].Value.Trim();
+        System.Text.RegularExpressions.Match statusMatch = System.Text.RegularExpressions.Regex.Match(
+            ctx, @"(?:^|\n)\s*Duplicated\s+Target\s+Has\s+customer_must_fix\s*:\s*([^\r\n]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (!statusMatch.Success) return string.Empty;
+
+        string statusText = statusMatch.Groups[1].Value.Trim();
+        if (statusText.StartsWith("Yes", StringComparison.OrdinalIgnoreCase)) return string.Empty;
+
+        System.Text.RegularExpressions.Match tenantMatch = System.Text.RegularExpressions.Regex.Match(
+            ctx, @"(?:^|\n)\s*Duplicated\s+Target\s+Tenant\s*:\s*([^\r\n]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        string tenant = tenantMatch.Success ? tenantMatch.Groups[1].Value.Trim() : string.Empty;
+
+        if (statusText.IndexOf("not client_platf", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            string tenantLabel = string.IsNullOrWhiteSpace(tenant) ? "another" : tenant;
+            return "- **Duplicate check:** Although Merge ID " + targetId + " is present in the ticket, it falls under the " + tenantLabel + " tenant (not client_platf.bug), so it does not qualify for CMF_DUPLICATE. **Note**- please contact the submitter to correct the merge ID.";
+        }
+        if (statusText.IndexOf("does not contain", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return "- **Duplicate check:** Although Merge ID " + targetId + " is under the client platform tenant, its sysdebug field does not contain cmf_ask_status, so it does not qualify for CMF_DUPLICATE.";
+        }
+        return "- **Duplicate check:** Although Merge ID " + targetId + " is present in the ticket, its client platform tenant and sysdebug CMF status could not be verified, so it does not qualify for CMF_DUPLICATE.";
+    }
+
+    private static List<CmfRecommendationRuleScore> GetBorderlineDecisionMetrics(List<CmfRecommendationRuleScore> ruleScores)
+    {
+        List<CmfRecommendationRuleScore> list = new List<CmfRecommendationRuleScore>();
+        if (ruleScores == null) return list;
+        foreach (CmfRecommendationRuleScore rule in ruleScores)
+        {
+            if (rule == null) continue;
+            string id = SafeText(rule.RuleId).ToUpperInvariant();
+            // Only decision-critical metrics (S and B) trigger Borderline -> CMF_REVIEW routing; never meddle with O/RVP/regular matches.
+            if ((id == "S" || id == "B")
+                && string.Equals(SafeText(rule.MatchConfidence), "Borderline", StringComparison.OrdinalIgnoreCase))
+            {
+                list.Add(rule);
+            }
+        }
+        return list;
+    }
+
+    private static string BuildGuidelineGapBullet(List<CmfRecommendationRuleScore> borderlineMetrics)
+    {
+        if (borderlineMetrics == null || borderlineMetrics.Count == 0) return string.Empty;
+        List<string> parts = new List<string>();
+        foreach (CmfRecommendationRuleScore r in borderlineMetrics)
+        {
+            string label = !string.IsNullOrWhiteSpace(r.RuleName) ? r.RuleName : r.RuleId;
+            string note = SafeText(r.BorderlineNote).TrimEnd('.');
+            parts.Add(string.IsNullOrWhiteSpace(note) ? label : (label + " (" + note + ")"));
+        }
+        return "- **Guideline gap:** " + JoinReadableList(parts) + " did not have a direct match in the active scoring guidelines; consider updating the Scoring Guidelines or submitting an Override/Feedback.";
+    }
+
+    private static string BuildBorderlineReviewReasoning(List<CmfRecommendationRuleScore> borderlineMetrics, List<CmfRecommendationRuleScore> allRules, string hsdContext)
+    {
+        List<string> metricNames = new List<string>();
+        foreach (CmfRecommendationRuleScore r in borderlineMetrics)
+        {
+            metricNames.Add(!string.IsNullOrWhiteSpace(r.RuleName) ? r.RuleName : r.RuleId);
+        }
+        string severityFactor = ExtractContributingFactorValueFromRule(allRules, "S");
+        string mainBullet = "- Recommending **CMF_REVIEW** because " + JoinReadableList(metricNames)
+            + (metricNames.Count == 1 ? " is" : " are")
+            + " borderline (no direct match in the active scoring guidelines for " + LowerFirst(severityFactor) + "), requiring committee review rather than automatic approval or rejection.";
+        string gapBullet = BuildGuidelineGapBullet(borderlineMetrics);
+        string mergeCallout = BuildMergeIdNonDuplicateCallout(hsdContext);
+        StringBuilder sb = new StringBuilder(mainBullet);
+        if (!string.IsNullOrWhiteSpace(gapBullet)) sb.Append("\n").Append(gapBullet);
+        if (!string.IsNullOrWhiteSpace(mergeCallout)) sb.Append("\n").Append(mergeCallout);
+        return AiSummaryService.PolishPlainSectionGrammar(sb.ToString());
     }
 
     private static bool ResolveIsRvpReproYes(string reproOnRvp, string hsdContext, List<CmfRecommendationRuleScore> ruleScores = null)
     {
-        if (ruleScores != null && GetMetricScore(ruleScores, "RVP") >= 4)
-        {
-            return true;
-        }
+        // Strictly source RVP repro from the primary sighting's repro_on_rvp field (never promoted/merged tickets; AUD-12).
         string raw = SafeText(reproOnRvp).Trim().ToLowerInvariant();
         if (raw == "yes" || raw == "true" || raw == "1" || (raw.Contains("reproduced on rvp") && !raw.Contains("not reproduced on rvp")))
         {
             return true;
         }
+        if (raw == "no" || raw == "false" || raw == "0" || raw == "unknown" || raw == "blank" || raw == "n/a" || raw == "na")
+        {
+            return false;
+        }
         string ctx = SafeText(hsdContext);
-        if (System.Text.RegularExpressions.Regex.IsMatch(ctx, @"(?:Repro\s+On\s+RVP|RVP\s+Repro)\s*:\s*(?:yes|true|1)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
-            || System.Text.RegularExpressions.Regex.IsMatch(ctx, @"\b(?<!not\s)reproduced\s+on\s+(?:Intel\s+)?RVP\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+        System.Text.RegularExpressions.Match primaryMatch = System.Text.RegularExpressions.Regex.Match(
+            ctx,
+            @"(?:^|\n)\s*Primary\s+Sighting\s+RVP\s+Repro\s*:\s*([^\r\n]+)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (primaryMatch.Success)
+        {
+            string val = primaryMatch.Groups[1].Value.Trim().ToLowerInvariant();
+            return val == "yes" || val == "true" || val == "1";
+        }
+        if (ruleScores != null && GetMetricScore(ruleScores, "RVP") >= 4)
         {
             return true;
         }
@@ -2592,30 +2685,48 @@ public static class CmfRecommendationService
         List<string> bullets = new List<string>();
         bullets.Add("**Why the score is " + displayedScore + ":** " + scoreTradeoff);
 
+        int sScore = GetMetricScore(ruleScores, "S");
+        int bScore = GetMetricScore(ruleScores, "B");
+
         if (decision == "CMF_DUPLICATE")
         {
-            bullets.Add("**AI Recommendation:** Recommend **CMF_DUPLICATE** as engineering analysis confirms " + LowerFirst(severityFactor) + " is tracked under primary merged sighting with customer_must_fix in sysdebug.");
+            bullets.Add("**AI Recommendation:** Recommending **CMF_DUPLICATE** because " + LowerFirst(severityFactor) + " is tracked under primary merged sighting with customer_must_fix in sysdebug.");
         }
         else if (decision == "CMF_OK")
         {
-            string rvpClause = rvpYes ? " Confirmed on Intel RVP." : " Isolated to customer systems.";
-            bullets.Add("**AI Recommendation:** Approve as **CMF_OK** because " + LowerFirst(severityFactor) + " during " + LowerFirst(detectionFactor) + " blocks customer milestone readiness (" + LowerFirst(businessFactor) + ")." + rvpClause);
+            if (bScore >= 3 && rvpYes)
+            {
+                bullets.Add("**AI Recommendation:** Recommending **CMF_OK** because " + LowerFirst(severityFactor) + " during " + LowerFirst(detectionFactor) + " carries " + LowerFirst(businessFactor) + " and reproduces on Intel RVP.");
+            }
+            else if (bScore >= 3)
+            {
+                bullets.Add("**AI Recommendation:** Recommending **CMF_OK** because " + LowerFirst(severityFactor) + " during " + LowerFirst(detectionFactor) + " carries " + LowerFirst(businessFactor) + ".");
+            }
+            else if (sScore >= 3 && rvpYes)
+            {
+                bullets.Add("**AI Recommendation:** Recommending **CMF_OK** because " + LowerFirst(severityFactor) + " during " + LowerFirst(detectionFactor) + " reproduces on Intel RVP (platform-wide exposure), even though business impact is limited (" + LowerFirst(businessFactor) + ").");
+            }
+            else
+            {
+                string rvpClause = rvpYes ? " and reproduces on Intel RVP" : string.Empty;
+                bullets.Add("**AI Recommendation:** Recommending **CMF_OK** based on the combined severity (" + LowerFirst(severityFactor) + "), occurrence (" + LowerFirst(occurrenceFactor) + "), detection (" + LowerFirst(detectionFactor) + "), and business impact (" + LowerFirst(businessFactor) + ")" + rvpClause + ".");
+            }
         }
         else if (decision == "CMF_REVIEW")
         {
             string rvpClause = rvpYes ? " Confirmed on Intel RVP." : " Isolated to customer systems.";
-            bullets.Add("**AI Recommendation:** Recommend **CMF_REVIEW** because " + LowerFirst(severityFactor) + " poses significant risk during " + LowerFirst(detectionFactor) + ", requiring committee alignment on milestone exposure." + rvpClause);
+            bullets.Add("**AI Recommendation:** Recommending **CMF_REVIEW** because " + LowerFirst(severityFactor) + " during " + LowerFirst(detectionFactor) + " with " + LowerFirst(businessFactor) + " falls in the review criteria and requires committee alignment." + rvpClause);
         }
         else if (decision == "CMF_INCOMPLETE")
         {
             List<string> incompleteMetrics = GetIncompleteImportantMetrics(ruleScores);
             string incompList = incompleteMetrics.Count > 0 ? JoinReadableList(incompleteMetrics) : "decision-critical fields";
-            bullets.Add("**AI Recommendation:** Recommend **CMF_INCOMPLETE** because " + incompList + " must be documented to assess " + LowerFirst(severityFactor) + " during " + LowerFirst(detectionFactor) + " before final CMF disposition.");
+            bullets.Add("**AI Recommendation:** Recommending **CMF_INCOMPLETE** because " + incompList + " must be documented to assess " + LowerFirst(severityFactor) + " during " + LowerFirst(detectionFactor) + " before final CMF disposition.");
         }
         else
         {
-            string rvpClause = rvpYes ? " RVP reproduction alone does not overcome lack of gate impact." : " Isolated to customer units.";
-            bullets.Add("**AI Recommendation:** Recommend **CMF_REJECT** because " + LowerFirst(severityFactor) + " during " + LowerFirst(detectionFactor) + " does not block required customer milestones or launch criteria." + rvpClause);
+            string rvpClause = rvpYes ? " RVP reproduction alone does not meet CMF approval criteria." : " Isolated to customer units.";
+            bullets.Add("**AI Recommendation:** Recommending **CMF_REJECT** because " + LowerFirst(severityFactor) + " during " + LowerFirst(detectionFactor) + " with " + LowerFirst(businessFactor) + " does not meet the CMF approval criteria." + rvpClause);
         }
 
         return "- " + string.Join("\n- ", bullets.ToArray());
@@ -3284,17 +3395,24 @@ public static class CmfRecommendationService
             if (headerClean.StartsWith("RECOMMENDATION:", StringComparison.OrdinalIgnoreCase))
             {
                 currentSection = "RECOMMENDATION";
-                string recVal = headerClean.Substring("RECOMMENDATION:".Length).Trim().Trim('*', '[', ']', ' ', '.');
-                response.Recommendation = recVal;
+                string recVal = headerClean.Substring("RECOMMENDATION:".Length).Trim('*', ' ', '[', ']');
+                if (!string.IsNullOrWhiteSpace(recVal))
+                {
+                    response.Recommendation = recVal;
+                }
                 continue;
             }
 
-            if (headerClean.StartsWith("EVIDENCE:", StringComparison.OrdinalIgnoreCase) ||
-                headerClean.StartsWith("REASONING:", StringComparison.OrdinalIgnoreCase) ||
-                headerClean.StartsWith("AI REASONING:", StringComparison.OrdinalIgnoreCase) ||
-                headerClean.StartsWith("ISSUE IMPACT:", StringComparison.OrdinalIgnoreCase))
+            if (headerClean.StartsWith("REASONING:", StringComparison.OrdinalIgnoreCase) ||
+                headerClean.StartsWith("EVIDENCE:", StringComparison.OrdinalIgnoreCase))
             {
-                currentSection = headerClean.StartsWith("ISSUE IMPACT:", StringComparison.OrdinalIgnoreCase) ? "IMPACT" : "EVIDENCE";
+                currentSection = "EVIDENCE";
+                int colonIdx = headerClean.IndexOf(':');
+                string trailing = colonIdx >= 0 ? headerClean.Substring(colonIdx + 1).Trim() : string.Empty;
+                if (!string.IsNullOrWhiteSpace(trailing))
+                {
+                    evidenceBuilder.AppendLine(trailing);
+                }
                 continue;
             }
 
@@ -3333,8 +3451,29 @@ public static class CmfRecommendationService
                         || string.Equals(candId, "RVP", StringComparison.OrdinalIgnoreCase))
                     {
                         currentSection = "RULES";
+                        string matchConfidence = "Direct";
+                        string borderlineNote = string.Empty;
+                        int evalEndIdx = rowParts.Length;
+                        if (rowParts.Length >= 5)
+                        {
+                            string lastSeg = rowParts[rowParts.Length - 1].Replace("**", string.Empty).Trim(' ', '[', ']', '`');
+                            lastSeg = System.Text.RegularExpressions.Regex.Replace(
+                                lastSeg, @"^Confidence\s*[:\-]\s*", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim(' ', '[', ']');
+                            if (lastSeg.StartsWith("Direct", StringComparison.OrdinalIgnoreCase))
+                            {
+                                matchConfidence = "Direct";
+                                evalEndIdx = rowParts.Length - 1;
+                            }
+                            else if (lastSeg.StartsWith("Borderline", StringComparison.OrdinalIgnoreCase))
+                            {
+                                matchConfidence = "Borderline";
+                                borderlineNote = System.Text.RegularExpressions.Regex.Replace(
+                                    lastSeg, @"^Borderline\s*[:\-(]?\s*", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim(')', ']', ' ', '.');
+                                evalEndIdx = rowParts.Length - 1;
+                            }
+                        }
                         StringBuilder evalJoined = new StringBuilder();
-                        for (int p = 3; p < rowParts.Length; p++)
+                        for (int p = 3; p < evalEndIdx; p++)
                         {
                             string seg = rowParts[p].Trim();
                             if (string.IsNullOrWhiteSpace(seg)) continue;
@@ -3346,7 +3485,9 @@ public static class CmfRecommendationService
                             RuleId = candId.ToUpperInvariant(),
                             RuleName = rowParts[1].Replace("**", string.Empty).Trim(),
                             Score = NormalizeNumericScore(rowParts[2].Replace("**", string.Empty).Trim()),
-                            Evaluation = evalJoined.ToString().Trim()
+                            Evaluation = evalJoined.ToString().Trim(),
+                            MatchConfidence = matchConfidence,
+                            BorderlineNote = borderlineNote
                         });
                         continue;
                     }
@@ -3454,29 +3595,23 @@ public static class CmfRecommendationService
     {
         StringBuilder prompt = new StringBuilder();
         prompt.AppendLine("### INSTRUCTIONS ###");
-        prompt.AppendLine("Evaluate this sighting as a Customer Must Fix (CMF) advisor using all supplied HSD fields across layouts, all ~50 database columns, HSD comments, merged/duplicated ticket details, and any attached image readouts.");
+        prompt.AppendLine("Evaluate this sighting as a Customer Must Fix (CMF) advisor using ONLY the Primary Sighting's HSD fields and database columns for scoring S, O, D, B, and RVP. Use [Duplicate Check Metadata Only] strictly for the CMF_DUPLICATE gate, and ignore [Promoted Bug Debug/Fix Update] when scoring the primary sighting.");
         prompt.AppendLine("Write everything in brief, simple, everyday English so any reviewer can read and understand it in seconds.");
         prompt.AppendLine();
-        prompt.AppendLine("### STRICT 5-METRIC INDEPENDENCE & EXACT SCORING CALIBRATION ###");
-        prompt.AppendLine("Score every metric (S, O, D, B, RVP) strictly on its own dimension from 1 to 4 — NEVER let one metric contaminate another:");
-        prompt.AppendLine("  - S | Severity (Weight 30%): Score ONLY what breaks functionally:");
-        prompt.AppendLine("      4 = Critical failure / Major Subsystem Loss: Matches any Score 4 guideline category:");
-        prompt.AppendLine("          * Permanent Black / Blank Screen: eDP/HDMI/DP panel cannot light up or display goes blank/disappears after boot, reboot, or Sx/S4 resume.");
-        prompt.AppendLine("          * Thunderbolt / USB4 / Type-C Loss: TBT4/TBT5 dock disconnect, TBT daisy-chain device lost or cannot be recognized after resume/restart, USB4/NVMe lost, Type-C port dead.");
-        prompt.AppendLine("          *METRIC INDEPENDENCE & AUTHORITATIVE RULES ###");
+        prompt.AppendLine("### STRICT 5-METRIC INDEPENDENCE & AUTHORITATIVE RULES ###");
         prompt.AppendLine("Use the ACTIVE CMF SCORING RULES & GUIDELINES section below as the SOLE authoritative source for all dimension weights, score rubrics, formula, disposition thresholds, and gating guardrails.");
         prompt.AppendLine("Score every metric (S, O, D, B, RVP) strictly on its own dimension from 1 to 4 using the active rubric below — NEVER let one metric contaminate another (for example, do not inflate Occurrence or Business Impact because RVP=Yes, and do not downgrade Business Impact because Severity is low).");
         prompt.AppendLine();
         prompt.AppendLine("### MANDATORY EVALUATION FLOW & TAG PRIORITY ###");
         prompt.AppendLine("1. Always score all 5 metrics (S, O, D, B, RVP) first using the active rubric below, then compute EVIDENCE QUALITY using the exact formula and weights defined in the ACTIVE CMF SCORING RULES & GUIDELINES section.");
         prompt.AppendLine("2. Determine RECOMMENDATION in this strict priority order:");
-        prompt.AppendLine("   - Priority A (Duplicate): Check if the sighting is merged or duplicated to another sighting (via merge_id, merged_id, or duplicate comments). If a merged sighting exists, check if its sysdebug / sysdebug_forum contains 'customer_must_fix'. ONLY if the merged sighting has 'customer_must_fix' in sysdebug, return CMF_DUPLICATE. If the merged sighting does NOT have 'customer_must_fix' in sysdebug, do NOT tag as CMF_DUPLICATE; instead evaluate it as a normal pending issue according to SQA completeness (Priority B) and the active disposition rules (Priority C).");
+        prompt.AppendLine("   - Priority A (Duplicate): Check ONLY if the primary sighting has an explicit merge_id AND that merged ticket is under the client_platf.bug / client_plat.bug tenant AND its sysdebug field contains cmf_ask_status / customer_must_fix. ONLY when all three hold, return CMF_DUPLICATE. Otherwise do NOT tag CMF_DUPLICATE.");
         prompt.AppendLine("   - Priority B (Completeness): If NOT duplicate and Sighting Quality Assessment has missing critical field(s), return CMF_INCOMPLETE.");
         prompt.AppendLine("   - Priority C (Core Disposition): Otherwise apply the disposition bands and gating guardrails defined in the ACTIVE CMF SCORING RULES & GUIDELINES section below.");
-        prompt.AppendLine("3. Metric Contributing Factors: For Severity (S), write the exact concrete symptom or failure that is severe / prone to risk in the sighting (e.g., 'TBT port is not being recognized', 'External display blank on resume', 'BSOD 0x116 VIDEO_TDR_FAILURE', 'System hard hang during restart', 'eUSB2 eye diagram fails tuning', 'NVMe boot drive missing', 'Camera device lost after S4'). Do NOT write broad generic category headings like 'Thunderbolt / USB4 / Type-C Loss' or 'Major Subsystem Loss' — state the exact failure observed! For other metrics, state concise, specific factors (e.g., O: '100% consistent', '2/40 (5% sporadic)'; D: 'S4 hibernate/resume cycling', 'Normal desktop idle boot'; B: 'P1-Showstopper', 'Blocks FVT phase exit'; RVP: 'Confirmed on RVP', 'Isolated to customer unit', 'Blank').");
-        prompt.AppendLine("4. REASONING REQUIREMENTS (EXACTLY 2 CONCISE, CRISP BULLETS; KEEP UNDER 25 WORDS PER BULLET; WRITE IN SIMPLE, SMOOTH, EVERYDAY ENGLISH):");
-        prompt.AppendLine("   - Bullet 1: - **Why the score is [score]/4:** Write 1 natural, plain-English sentence explaining what factors pushed the score up (such as the failure severity, trigger scope, or blocked milestone) and what held it back (such as low occurrence or unconfirmed/no RVP repro). NEVER include parenthetical scores like '(Score 3 Severity)', '(Score 4 Business Impact)', '(S=3)', or '(3/4)', math formulas, weights, disposition bands/thresholds (like 'falls below CMF_OK threshold 3.50'), CMF tag names, or missing-field statements.");
-        prompt.AppendLine("   - Bullet 2: - **AI Recommendation:** Write 1 crisp, plain-English sentence naming the recommended tag (**CMF_OK**, **CMF_REVIEW**, **CMF_REJECT**, **CMF_INCOMPLETE**, or **CMF_DUPLICATE**) and stating strictly why that tag applies, without repeating metric scores or listing next steps/actions (e.g., do NOT say 'request submitter provide...'). Only if tagged as CMF_DUPLICATE, mention the primary sighting ID and customer_must_fix. If tagged as CMF_INCOMPLETE, state which critical field is missing.");
+        prompt.AppendLine("3. Metric Contributing Factors & Match Confidence: Score and label every metric strictly by matching the sighting's HSD facts against the active scoring guidelines (no fixed/hardcoded labels). For Occurrence (O), score STRICTLY from the ticket's 'reproducibility' field ONLY (do NOT use occurrence mentioned in description/comments) and output the ticket's reproducibility field value as the contributing factor. For Detection (D), read the HSD Description and state the actual trigger scenario. For all metrics (S, D, B, etc.), once you identify the matching factor from the guidelines and HSD data, phrase the label in clear, self-explanatory plain English rather than cryptic shorthand so any reviewer immediately understands the context.");
+        prompt.AppendLine("   - Match Confidence (`Direct` vs `Borderline`): Mark `Direct` when the sighting's symptom/scenario clearly matches an explicit category or example listed in the active rubric with no score-boundary ambiguity. Mark `Borderline: <short reason>` ONLY when (a) the exact symptom/scenario is NOT explicitly listed in the rubric examples, OR (b) assigning the score requires judging an unstated quantitative/subjective threshold between two adjacent score levels (for example, a small numeric latency/timing/performance delta or marginal degradation where the rubric does not define a cutoff between Score 2 and Score 3). Never mark `Borderline` for clearly listed failures (such as BSOD, hang, no boot, black screen, S0ix failure, port loss, or explicit milestone/HLK gate block).");
+        prompt.AppendLine("4. REASONING REQUIREMENTS (EXACTLY 1 CONCISE, CRISP BULLET; WRITE IN SMOOTH, GRAMMATICALLY CORRECT EVERYDAY ENGLISH):");
+        prompt.AppendLine("   - Bullet 1: - Recommending **CMF_XXX** ... (start directly with 'Recommending **CMF_OK**', 'Recommending **CMF_REVIEW**', 'Recommending **CMF_REJECT**', 'Recommending **CMF_INCOMPLETE**', or 'Recommending **CMF_DUPLICATE**', followed upfront by the concrete technical, RVP, and customer/business factors that drove that tag). Do NOT write 'CMF_XXX applies because', do NOT include a 'Why the score' bullet, numeric scores/parentheticals, vague policy filler, or next steps/actions. If tagged as CMF_INCOMPLETE, state clearly which critical field is missing.");
 
         if (!string.IsNullOrWhiteSpace(duplicateDetail) || !string.IsNullOrWhiteSpace(duplicatedTargetId) || (missingSqaFields != null && missingSqaFields.Count > 0))
         {
@@ -3515,7 +3650,7 @@ public static class CmfRecommendationService
         if (!string.IsNullOrWhiteSpace(hsdContext))
         {
             prompt.AppendLine();
-            prompt.AppendLine("### FULL DATABASE (~50 COLUMNS), HSD LAYOUT FIELDS, COMMENTS, MERGED TICKET & IMAGE CONTEXT ###");
+            prompt.AppendLine("### LIVE HSD SIGHTING CONTEXT ###");
             prompt.AppendLine(hsdContext);
         }
         string feedbackMemory = CmfFeedbackMemoryService.BuildFewShotFeedbackContext(component, title);
@@ -3525,22 +3660,22 @@ public static class CmfRecommendationService
             prompt.AppendLine(feedbackMemory);
         }
         prompt.AppendLine();
-        prompt.AppendLine("### EXPECTED OUTPUT FORMAT (EXACTLY 2 REASONING BULLETS, NO EXTRA BULLETS) ###");
+        prompt.AppendLine("### EXPECTED OUTPUT FORMAT (EXACTLY 1 REASONING BULLET, NO EXTRA BULLETS) ###");
         prompt.AppendLine("RECOMMENDATION: [Exactly one of: CMF_OK, CMF_DUPLICATE, CMF_REVIEW, CMF_REJECT, CMF_INCOMPLETE]");
         prompt.AppendLine();
         prompt.AppendLine("EVIDENCE QUALITY: [weighted score from 1.00 to 4.00]");
         prompt.AppendLine();
         prompt.AppendLine("REASONING:");
-        prompt.AppendLine("- **Why the score is [score]/4:** [1 smooth plain-English sentence under 25 words: explain what factors raise the score and what factors hold it back, with no formulas, no '(S=3)' codes, and no CMF tag names.]");
-        prompt.AppendLine("- **AI Recommendation:** [1 crisp plain-English sentence under 25 words: state recommended **TAG** and strictly why it applies, without repeating metric scores or listing next steps.]");
+        prompt.AppendLine("- Recommending **[TAG]** [1 crisp plain-English sentence naming the concrete technical, RVP, and customer/business factors that drove this tag; no 'Why the score' bullet, no numeric scores, no next steps.]");
         prompt.AppendLine();
         prompt.AppendLine("RULE SCORES:");
-        prompt.AppendLine("Rule ID | Rule Name | Score | Evaluation");
-        prompt.AppendLine("S | Severity | [1-4] | Contributing factor: [2-5 word specific symptom phrase]. Evidence: [concise supporting fact from ticket].");
-        prompt.AppendLine("O | Occurrence | [1-4] | Contributing factor: [2-5 word specific frequency phrase]. Evidence: [concise supporting fact from ticket].");
-        prompt.AppendLine("D | Detection / Trigger Scope | [1-4] | Contributing factor: [2-5 word specific trigger phrase]. Evidence: [concise supporting fact from ticket].");
-        prompt.AppendLine("B | Business Impact | [1-4] | Contributing factor: [2-5 word specific gate/impact phrase]. Evidence: [concise supporting fact from ticket].");
-        prompt.AppendLine("RVP | RVP Repro Status | [4, 2, or 1] | Contributing factor: [Reproduced on RVP / RVP status unknown / Not reproduced on RVP]. Evidence: [concise supporting fact from ticket].");
+        prompt.AppendLine("Rule ID | Rule Name | Score | Evaluation | Confidence");
+        prompt.AppendLine("Use 'Direct' in Confidence for all normal matches. Use 'Borderline: <short reason>' ONLY in rare edge cases where the sighting's symptom/scenario is NOT covered in the active scoring guidelines and sits ambiguously between two score levels.");
+        prompt.AppendLine("S | Severity | [1-4] | Contributing factor: [clear self-explanatory symptom phrase]. Evidence: [concise supporting fact from ticket]. | [Direct OR Borderline: short reason if unlisted]");
+        prompt.AppendLine("O | Occurrence | [1-4] | Contributing factor: [exact ticket reproducibility field value]. Evidence: [concise supporting fact from ticket]. | Direct");
+        prompt.AppendLine("D | Detection / Trigger Scope | [1-4] | Contributing factor: [clear trigger phrase from HSD Description]. Evidence: [concise supporting fact from ticket]. | [Direct OR Borderline: short reason if unlisted]");
+        prompt.AppendLine("B | Business Impact | [1-4] | Contributing factor: [clear self-explanatory impact phrase]. Evidence: [concise supporting fact from ticket]. | [Direct OR Borderline: short reason if unlisted]");
+        prompt.AppendLine("RVP | RVP Repro Status | [4, 2, or 1] | Contributing factor: [Reproduced on RVP / RVP status unknown / Not reproduced on RVP]. Evidence: [concise supporting fact from ticket]. | Direct");
 
         return prompt.ToString();
     }
@@ -3632,6 +3767,7 @@ public static class CmfRecommendationService
         prompt.AppendLine("Do not mark a field Partial only because the value is short. Aliases, status labels, board names, IDs, filenames, and yes/no attachment flags can be complete only when they satisfy that field's purpose.");
         prompt.AppendLine("If Status is Partial, Characteristic must be specific. Do not use generic wording such as 'low detail or vague'. Use concrete phrases such as 'Title is generic', 'Missing numeric rate or sample size', 'Processor model unclear', 'SoC stepping not explicitly called out', 'Impact effect not explained', 'Repro steps incomplete or unordered', 'Priority/exposure severity not called out', or 'ME SKU does not say Consumer or Corp'.");
         prompt.AppendLine("For every Missing, Partial, or Conflicting field, Characteristic must explain the actual evidence gap or contradiction. For reproduction steps, identify the specific missing action, setup, trigger, or expected/observed result; do not call a clear ordered sequence incomplete without stating what is missing. Ignore HTML editor formatting when evaluating content.");
+        prompt.AppendLine("Special rule for 'Steps to Reproduce': Check the explicit Repro Steps / Steps to Reproduce (to_reproduce) field FIRST. If to_reproduce is already populated with reproduction steps, evaluate ONLY to_reproduce and do NOT check Problem Description. ONLY if to_reproduce is blank or missing steps, read the sighting's Problem Description / Description in the evidence/context: if it contains clear, understandable reproduction steps that make sense, mark Steps to Reproduce as Present (citing those steps from Problem Description); otherwise mark it Missing.");
         prompt.AppendLine("All 8 fields are core SQA scoring fields. The portal calculates the final quality score from these checklist fields only; do not optimize status values to influence score.");
         prompt.AppendLine("Return strict JSON only: {\"qualityScore\":75,\"baselineScore\":90,\"tier\":\"Orange\",\"summary\":\"one concise sentence\",\"fields\":[{\"fieldName\":\"Steps to Reproduce\",\"status\":\"Partial\",\"characteristic\":\"Trigger/scenario not described\",\"evidence\":\"specific cited value or reason\",\"recommendation\":\"specific update needed\",\"decisionUse\":\"why this field matters\"}]}");
         prompt.AppendLine();
@@ -3779,13 +3915,20 @@ public static class CmfRecommendationService
             if (!recoveredFields.Add(match.Groups[1].Value)) continue;
             context[match.Groups[1].Value] = match.Groups[2].Value.Trim();
         }
+        bool hasLiveHsd = currentContext.IndexOf("(HSD Portal)", StringComparison.OrdinalIgnoreCase) >= 0
+            && currentContext.IndexOf("External Evidence Status: Unavailable", StringComparison.OrdinalIgnoreCase) < 0;
+        string hsdTitle = FirstContextValue(context, "Title");
+        string hsdRepro = FirstContextValue(context, "Reproducibility");
+        string hsdImpact = FirstContextValue(context, "Impact");
+
         SightingQualityAssessmentResponse response = new SightingQualityAssessmentResponse { CpId = cpId };
-        AddQualityField(response, "Title", BuildQualityEvidenceBucket(context, "DB Title", title, "HSD Title", FirstContextValue(context, "Title"), "HSD Subject", FirstContextValue(context, "Subject")), "Add a clear title that captures the issue symptom or affected area.");
-        AddQualityField(response, "Reproducibility / Failure Rate", BuildQualityEvidenceBucket(context, "DB Reproducibility", reproducibility, "HSD Reproducibility", FirstContextValue(context, "Reproducibility"), "Title occurrence signal", title), "State exact failure rate, cycle count, sample size, or reproducibility band.");
-        AddQualityField(response, "Processor", BuildQualityEvidenceBucket(context, "Processor", FirstContextValue(context, "Processor", "DB processor", "DB cpu"), "HSD Processor", FirstContextValue(context, "HSD Processor"), "Customer Detail", customerDetail, "System Scope Filename", FirstContextValue(context, "System Scope Filename")), "Call out the exact processor or processor family used for this sighting.");
+        AddQualityField(response, "Title", BuildQualityEvidenceBucket(context, "DB Title", hasLiveHsd && HasUsefulQualityValue(hsdTitle) ? string.Empty : title, "HSD Title", hsdTitle, "HSD Subject", FirstContextValue(context, "Subject")), "Add a clear title that captures the issue symptom or affected area.");
+        AddQualityField(response, "Reproducibility / Failure Rate", BuildQualityEvidenceBucket(context, "DB Reproducibility", hasLiveHsd && HasUsefulQualityValue(hsdRepro) ? string.Empty : reproducibility, "HSD Reproducibility", hsdRepro, "Title occurrence signal", hasLiveHsd && HasUsefulQualityValue(hsdTitle) ? hsdTitle : title), "State exact failure rate, cycle count, sample size, or reproducibility band.");
+        AddQualityField(response, "Processor", BuildQualityEvidenceBucket(context, "Processor", FirstContextValue(context, "Processor", "DB processor", "DB cpu"), "HSD Processor", FirstContextValue(context, "HSD Processor"), "Customer Detail", hasLiveHsd ? FirstContextValue(context, "Customer Detail") : customerDetail, "System Scope Filename", FirstContextValue(context, "System Scope Filename")), "Call out the exact processor or processor family used for this sighting.");
         AddQualityField(response, "SoC Stepping", BuildQualityEvidenceBucket(context, "SoC Stepping", FirstContextValue(context, "SoC Stepping", "HSD SoC Stepping", "SOC Stepping", "Stepping", "HSD Stepping", "client_platf.bug.soc_stepping", "client_platf.bug.stepping", "DB soc_stepping", "DB silicon_stepping", "DB stepping"), "Stepping", FirstContextValue(context, "Stepping", "HSD Stepping", "HSD SoC Stepping", "SoC Stepping", "client_platf.bug.soc_stepping", "client_platf.bug.stepping", "DB stepping")), "Call out the SoC stepping, such as A0, A1, B0, B1, C0, C1, ES, QS, or equivalent stepping value.");
-        AddQualityField(response, "Impact", BuildQualityEvidenceBucket(context, "DB Impact", impact, "Impact", FirstContextValue(context, "Impact"), "Customer Impact", FirstContextValue(context, "Customer Impact"), "Customer Summary", FirstContextValue(context, "Customer Summary"), "Customer Detail", FirstContextValue(context, "Customer Detail")), "State the practical impact or risk created by the sighting.");
-        AddQualityField(response, "Steps to Reproduce", BuildQualityEvidenceBucket(context, "Repro Steps", FirstContextValue(context, "Repro Steps", "DB repro_steps"), "Steps to Reproduce", FirstContextValue(context, "Steps to Reproduce", "DB steps_to_reproduce"), "What Happened", FirstContextValue(context, "What Happened"), "Problem Description", FirstContextValue(context, "Problem Description"), "DB RVP Repro", reproOnRvp), "Add clear ordered steps, trigger, setup, or scenario needed to reproduce the issue.");
+        // SQA Impact must be fetched strictly from the primary sighting's 'impact' field ONLY (no fallbacks to customer_impact, customer_summary, or customer_detail).
+        AddQualityField(response, "Impact", BuildQualityEvidenceBucket(context, "Impact", hsdImpact), "State the practical impact or risk created by the sighting in the Impact field.");
+        AddQualityField(response, "Steps to Reproduce", BuildQualityEvidenceBucket(context, "Repro Steps", FirstContextValue(context, "Repro Steps", "DB repro_steps"), "Steps to Reproduce", FirstContextValue(context, "Steps to Reproduce", "DB steps_to_reproduce"), "What Happened", FirstContextValue(context, "What Happened"), "Problem Description", FirstContextValue(context, "Problem Description", "Description"), "DB RVP Repro", reproOnRvp), "Add clear ordered steps, trigger, setup, or scenario needed to reproduce the issue.");
         AddQualityField(response, "Exposure / Priority", BuildQualityEvidenceBucket(context, "Priority", FirstContextValue(context, "Priority", "DB priority"), "Exposure", FirstContextValue(context, "Exposure", "DB exposure"), "Customer Impact", FirstContextValue(context, "Customer Impact"), "DB Impact", impact, "Must Fix For", FirstContextValue(context, "Must Fix For"), "Drivers", FirstContextValue(context, "Drivers")), "Call out exposure and priority clearly, especially Showstopper or Critical severity.");
         AddOccurrenceConflictIfFound(response, title, impact, reproducibility, currentContext);
         return response;
@@ -3827,10 +3970,17 @@ public static class CmfRecommendationService
             if (field == null || fallbackField == null) continue;
 
             if (string.Equals(fieldName, "Steps to Reproduce", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(fallbackField.Status, "Missing", StringComparison.OrdinalIgnoreCase)) field.Evidence = fallbackField.Evidence;
+                && string.Equals(fallbackField.Status, "Present", StringComparison.OrdinalIgnoreCase)) field.Evidence = fallbackField.Evidence;
 
             string status = NormalizeSightingQualityStatus(field.Status);
             string fallbackStatus = NormalizeSightingQualityStatus(fallbackField.Status);
+            // For Steps to Reproduce, allow the LLM's Present/Missing decision from reading Problem Description when to_reproduce was blank/incomplete.
+            if (string.Equals(fieldName, "Steps to Reproduce", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(fallbackStatus, "Present", StringComparison.OrdinalIgnoreCase)
+                && (string.Equals(status, "Present", StringComparison.OrdinalIgnoreCase) || string.Equals(status, "Missing", StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
             bool modelWeakenedDeterministicGap = GetSightingQualityStatusRank(status) < GetSightingQualityStatusRank(fallbackStatus);
             bool deterministicConflict = string.Equals(fallbackStatus, "Conflicting", StringComparison.OrdinalIgnoreCase);
             bool deterministicCompletenessShouldWin = IsDeterministicCompleteSightingQualityField(fieldName)
@@ -3879,7 +4029,8 @@ public static class CmfRecommendationService
         foreach (SightingQualityFieldAssessment field in assessment.Fields)
         {
             if (field == null) continue;
-            if (IsSightingQualityCoreField(field.FieldName) && string.Equals(NormalizeSightingQualityStatus(field.Status), "Missing", StringComparison.OrdinalIgnoreCase))
+            string status = NormalizeSightingQualityStatus(field.Status);
+            if (IsSightingQualityCoreField(field.FieldName) && string.Equals(status, "Missing", StringComparison.OrdinalIgnoreCase))
             {
                 missing.Add(field.FieldName);
             }
@@ -4101,7 +4252,9 @@ public static class CmfRecommendationService
                 bool isReproSteps = string.Equals(label, "Repro Steps", StringComparison.OrdinalIgnoreCase) || string.Equals(label, "Steps to Reproduce", StringComparison.OrdinalIgnoreCase);
                 bool preserveFullValue = isReproSteps || string.Equals(label, "DB Title", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(label, "HSD Title", StringComparison.OrdinalIgnoreCase) || string.Equals(label, "HSD Subject", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(label, "Exposure", StringComparison.OrdinalIgnoreCase) || string.Equals(label, "Priority", StringComparison.OrdinalIgnoreCase);
+                    || string.Equals(label, "Exposure", StringComparison.OrdinalIgnoreCase) || string.Equals(label, "Priority", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(label, "Impact", StringComparison.OrdinalIgnoreCase) || string.Equals(label, "DB Impact", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(label, "Customer Impact", StringComparison.OrdinalIgnoreCase) || string.Equals(label, "Customer Summary", StringComparison.OrdinalIgnoreCase);
                 builder.Append(label).Append(": ").Append(preserveFullValue ? value : TruncateForQuality(value, 220)).AppendLine();
             }
         }
@@ -4118,6 +4271,21 @@ public static class CmfRecommendationService
                 string steps = ExtractSightingQualityReproductionSteps(source.Groups[2].Value);
                 if (HasUsefulQualityValue(steps)) stepsEvidence.Append(source.Groups[1].Value).Append(": ").AppendLine(steps);
             }
+            string explicitSteps = stepsEvidence.ToString().Trim();
+            // If to_reproduce already has complete steps, use ONLY to_reproduce and do not check Problem Description.
+            if (!string.IsNullOrWhiteSpace(explicitSteps) && GetReproductionDetailsGap(explicitSteps).Length == 0)
+            {
+                return explicitSteps;
+            }
+            // Only when to_reproduce is blank or has missing steps, include Problem Description as fallback for the LLM to evaluate.
+            foreach (System.Text.RegularExpressions.Match desc in System.Text.RegularExpressions.Regex.Matches(SafeText(value), @"(?:^|\n)[ \t]*(Problem Description):[ \t]*(.*?)(?=\r?\n(?:Repro Steps|Steps to Reproduce|What Happened|Problem Description|DB RVP Repro):|\z)", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline))
+            {
+                string descText = CleanSightingQualityEvidenceText(desc.Groups[2].Value).Trim();
+                if (HasUsefulQualityValue(descText))
+                {
+                    stepsEvidence.Append("Problem Description (fallback - to_reproduce blank/incomplete): ").AppendLine(descText);
+                }
+            }
             return stepsEvidence.ToString().Trim();
         }
         string[] labels;
@@ -4127,7 +4295,7 @@ public static class CmfRecommendationService
             case "Processor": labels = new[] { "Processor", "HSD Processor" }; break;
             case "SoC Stepping": labels = new[] { "SoC Stepping", "Stepping", "CPU Stepping", "Target Stepping" }; break;
             case "ME SKU": labels = new[] { "ME SKU", "ME_SKU" }; break;
-            case "Impact": labels = new[] { "DB Impact", "Impact", "Customer Impact", "Customer Summary" }; break;
+            case "Impact": labels = new[] { "Impact" }; break;
             case "Steps to Reproduce": labels = new[] { "Repro Steps", "Steps to Reproduce" }; break;
             case "Exposure / Priority": labels = new[] { "Exposure", "Priority" }; break;
             case "Reproducibility / Failure Rate": labels = new[] { "DB Reproducibility", "HSD Reproducibility" }; break;
@@ -4184,7 +4352,8 @@ public static class CmfRecommendationService
         string characteristic = "Usable evidence available";
         bool preserveFullEvidence = string.Equals(fieldName, "Steps to Reproduce", StringComparison.OrdinalIgnoreCase)
             || string.Equals(fieldName, "Title", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(fieldName, "Exposure / Priority", StringComparison.OrdinalIgnoreCase);
+            || string.Equals(fieldName, "Exposure / Priority", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(fieldName, "Impact", StringComparison.OrdinalIgnoreCase);
         string evidence = preserveFullEvidence ? text : TruncateForQuality(text, 180);
         if (!HasUsefulQualityValue(text))
         {
@@ -4277,10 +4446,19 @@ public static class CmfRecommendationService
 
         if (string.Equals(fieldName, "Impact", StringComparison.OrdinalIgnoreCase))
         {
-            if (!HasQualityEvidenceLabel(text, "DB Impact", "Impact", "Customer Impact", "Customer Summary") || IsGenericQualityPhrase(content)
-                || !System.Text.RegularExpressions.Regex.IsMatch(content, @"\b(?:block\w*|impact\w*|fail\w*|lost|loss|unusable|cannot|unable|crash\w*|hang\w*|delay\w*|risk\w*|validation|customer\s+(?:use|sign.?off)|no\s+(?:display|audio|boot))\b"))
+            // Mark Impact Complete if it is non-vague and mentions meaningful consequence, repro details, customer/internal milestones, or program/user impact.
+            bool isBareSeverityOrVague = IsGenericQualityPhrase(content)
+                || System.Text.RegularExpressions.Regex.IsMatch(content, @"\A(?:[1-4]\s*[-:]?\s*(?:critical|high|medium|low)|p[0-4]|showstopper|urgent|asap|high\s+priority|need\s+fix|please\s+fix|customer\s+must\s+fix|cmf)\z", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+                || content.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).Length < 3;
+
+            bool hasMeaningfulImpactDetail = System.Text.RegularExpressions.Regex.IsMatch(
+                content,
+                @"\b(?:block\w*|impact\w*|fail\w*|lost|loss|unusable|cannot|unable|can't|crash\w*|hang\w*|delay\w*|risk\w*|validation|customer|oem|user\w*|milestone\w*|launch|fvt|sit|svt|dvt|pvt|qs|pv|prq|fcs|mp|mass\s+production|image\s+freeze|phase\s+exit|exit|shipment|ship|release|schedule|ww\s*\d+|certif\w*|whql|hlk|repro\w*|unit\w*|cycle\w*|system\w*|boot|display|blank|black|audio|power|sleep|resume|s[345]|s0ix|performance|throughput|drop|degrad\w*|function\w*|feature|work\w*|fix\s+before|must\s+fix|escalat\w*|program|project|return\w*|warranty)\b|\d+\s*/\s*\d+|\d+\s*%",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            if (!HasQualityEvidenceLabel(text, "Impact") || isBareSeverityOrVague || !hasMeaningfulImpactDetail)
             {
-                characteristic = "Impact mentions a severity tag or vague phrase without explaining functional consequence or customer impact";
+                characteristic = "Impact statement is vague and lacks clear customer, milestone, repro, or functional consequence. CMF Owners/iDST: Please request the sighting owner to complete the Impact details.";
                 return true;
             }
             return false;
@@ -4984,12 +5162,8 @@ public static class CmfRecommendationService
         {
             mergedTargetHasCmf = true;
         }
-        else if (System.Text.RegularExpressions.Regex.IsMatch(safeCtx, @"(?:^|\n)\s*(?:Duplicated\s+Target\s+Sysdebug(?:\s+Forum)?|Promoted\s+Issue\s+Sysdebug)\s*:\s*[^\r\n]*customer_must_fix", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
-        {
-            mergedTargetHasCmf = true;
-        }
 
-        // 2. Also run full duplicate evidence & ID extraction
+        // 2. Also check explicit merge_id evidence
         string detectedDetail;
         string detectedTargetId;
         if (HasDuplicateIssueEvidence(cpId, title, cmfRequest, impact, safeCtx, out detectedDetail, out detectedTargetId))
@@ -5001,57 +5175,31 @@ public static class CmfRecommendationService
             }
         }
 
-        // 3. If duplicatedTargetId was found and its HSD sysdebug/sysdebug_forum was not inspected yet (or was cached before qrc_vector/transitive merge check), verify via HSD
+        // 3. Strictly verify ONLY the direct merged sighting under client_platf/client_plat tenant and its actual sysdebug field (no transitive PromotedId or parent MergeId escalation; AUD-08..11).
         if (!string.IsNullOrWhiteSpace(duplicatedTargetId) && !mergedTargetHasCmf)
         {
             try
             {
-                HsdArticleData mergedHsd = HsdPortalService.FetchArticle(duplicatedTargetId);
+                HsdArticleData mergedHsd = HsdPortalService.FetchArticle(duplicatedTargetId, false, false, true);
                 if (mergedHsd != null && mergedHsd.FetchSuccess)
                 {
+                    string tenant = mergedHsd.Tenant ?? string.Empty;
+                    bool isClientPlatform = HsdPortalService.IsClientPlatformTenant(mergedHsd);
                     string sysdebug = mergedHsd.Sysdebug ?? string.Empty;
-                    string sysdebugForum = mergedHsd.SysdebugForum ?? string.Empty;
                     mergedTargetHasCmf = HsdPortalService.HasCustomerMustFixFlag(mergedHsd);
 
-                    if (!mergedTargetHasCmf && !string.IsNullOrWhiteSpace(mergedHsd.MergeId))
+                    string statusExplanation;
+                    if (!isClientPlatform)
                     {
-                        System.Text.RegularExpressions.Match parentMatch = System.Text.RegularExpressions.Regex.Match(mergedHsd.MergeId, @"\b(\d{8,14})\b");
-                        if (parentMatch.Success && !string.Equals(parentMatch.Groups[1].Value, duplicatedTargetId, StringComparison.OrdinalIgnoreCase))
-                        {
-                            HsdArticleData parentHsd = HsdPortalService.FetchArticle(parentMatch.Groups[1].Value);
-                            if (HsdPortalService.HasCustomerMustFixFlag(parentHsd))
-                            {
-                                mergedTargetHasCmf = true;
-                                sysdebug = string.IsNullOrWhiteSpace(sysdebug) ? "customer_must_fix" : (sysdebug + " (parent " + parentMatch.Groups[1].Value + ": customer_must_fix)");
-                            }
-                        }
+                        statusExplanation = "No (merge ID " + duplicatedTargetId + " is under tenant '" + (string.IsNullOrWhiteSpace(tenant) ? "unknown" : tenant) + "', not client_platf.bug / client_plat.bug)";
                     }
-
-                    if (!mergedTargetHasCmf)
+                    else if (mergedTargetHasCmf)
                     {
-                        string promId = mergedHsd.PromotedId;
-                        if (string.IsNullOrWhiteSpace(promId) && !string.IsNullOrWhiteSpace(sysdebugForum))
-                        {
-                            System.Text.RegularExpressions.Match pm = System.Text.RegularExpressions.Regex.Match(sysdebugForum, @"\b(1[4-9]\d{8,9})\b");
-                            if (pm.Success && !string.Equals(pm.Groups[1].Value, duplicatedTargetId, StringComparison.OrdinalIgnoreCase))
-                            {
-                                promId = pm.Groups[1].Value;
-                            }
-                        }
-                        if (!string.IsNullOrWhiteSpace(promId) && !string.Equals(promId, duplicatedTargetId, StringComparison.OrdinalIgnoreCase))
-                        {
-                            HsdArticleData promHsd = HsdPortalService.FetchArticle(promId);
-                            if (HsdPortalService.HasCustomerMustFixFlag(promHsd))
-                            {
-                                mergedTargetHasCmf = true;
-                                sysdebug = string.IsNullOrWhiteSpace(sysdebug) ? "customer_must_fix" : (sysdebug + "; customer_must_fix (via promoted " + promId + ")");
-                            }
-                            if (promHsd != null && promHsd.FetchSuccess && !string.IsNullOrWhiteSpace(promHsd.SysdebugForum))
-                            {
-                                sysdebugForum = (string.IsNullOrWhiteSpace(sysdebugForum) ? "" : (sysdebugForum + " | "))
-                                    + "[Promoted " + promId + " Forum]: " + promHsd.SysdebugForum;
-                            }
-                        }
+                        statusExplanation = "Yes (merge ID " + duplicatedTargetId + " is under client_platf/client_plat tenant and has cmf_ask_status / customer_must_fix in sysdebug)";
+                    }
+                    else
+                    {
+                        statusExplanation = "No (merge ID " + duplicatedTargetId + " is under client_platf/client_plat tenant, but sysdebug does not contain cmf_ask_status / customer_must_fix)";
                     }
 
                     if (safeCtx.IndexOf("Duplicated Target Has customer_must_fix:", StringComparison.OrdinalIgnoreCase) < 0 || mergedTargetHasCmf)
@@ -5061,16 +5209,17 @@ public static class CmfRecommendationService
                         enriched.AppendLine("--- Duplicated / Merged Target Sighting " + duplicatedTargetId + " ---");
                         enriched.AppendLine("Duplicated Target Sighting ID: " + duplicatedTargetId);
                         enriched.AppendLine("Duplicated Target HSD Link: https://hsdes.intel.com/appstore/article/#/" + duplicatedTargetId);
+                        enriched.AppendLine("Duplicated Target Tenant: " + (string.IsNullOrWhiteSpace(tenant) ? "Unknown" : tenant));
                         enriched.AppendLine("Duplicated Target Sysdebug: " + (string.IsNullOrWhiteSpace(sysdebug) ? "N/A" : sysdebug));
-                        enriched.AppendLine("Duplicated Target Sysdebug Forum: " + (string.IsNullOrWhiteSpace(sysdebugForum) ? "N/A" : sysdebugForum));
-                        enriched.AppendLine("Duplicated Target Has customer_must_fix: " + (mergedTargetHasCmf ? "Yes (customer_must_fix is written in sysdebug/sysdebug_forum of duplicated sighting " + duplicatedTargetId + ")" : "No"));
-                        string formatted = HsdPortalService.FormatForAiContext(mergedHsd, "Duplicated / Merged Sighting " + duplicatedTargetId);
-                        if (!string.IsNullOrWhiteSpace(formatted)) enriched.AppendLine(formatted);
+                        enriched.AppendLine("Duplicated Target Has customer_must_fix: " + statusExplanation);
                         return enriched.ToString().Trim();
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.TraceWarning("EnrichContextWithMergedTargetHsd failed for {0}: {1}", duplicatedTargetId, ex.Message);
+            }
         }
 
         return safeCtx;
@@ -5088,21 +5237,13 @@ public static class CmfRecommendationService
         duplicatedTargetId = string.Empty;
         string cleanCpId = SafeText(cpId).Trim();
         string req = SafeText(cmfRequest).Trim();
+        string safeCtx = SafeText(hsdContext);
 
-        string combined = string.Join("\n", new string[] { SafeText(title), SafeText(impact), SafeText(hsdContext) });
-        string scrubbed = string.IsNullOrWhiteSpace(combined)
-            ? string.Empty
-            : System.Text.RegularExpressions.Regex.Replace(
-                combined,
-                @"\b(?:not\s+a\s+duplicate|not\s+duplicate|no\s+duplicate|is\s+not\s+duplicated|not\s+merged)\b",
-                " ",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-
-        // Extract explicit Merge ID / Duplicated Target Sighting ID from DB or HSD record
-        if (!string.IsNullOrWhiteSpace(scrubbed))
+        // Require explicit Merge ID / Duplicated Target Sighting ID from DB or HSD record (no speculative comment matching; AUD-11).
+        if (!string.IsNullOrWhiteSpace(safeCtx))
         {
             System.Text.RegularExpressions.Match mergeIdMatch = System.Text.RegularExpressions.Regex.Match(
-                scrubbed,
+                safeCtx,
                 @"(?:^|\n)\s*(?:Merge\s*ID|Merged\s*ID|Duplicated\s+Target\s+Sighting\s+ID)\s*:\s*(\d{8,14})\b",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             if (mergeIdMatch.Success)
@@ -5111,7 +5252,7 @@ public static class CmfRecommendationService
                 if (!string.Equals(mergeId, cleanCpId, StringComparison.OrdinalIgnoreCase))
                 {
                     duplicatedTargetId = mergeId;
-                    duplicateDetail = "Sighting has Merge/Duplicated ID " + mergeId;
+                    duplicateDetail = "Sighting has explicit merge_id " + mergeId;
                     return true;
                 }
             }
@@ -5120,40 +5261,6 @@ public static class CmfRecommendationService
         if (req.IndexOf("cmf_duplicate", StringComparison.OrdinalIgnoreCase) >= 0)
         {
             duplicateDetail = "The ticket is marked as cmf_duplicate in the portal record";
-            return true;
-        }
-
-        if (string.IsNullOrWhiteSpace(scrubbed)) return false;
-
-        System.Text.RegularExpressions.Match closedReasonMatch = System.Text.RegularExpressions.Regex.Match(scrubbed, @"(?:^|\n)\s*(?:Closed\s*Reason|CMF\s*Request)\s*:\s*([^\r\n]*duplicate[^\r\n]*)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        if (closedReasonMatch.Success)
-        {
-            duplicateDetail = "Ticket status/closed reason indicates a duplicate (" + closedReasonMatch.Groups[1].Value.Trim() + ")";
-        }
-
-        System.Text.RegularExpressions.Match dupIdMatch = System.Text.RegularExpressions.Regex.Match(
-            scrubbed,
-            @"\b(?:duplicate(?:d)?\s*(?:of|with|to|into|in|under|by|issue|sighting|hsd|bug|ticket|id)?|dup\s*(?:of|with|to|id|hsd)?|merged?\s*(?:to|into|with)\s*(?:sighting|issue|hsd|bug|article|id)?|same\s+(?:issue|bug|root\s+cause|sighting)\s+as)\s*[:#\-]?\s*(?:https?://\S+/#/)?(?:HSD|sighting|issue|bug|article|ticket|#|\s)*(\d{8,14})\b",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        if (dupIdMatch.Success)
-        {
-            string refId = dupIdMatch.Groups[1].Value.Trim();
-            if (!string.Equals(refId, cleanCpId, StringComparison.OrdinalIgnoreCase))
-            {
-                duplicatedTargetId = refId;
-                duplicateDetail = "HSD comments/details state this sighting is duplicated/merged to " + refId;
-                return true;
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(duplicateDetail))
-        {
-            return true;
-        }
-
-        if (System.Text.RegularExpressions.Regex.IsMatch(scrubbed, @"\b(?:marked\s+as\s+(?:a\s+)?duplicate|closed\s+as\s+(?:a\s+)?duplicate|flagged\s+as\s+(?:a\s+)?duplicate|is\s+a\s+duplicate\s+(?:issue|sighting|of)|duplicate\s+(?:issue|sighting|ticket|hsd))\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
-        {
-            duplicateDetail = "A duplicate issue is mentioned in the ticket details";
             return true;
         }
 
@@ -5257,8 +5364,8 @@ public static class CmfRecommendationService
     private static int ResolveAiRequestTimeoutMilliseconds()
     {
         int jsonTimeout = CmfAssistantConfigService.GetConfig().RequestTimeoutSeconds;
-        if (jsonTimeout > 0) return Math.Max(15, Math.Min(120, jsonTimeout)) * 1000;
-        return 60000;
+        if (jsonTimeout > 0) return Math.Max(90, Math.Min(180, jsonTimeout)) * 1000;
+        return 90000;
     }
 
     private static string GetAiProviderCacheSignature()
@@ -5266,7 +5373,7 @@ public static class CmfRecommendationService
         string gnaiToken = ResolveGnaiToken();
         string gnaiEndpoint = ResolveGnaiEndpoint();
         string gnaiModel = ResolveGnaiModel();
-        return "GNAI|" + gnaiEndpoint + "|" + FirstNonEmpty(gnaiModel, "claude-4-5-sonnet") + "|" + ComputeHash(gnaiToken ?? string.Empty).Substring(0, 12);
+        return "GNAI|" + gnaiEndpoint + "|" + FirstNonEmpty(gnaiModel, "claude-sonnet-5-5") + "|" + ComputeHash(gnaiToken ?? string.Empty).Substring(0, 12);
     }
 
     private static string FirstNonEmpty(params string[] values)

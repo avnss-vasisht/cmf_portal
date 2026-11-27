@@ -153,14 +153,14 @@ public static class CmfAssistantConfigService
     {
         CmfAssistantUnifiedConfig cfg = GetConfig();
         if (!string.IsNullOrWhiteSpace(cfg.PrimaryModel)) return cfg.PrimaryModel.Trim();
-        return "claude-4-5-sonnet";
+        return "claude-sonnet-5-5";
     }
 
     public static string ResolveFastSummaryModel()
     {
         CmfAssistantUnifiedConfig cfg = GetConfig();
         if (!string.IsNullOrWhiteSpace(cfg.FastSummaryModel)) return cfg.FastSummaryModel.Trim();
-        return "claude-4-5-haiku";
+        return ResolvePrimaryModel();
     }
 
     public static List<string> ResolveModelChain(string preferredPrimaryModel)
@@ -181,11 +181,6 @@ public static class CmfAssistantConfigService
                     chain.Add(candidate.Trim());
                 }
             }
-        }
-
-        if (!chain.Exists(m => string.Equals(m, "claude-4-5-haiku", StringComparison.OrdinalIgnoreCase)))
-        {
-            chain.Add("claude-4-5-haiku");
         }
 
         return chain;
@@ -758,12 +753,10 @@ public static class CmfAssistantConfigService
                         return false;
                     }
 
-                    // Check if workbook is a standalone Permutation Analysis workbook
-                    ExcelWorksheet standalonePermSheet = pkg.Workbook.Worksheets["Permutation Analysis"]
-                        ?? pkg.Workbook.Worksheets["Permutations"];
-                    bool hasRubricSheet = pkg.Workbook.Worksheets["Updated Scoring Guidelines"] != null
-                        || pkg.Workbook.Worksheets["Scoring Guidelines"] != null;
-                    if (!hasRubricSheet && standalonePermSheet != null)
+                    // Content-based sheet discovery (works with ANY worksheet tab names)
+                    ExcelWorksheet rubricSheet = FindRubricWorksheet(pkg.Workbook);
+                    ExcelWorksheet standalonePermSheet = FindPermutationWorksheet(pkg.Workbook, rubricSheet);
+                    if (rubricSheet == null && standalonePermSheet != null)
                     {
                         List<Dictionary<string, object>> standalonePermList = ParsePermutationSheet(standalonePermSheet);
                         if (standalonePermList.Count > 0)
@@ -788,31 +781,7 @@ public static class CmfAssistantConfigService
                         }
                     }
 
-                    // 1. Locate rubric sheet dynamically ("Updated Scoring Guidelines" / "Scoring Guidelines" or first sheet with Severity/Score header)
-                    ExcelWorksheet rubricSheet = pkg.Workbook.Worksheets["Updated Scoring Guidelines"]
-                        ?? pkg.Workbook.Worksheets["Scoring Guidelines"];
-
-                    if (rubricSheet == null)
-                    {
-                        foreach (ExcelWorksheet ws in pkg.Workbook.Worksheets)
-                        {
-                            if (ws.Dimension == null) continue;
-                            for (int r = 1; r <= Math.Min(ws.Dimension.End.Row, 10); r++)
-                            {
-                                for (int c = 1; c <= Math.Min(ws.Dimension.End.Column, 10); c++)
-                                {
-                                    string txt = (ws.Cells[r, c].Text ?? string.Empty).Trim();
-                                    if (txt.IndexOf("Severity", StringComparison.OrdinalIgnoreCase) >= 0)
-                                    {
-                                        rubricSheet = ws;
-                                        break;
-                                    }
-                                }
-                                if (rubricSheet != null) break;
-                            }
-                            if (rubricSheet != null) break;
-                        }
-                    }
+                    // 1. Locate rubric sheet dynamically by content (fallback to first worksheet if needed)
                     if (rubricSheet == null) rubricSheet = pkg.Workbook.Worksheets[1];
 
                     // 2. Discover header row and dimensions dynamically
@@ -987,8 +956,8 @@ public static class CmfAssistantConfigService
                         }
                     }
 
-                    // 4. Locate disposition & guardrails (from separate sheet or in-sheet priority table)
-                    ExcelWorksheet mechSheet = pkg.Workbook.Worksheets["6-Category Scoring Mechanism"];
+                    // 4. Locate disposition & guardrails dynamically across any worksheet name (separate sheet or in-sheet priority table)
+                    ExcelWorksheet mechSheet = FindDispositionWorksheet(pkg.Workbook, rubricSheet);
                     double cmfOkMin = 3.50;
                     double cmfReviewMin = 2.75;
                     List<Dictionary<string, object>> dispRows = new List<Dictionary<string, object>>();
@@ -1246,10 +1215,9 @@ public static class CmfAssistantConfigService
                     if (dispRows.Count > 0) scoringNode["dispositionTable"] = dispRows.ToArray();
                     if (guardrailRows.Count > 0) scoringNode["gatingGuardrails"] = guardrailRows.ToArray();
 
-                    // Parse Permutation Analysis sheet if present (e.g. 768 combinations).
+                    // Parse Permutation Analysis sheet if present (any tab name, detected by header columns).
                     // Do NOT carry over old permutationAnalysis from previous guidelines when importing a new rubric workbook without a Permutation sheet.
-                    ExcelWorksheet permSheet = pkg.Workbook.Worksheets["Permutation Analysis"]
-                        ?? pkg.Workbook.Worksheets["Permutations"];
+                    ExcelWorksheet permSheet = FindPermutationWorksheet(pkg.Workbook, rubricSheet);
                     if (permSheet != null && permSheet.Dimension != null && permSheet.Dimension.End.Row >= 5)
                     {
                         List<Dictionary<string, object>> permList = ParsePermutationSheet(permSheet);
@@ -1265,17 +1233,8 @@ public static class CmfAssistantConfigService
                     CachedConfig = null;
                     CachedLastWriteUtc = DateTime.MinValue;
 
-                    // Erase any previous rules in cmf-recommendation-rules.txt and update with newly compiled rules
-                    CmfRecommendationService.ResetActiveRulesText();
-                    CmfAssistantUnifiedConfig newConfig = GetConfig();
-                    if (newConfig != null && !string.IsNullOrWhiteSpace(newConfig.CompiledRulesText))
-                    {
-                        CmfRecommendationService.SaveActiveRulesText(newConfig.CompiledRulesText);
-                    }
-                    else
-                    {
-                        CmfRecommendationService.ClearRecommendationCache();
-                    }
+                    // Clear cached recommendations so new cmf-assistant-config.json rules take effect immediately
+                    CmfRecommendationService.ClearRecommendationCache();
 
                     statusMessage = string.Format(
                         "Successfully imported {0}-point scoring guidelines ({1} dimensions, {2} disposition bands, {3} gating guardrails) into cmf-assistant-config.json.",
@@ -1289,6 +1248,90 @@ public static class CmfAssistantConfigService
                 return false;
             }
         }
+    }
+
+    private static ExcelWorksheet FindRubricWorksheet(ExcelWorkbook workbook)
+    {
+        if (workbook == null || workbook.Worksheets == null) return null;
+        foreach (ExcelWorksheet ws in workbook.Worksheets)
+        {
+            if (ws == null || ws.Dimension == null) continue;
+            bool hasSeverity = false;
+            bool hasSecondDimOrWeight = false;
+            int maxR = Math.Min(ws.Dimension.End.Row, 15);
+            int maxC = Math.Min(ws.Dimension.End.Column, 12);
+            for (int r = 1; r <= maxR; r++)
+            {
+                for (int c = 1; c <= maxC; c++)
+                {
+                    string txt = (ws.Cells[r, c].Text ?? string.Empty).Trim();
+                    if (string.IsNullOrWhiteSpace(txt)) continue;
+                    if (txt.IndexOf("Severity", StringComparison.OrdinalIgnoreCase) >= 0) hasSeverity = true;
+                    if (txt.IndexOf("Occurrence", StringComparison.OrdinalIgnoreCase) >= 0
+                        || txt.IndexOf("Business Impact", StringComparison.OrdinalIgnoreCase) >= 0
+                        || txt.StartsWith("Weight", StringComparison.OrdinalIgnoreCase))
+                    {
+                        hasSecondDimOrWeight = true;
+                    }
+                }
+            }
+            if (hasSeverity && hasSecondDimOrWeight) return ws;
+        }
+        return null;
+    }
+
+    private static ExcelWorksheet FindDispositionWorksheet(ExcelWorkbook workbook, ExcelWorksheet rubricSheet)
+    {
+        if (workbook == null || workbook.Worksheets == null) return null;
+        foreach (ExcelWorksheet ws in workbook.Worksheets)
+        {
+            if (ws == null || ws.Dimension == null || ws == rubricSheet) continue;
+            int maxR = Math.Min(ws.Dimension.End.Row, 60);
+            int maxC = Math.Min(ws.Dimension.End.Column, 6);
+            bool hasDispositionMarker = false;
+            for (int r = 1; r <= maxR; r++)
+            {
+                for (int c = 1; c <= maxC; c++)
+                {
+                    string txt = (ws.Cells[r, c].Text ?? string.Empty).Trim();
+                    if (txt.IndexOf("CMF Disposition", StringComparison.OrdinalIgnoreCase) >= 0
+                        || txt.IndexOf("Gating Guardrails", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        hasDispositionMarker = true;
+                        break;
+                    }
+                }
+                if (hasDispositionMarker) break;
+            }
+            if (hasDispositionMarker) return ws;
+        }
+        return null;
+    }
+
+    private static ExcelWorksheet FindPermutationWorksheet(ExcelWorkbook workbook, ExcelWorksheet rubricSheet)
+    {
+        if (workbook == null || workbook.Worksheets == null) return null;
+        foreach (ExcelWorksheet ws in workbook.Worksheets)
+        {
+            if (ws == null || ws.Dimension == null || ws == rubricSheet || ws.Dimension.End.Row < 5 || ws.Dimension.End.Column < 8) continue;
+            int maxR = Math.Min(ws.Dimension.End.Row, 10);
+            int maxC = Math.Min(ws.Dimension.End.Column, 14);
+            for (int r = 1; r <= maxR; r++)
+            {
+                string col1 = (ws.Cells[r, 1].Text ?? string.Empty).Trim();
+                if (!string.Equals(col1, "ID", StringComparison.OrdinalIgnoreCase)) continue;
+                bool hasS = false, hasO = false, hasRec = false;
+                for (int c = 2; c <= maxC; c++)
+                {
+                    string h = (ws.Cells[r, c].Text ?? string.Empty).Trim();
+                    if (string.Equals(h, "S", StringComparison.OrdinalIgnoreCase) || h.IndexOf("Severity", StringComparison.OrdinalIgnoreCase) >= 0) hasS = true;
+                    if (string.Equals(h, "O", StringComparison.OrdinalIgnoreCase) || h.IndexOf("Occurrence", StringComparison.OrdinalIgnoreCase) >= 0) hasO = true;
+                    if (h.IndexOf("Recommendation", StringComparison.OrdinalIgnoreCase) >= 0 || h.IndexOf("Disposition", StringComparison.OrdinalIgnoreCase) >= 0) hasRec = true;
+                }
+                if (hasS && hasO && hasRec) return ws;
+            }
+        }
+        return null;
     }
 
     private static List<Dictionary<string, object>> ParsePermutationSheet(ExcelWorksheet permSheet)
@@ -1350,6 +1393,433 @@ public static class CmfAssistantConfigService
         public int Weight { get; set; }
         public List<string> Rubrics { get; set; }
         public ExcelDimensionDef() { Rubrics = new List<string>(); }
+    }
+
+    private sealed class RubricLevelEntry
+    {
+        public int Score { get; set; }
+        public string LeadText { get; set; }
+        public List<string> Items { get; set; }
+        public RubricLevelEntry() { Items = new List<string>(); }
+    }
+
+    private static List<RubricLevelEntry> ParseRubricIntoLevels(string rubric, int scaleMax)
+    {
+        var result = new List<RubricLevelEntry>();
+        string text = rubric ?? string.Empty;
+        MatchCollection matches = Regex.Matches(text, @"(?:^|\s)([1-9])=");
+
+        var found = new Dictionary<int, string>();
+        for (int i = 0; i < matches.Count; i++)
+        {
+            int score;
+            if (!int.TryParse(matches[i].Groups[1].Value, out score)) continue;
+            int contentStart = matches[i].Index + matches[i].Length;
+            int contentEnd = (i + 1 < matches.Count) ? matches[i + 1].Index : text.Length;
+            string body = contentEnd > contentStart ? text.Substring(contentStart, contentEnd - contentStart).Trim() : string.Empty;
+            if (!found.ContainsKey(score)) found[score] = body;
+        }
+
+        int maxS = scaleMax > 0 ? scaleMax : 4;
+        for (int s = maxS; s >= 1; s--)
+        {
+            string body = found.ContainsKey(s) ? found[s] : string.Empty;
+            var entry = new RubricLevelEntry { Score = s, LeadText = string.Empty };
+            if (!string.IsNullOrWhiteSpace(body))
+            {
+                string[] parts = Regex.Split(body, @"\s+-\s+");
+                entry.LeadText = (parts[0] ?? string.Empty).Trim();
+                for (int p = 1; p < parts.Length; p++)
+                {
+                    string item = (parts[p] ?? string.Empty).Trim();
+                    if (!string.IsNullOrWhiteSpace(item)) entry.Items.Add(item);
+                }
+            }
+            result.Add(entry);
+        }
+
+        return result;
+    }
+
+    private static string SerializeLevelsToRubric(List<RubricLevelEntry> levels)
+    {
+        if (levels == null || levels.Count == 0) return string.Empty;
+        var chunks = new List<string>();
+        foreach (RubricLevelEntry lvl in levels)
+        {
+            if (lvl == null || lvl.Score <= 0) continue;
+            var sb = new StringBuilder();
+            sb.Append(lvl.Score).Append("=");
+            string lead = (lvl.LeadText ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(lead)) sb.Append(lead);
+            if (lvl.Items != null)
+            {
+                foreach (string rawItem in lvl.Items)
+                {
+                    string item = (rawItem ?? string.Empty).Trim();
+                    if (string.IsNullOrWhiteSpace(item)) continue;
+                    if (sb.Length > 2) sb.Append(" - ");
+                    else sb.Append("- ");
+                    sb.Append(item);
+                }
+            }
+            string built = sb.ToString().Trim();
+            if (built.Length > 2) chunks.Add(built);
+        }
+        return string.Join(" ", chunks.ToArray());
+    }
+
+    public static Dictionary<string, object> GetScoringRulesStructured()
+    {
+        lock (SyncRoot)
+        {
+            var output = new Dictionary<string, object>();
+            string configPath = ResolveConfigFilePath();
+            if (string.IsNullOrWhiteSpace(configPath) || !File.Exists(configPath))
+            {
+                output["success"] = false;
+                output["message"] = "Configuration file cmf-assistant-config.json not found.";
+                return output;
+            }
+
+            try
+            {
+                JavaScriptSerializer serializer = new JavaScriptSerializer { MaxJsonLength = 4194304 };
+                IDictionary root = serializer.DeserializeObject(File.ReadAllText(configPath, Encoding.UTF8)) as IDictionary;
+                IDictionary scoring = root != null ? root["scoringRules"] as IDictionary : null;
+                if (scoring == null)
+                {
+                    output["success"] = false;
+                    output["message"] = "scoringRules section not found in cmf-assistant-config.json.";
+                    return output;
+                }
+
+                int scaleMax = ReadInt(scoring, "scaleMax", 4);
+                output["success"] = true;
+                output["scaleMax"] = scaleMax;
+                output["formula"] = ReadString(scoring, "formula", string.Empty);
+                output["cmfOkMinScore"] = ReadDouble(scoring, "cmfOkMinScore", 3.5);
+                output["cmfReviewMinScore"] = ReadDouble(scoring, "cmfReviewMinScore", 2.75);
+
+                IDictionary mandatory = scoring["mandatoryRequirements"] as IDictionary;
+                var mandatoryOut = new Dictionary<string, object>
+                {
+                    { "requireComponentInDescription", mandatory != null && ReadBool(mandatory, "requireComponentInDescription", true) },
+                    { "requireRvpReproInDescription", mandatory != null && ReadBool(mandatory, "requireRvpReproInDescription", true) },
+                    { "requirePromotedIdInHeader", mandatory != null && ReadBool(mandatory, "requirePromotedIdInHeader", true) },
+                    { "requireRvpReproInReasoning", mandatory != null && ReadBool(mandatory, "requireRvpReproInReasoning", true) }
+                };
+                output["mandatoryRequirements"] = mandatoryOut;
+
+                var dimsOut = new List<Dictionary<string, object>>();
+                IList dims = scoring["dimensions"] as IList;
+                if (dims != null)
+                {
+                    foreach (object item in dims)
+                    {
+                        IDictionary d = item as IDictionary;
+                        if (d == null) continue;
+                        string id = ReadString(d, "id", string.Empty);
+                        string name = ReadString(d, "name", string.Empty);
+                        int weight = ReadInt(d, "weight", 0);
+                        string rubric = ReadString(d, "rubric", string.Empty);
+                        List<RubricLevelEntry> levels = ParseRubricIntoLevels(rubric, scaleMax);
+                        var levelsOut = new List<Dictionary<string, object>>();
+                        foreach (RubricLevelEntry lvl in levels)
+                        {
+                            levelsOut.Add(new Dictionary<string, object>
+                            {
+                                { "score", lvl.Score },
+                                { "leadText", lvl.LeadText },
+                                { "items", lvl.Items.ToArray() }
+                            });
+                        }
+                        dimsOut.Add(new Dictionary<string, object>
+                        {
+                            { "id", id },
+                            { "name", name },
+                            { "weight", weight },
+                            { "rubric", rubric },
+                            { "levels", levelsOut.ToArray() }
+                        });
+                    }
+                }
+                output["dimensions"] = dimsOut.ToArray();
+
+                var guardrailsOut = new List<Dictionary<string, object>>();
+                IList guardrails = scoring["gatingGuardrails"] as IList;
+                if (guardrails != null)
+                {
+                    foreach (object item in guardrails)
+                    {
+                        IDictionary g = item as IDictionary;
+                        if (g == null) continue;
+                        guardrailsOut.Add(new Dictionary<string, object>
+                        {
+                            { "id", ReadString(g, "id", string.Empty) },
+                            { "name", ReadString(g, "name", string.Empty) },
+                            { "rule", ReadString(g, "rule", string.Empty) },
+                            { "rationale", ReadString(g, "rationale", string.Empty) }
+                        });
+                    }
+                }
+                output["gatingGuardrails"] = guardrailsOut.ToArray();
+                return output;
+            }
+            catch (Exception ex)
+            {
+                output["success"] = false;
+                output["message"] = "Failed to load scoring rules: " + ex.Message;
+                return output;
+            }
+        }
+    }
+
+    public static bool UpdateScoringRubricLevel(string dimensionId, int scoreLevel, string leadText, List<string> items, out string statusMessage)
+    {
+        statusMessage = string.Empty;
+        if (string.IsNullOrWhiteSpace(dimensionId) || scoreLevel < 1 || scoreLevel > 4)
+        {
+            statusMessage = "Valid dimension ID and score level (1-4) are required.";
+            return false;
+        }
+
+        lock (SyncRoot)
+        {
+            try
+            {
+                string configPath = ResolveConfigFilePath();
+                if (string.IsNullOrWhiteSpace(configPath) || !File.Exists(configPath))
+                {
+                    statusMessage = "Configuration file cmf-assistant-config.json not found.";
+                    return false;
+                }
+
+                JavaScriptSerializer serializer = new JavaScriptSerializer { MaxJsonLength = 4194304 };
+                IDictionary root = serializer.DeserializeObject(File.ReadAllText(configPath, Encoding.UTF8)) as IDictionary;
+                IDictionary scoring = root != null ? root["scoringRules"] as IDictionary : null;
+                IList dims = scoring != null ? scoring["dimensions"] as IList : null;
+                if (dims == null)
+                {
+                    statusMessage = "scoringRules.dimensions not found in cmf-assistant-config.json.";
+                    return false;
+                }
+
+                int scaleMax = ReadInt(scoring, "scaleMax", 4);
+                bool updated = false;
+                string dimDisplayName = dimensionId;
+                foreach (object item in dims)
+                {
+                    IDictionary d = item as IDictionary;
+                    if (d == null) continue;
+                    string id = ReadString(d, "id", string.Empty);
+                    if (!string.Equals(id, dimensionId.Trim(), StringComparison.OrdinalIgnoreCase)) continue;
+
+                    dimDisplayName = ReadString(d, "name", id);
+                    string rubric = ReadString(d, "rubric", string.Empty);
+                    List<RubricLevelEntry> levels = ParseRubricIntoLevels(rubric, scaleMax);
+                    RubricLevelEntry target = levels.Find(l => l.Score == scoreLevel);
+                    if (target == null)
+                    {
+                        target = new RubricLevelEntry { Score = scoreLevel };
+                        levels.Add(target);
+                        levels.Sort((a, b) => b.Score.CompareTo(a.Score));
+                    }
+
+                    target.LeadText = (leadText ?? string.Empty).Trim();
+                    target.Items = new List<string>();
+                    if (items != null)
+                    {
+                        foreach (string raw in items)
+                        {
+                            string clean = Regex.Replace((raw ?? string.Empty).Trim(), @"^[-*\u2022]\s+", string.Empty).Trim();
+                            if (!string.IsNullOrWhiteSpace(clean)) target.Items.Add(clean);
+                        }
+                    }
+
+                    d["rubric"] = SerializeLevelsToRubric(levels);
+                    updated = true;
+                    break;
+                }
+
+                if (!updated)
+                {
+                    statusMessage = "Dimension '" + dimensionId + "' not found.";
+                    return false;
+                }
+
+                File.WriteAllText(configPath, FormatPrettyJson(serializer.Serialize(root)), Encoding.UTF8);
+                CachedConfig = null;
+                CachedLastWriteUtc = DateTime.MinValue;
+                CmfRecommendationService.ClearRecommendationCache();
+
+                statusMessage = string.Format("Updated {0} (Score {1}) in cmf-assistant-config.json.", dimDisplayName, scoreLevel);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                statusMessage = "Failed to save rubric level: " + ex.Message;
+                return false;
+            }
+        }
+    }
+
+    public static bool AddScoringRubricSymptom(string dimensionId, int scoreLevel, string symptomText, out string statusMessage)
+    {
+        statusMessage = string.Empty;
+        string cleanSymptom = Regex.Replace((symptomText ?? string.Empty).Trim(), @"^[-*\u2022]\s+", string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(dimensionId) || scoreLevel < 1 || scoreLevel > 4 || string.IsNullOrWhiteSpace(cleanSymptom))
+        {
+            statusMessage = "Dimension, score level (1-4), and symptom/condition text are required.";
+            return false;
+        }
+
+        lock (SyncRoot)
+        {
+            try
+            {
+                string configPath = ResolveConfigFilePath();
+                if (string.IsNullOrWhiteSpace(configPath) || !File.Exists(configPath))
+                {
+                    statusMessage = "Configuration file cmf-assistant-config.json not found.";
+                    return false;
+                }
+
+                JavaScriptSerializer serializer = new JavaScriptSerializer { MaxJsonLength = 4194304 };
+                IDictionary root = serializer.DeserializeObject(File.ReadAllText(configPath, Encoding.UTF8)) as IDictionary;
+                IDictionary scoring = root != null ? root["scoringRules"] as IDictionary : null;
+                IList dims = scoring != null ? scoring["dimensions"] as IList : null;
+                if (dims == null)
+                {
+                    statusMessage = "scoringRules.dimensions not found in cmf-assistant-config.json.";
+                    return false;
+                }
+
+                int scaleMax = ReadInt(scoring, "scaleMax", 4);
+                foreach (object item in dims)
+                {
+                    IDictionary d = item as IDictionary;
+                    if (d == null) continue;
+                    string id = ReadString(d, "id", string.Empty);
+                    if (!string.Equals(id, dimensionId.Trim(), StringComparison.OrdinalIgnoreCase)) continue;
+
+                    string rubric = ReadString(d, "rubric", string.Empty);
+                    List<RubricLevelEntry> levels = ParseRubricIntoLevels(rubric, scaleMax);
+                    RubricLevelEntry target = levels.Find(l => l.Score == scoreLevel);
+                    if (target == null)
+                    {
+                        target = new RubricLevelEntry { Score = scoreLevel };
+                        levels.Add(target);
+                        levels.Sort((a, b) => b.Score.CompareTo(a.Score));
+                    }
+
+                    bool exists = target.Items.Exists(x => string.Equals(x, cleanSymptom, StringComparison.OrdinalIgnoreCase));
+                    if (!exists) target.Items.Add(cleanSymptom);
+
+                    d["rubric"] = SerializeLevelsToRubric(levels);
+                    File.WriteAllText(configPath, FormatPrettyJson(serializer.Serialize(root)), Encoding.UTF8);
+                    CachedConfig = null;
+                    CachedLastWriteUtc = DateTime.MinValue;
+                    CmfRecommendationService.ClearRecommendationCache();
+
+                    statusMessage = string.Format("Added symptom to {0} (Score {1}) in cmf-assistant-config.json.", ReadString(d, "name", id), scoreLevel);
+                    return true;
+                }
+
+                statusMessage = "Dimension '" + dimensionId + "' not found.";
+                return false;
+            }
+            catch (Exception ex)
+            {
+                statusMessage = "Failed to add symptom: " + ex.Message;
+                return false;
+            }
+        }
+    }
+
+    public static bool SaveGuardrailsAndThresholds(double cmfOkMinScore, double cmfReviewMinScore, List<Dictionary<string, string>> guardrails, Dictionary<string, bool> mandatoryReqs, out string statusMessage)
+    {
+        statusMessage = string.Empty;
+        if (cmfOkMinScore <= 0 || cmfReviewMinScore <= 0 || cmfOkMinScore < cmfReviewMinScore)
+        {
+            statusMessage = "CMF_OK min score must be greater than or equal to CMF_REVIEW min score.";
+            return false;
+        }
+
+        lock (SyncRoot)
+        {
+            try
+            {
+                string configPath = ResolveConfigFilePath();
+                if (string.IsNullOrWhiteSpace(configPath) || !File.Exists(configPath))
+                {
+                    statusMessage = "Configuration file cmf-assistant-config.json not found.";
+                    return false;
+                }
+
+                JavaScriptSerializer serializer = new JavaScriptSerializer { MaxJsonLength = 4194304 };
+                IDictionary root = serializer.DeserializeObject(File.ReadAllText(configPath, Encoding.UTF8)) as IDictionary;
+                IDictionary scoring = root != null ? root["scoringRules"] as IDictionary : null;
+                if (scoring == null)
+                {
+                    statusMessage = "scoringRules section not found in cmf-assistant-config.json.";
+                    return false;
+                }
+
+                int scaleMax = ReadInt(scoring, "scaleMax", 4);
+                scoring["cmfOkMinScore"] = Math.Round(cmfOkMinScore, 2);
+                scoring["cmfReviewMinScore"] = Math.Round(cmfReviewMinScore, 2);
+                scoring["thresholdScore"] = (int)Math.Round((cmfOkMinScore / Math.Max(1, scaleMax)) * 100.0);
+                scoring["reviewThresholdScore"] = (int)Math.Round((cmfReviewMinScore / Math.Max(1, scaleMax)) * 100.0);
+
+                if (mandatoryReqs != null)
+                {
+                    IDictionary mandatory = scoring["mandatoryRequirements"] as IDictionary ?? new Dictionary<string, object>();
+                    foreach (KeyValuePair<string, bool> kv in mandatoryReqs)
+                    {
+                        if (!string.IsNullOrWhiteSpace(kv.Key)) mandatory[kv.Key] = kv.Value;
+                    }
+                    scoring["mandatoryRequirements"] = mandatory;
+                }
+
+                if (guardrails != null)
+                {
+                    var cleanedGuardrails = new List<Dictionary<string, object>>();
+                    int idx = 1;
+                    foreach (Dictionary<string, string> g in guardrails)
+                    {
+                        if (g == null) continue;
+                        string name = g.ContainsKey("name") ? (g["name"] ?? string.Empty).Trim() : string.Empty;
+                        string rule = g.ContainsKey("rule") ? (g["rule"] ?? string.Empty).Trim() : string.Empty;
+                        string rationale = g.ContainsKey("rationale") ? (g["rationale"] ?? string.Empty).Trim() : string.Empty;
+                        string id = g.ContainsKey("id") && !string.IsNullOrWhiteSpace(g["id"]) ? g["id"].Trim() : ("priority_" + idx);
+                        if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(rule)) continue;
+                        cleanedGuardrails.Add(new Dictionary<string, object>
+                        {
+                            { "id", id },
+                            { "name", name },
+                            { "rule", rule },
+                            { "rationale", rationale }
+                        });
+                        idx++;
+                    }
+                    scoring["gatingGuardrails"] = cleanedGuardrails.ToArray();
+                }
+
+                File.WriteAllText(configPath, FormatPrettyJson(serializer.Serialize(root)), Encoding.UTF8);
+                CachedConfig = null;
+                CachedLastWriteUtc = DateTime.MinValue;
+                CmfRecommendationService.ClearRecommendationCache();
+
+                statusMessage = "Guardrails and thresholds saved to cmf-assistant-config.json.";
+                return true;
+            }
+            catch (Exception ex)
+            {
+                statusMessage = "Failed to save guardrails: " + ex.Message;
+                return false;
+            }
+        }
     }
 
     private static string FormatPrettyJson(string rawJson)

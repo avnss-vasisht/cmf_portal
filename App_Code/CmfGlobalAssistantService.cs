@@ -1892,7 +1892,6 @@ public static class CmfGlobalAssistantService
                     {
                         model = model,
                         max_tokens = 700,
-                        temperature = 0,
                         system = "You are CMF Pulse AI, an executive analytics assistant for Intel CMF Portal. Return concise '- **Label:** ...' bullet points grounded in the provided SQL metrics.",
                         messages = new object[] { new { role = "user", content = userPrompt } }
                     };
@@ -1915,9 +1914,11 @@ public static class CmfGlobalAssistantService
                 req.Method = "POST";
                 req.ContentType = "application/json";
                 req.Accept = "application/json";
+                req.KeepAlive = false;
                 req.Headers["Authorization"] = "Bearer " + token;
-                req.Timeout = 20000;
-                req.ReadWriteTimeout = 20000;
+                if (isAnthropic) req.Headers["anthropic-version"] = "2023-06-01";
+                req.Timeout = 30000;
+                req.ReadWriteTimeout = 30000;
                 req.Proxy = null;
 
                 using (StreamWriter sw = new StreamWriter(req.GetRequestStream()))

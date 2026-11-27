@@ -7,7 +7,7 @@
 }
 
 :root {
-    --portal-font-ui: Cambria, Georgia, serif;
+    --portal-font-ui: "Intel Clear", sans-serif;
     --portal-font-body: var(--portal-font-ui);
     --portal-font-display: var(--portal-font-ui);
     --portal-font-card: var(--portal-font-ui);

@@ -26,12 +26,26 @@ public class AiSummaryResponse
     public bool Success { get; set; }
     public string IssueId { get; set; }
     public string PromotedId { get; set; }
+    public string MergeId { get; set; }
     public string Title { get; set; }
     public string SubmittedDate { get; set; }
     public string Summary { get; set; }
     public int Confidence { get; set; }
     public string Message { get; set; }
     public bool UsedFallback { get; set; }
+}
+
+public class SightingStoryBriefResponse
+{
+    public bool Success { get; set; }
+    public string IssueId { get; set; }
+    public string PromotedId { get; set; }
+    public string MergeId { get; set; }
+    public string Title { get; set; }
+    public string ProblemDescription { get; set; }
+    public string CurrentStatus { get; set; }
+    public string ImpactSummary { get; set; }
+    public string Message { get; set; }
 }
 
 public class CmfSightingChatResponse
@@ -625,7 +639,8 @@ public static class AiSummaryService
     private static string NormalizeSummaryLineForDedupe(string line)
     {
         if (string.IsNullOrWhiteSpace(line)) return string.Empty;
-        string normalized = System.Text.RegularExpressions.Regex.Replace(line, @"^[\-\*\d\.\)\s]+", string.Empty).Trim();
+        // Strip only explicit list bullet prefixes (- , * , 1. , 2) ) without stripping leading version numbers (AUD-19).
+        string normalized = System.Text.RegularExpressions.Regex.Replace(line, @"^\s*(?:[-*\u2022]|\d+[.)])\s+", string.Empty).Trim();
         normalized = System.Text.RegularExpressions.Regex.Replace(normalized, @"\s+", " ");
         return normalized.Trim('.', ',', ';', ':').ToLowerInvariant();
     }
@@ -795,21 +810,14 @@ public static class AiSummaryService
         var dashboard = IsDashboardAiRequest(issueId) ? ReadDashboardAiConfiguration() : null;
         if (useGnai)
         {
+            // Do not permanently blacklist models in memory on transient 404 errors (AUD-24).
             var models = dashboard != null && dashboard.HasOverride
                 ? new List<string> { dashboard.Model } : ResolveGnaiModelChain(gnaiModel);
             foreach (string candidateModel in models)
             {
                 cancellation.ThrowIfCancellationRequested();
-                lock (CacheSync)
-                {
-                    if ((dashboard == null || !dashboard.HasOverride) && UnavailableGnaiModels.Contains(candidateModel)) continue;
-                }
                 if (TryExecuteSummaryModelRequest(gnaiEndpoint, gnaiToken, candidateModel, systemPrompt, prompt,
                     "GNAI", out summary, out error, issueId, dashboard, retryProgress, cancellation)) return true;
-                if (!string.IsNullOrWhiteSpace(error) && error.IndexOf("404", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    lock (CacheSync) { UnavailableGnaiModels.Add(candidateModel); }
-                }
             }
             return false;
         }
@@ -851,7 +859,7 @@ public static class AiSummaryService
             object payload = CreateModelPayload(model, prompt, systemPrompt, useAnthropic);
             if (!IsDashboardAiRequest(issueId) && useAnthropic)
             {
-                payload = new { model = model, max_tokens = 1024, temperature = 0, system = systemPrompt,
+                payload = new { model = model, max_tokens = 16384, system = systemPrompt,
                     messages = new object[] { new { role = "user", content = prompt } } };
             }
             else if (!IsDashboardAiRequest(issueId) && model.IndexOf("gpt-5", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -973,31 +981,53 @@ public static class AiSummaryService
     private static string SendModelRequest(string endpoint, string apiKey, string payload, bool anthropic,
         bool useGnai, int timeoutMilliseconds, bool insights)
     {
-        HttpWebRequest request = (HttpWebRequest)WebRequest.Create(endpoint);
-        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-        request.Method = "POST";
-        request.ContentType = "application/json";
-        request.Accept = "application/json";
-        request.Headers["Authorization"] = "Bearer " + apiKey;
-        if (anthropic) request.Headers["anthropic-version"] = "2023-06-01";
-        request.UserAgent = "CMF-Portal-AI-Summary/1.0";
-        request.Timeout = request.ReadWriteTimeout = timeoutMilliseconds;
-        if (insights) request.ServicePoint.ConnectionLimit = Math.Max(request.ServicePoint.ConnectionLimit, DashboardRequestConcurrency);
-        ConfigureProxy(request, useGnai);
-        try
+        int maxAttempts = insights ? 1 : 3;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            using (StreamWriter writer = new StreamWriter(request.GetRequestStream())) writer.Write(payload);
-            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
-            using (StreamReader reader = new StreamReader(response.GetResponseStream())) return reader.ReadToEnd();
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(endpoint);
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+            request.Method = "POST";
+            request.ContentType = "application/json";
+            request.Accept = "application/json";
+            request.KeepAlive = false;
+            request.Headers["Authorization"] = "Bearer " + apiKey;
+            if (anthropic) request.Headers["anthropic-version"] = "2023-06-01";
+            request.UserAgent = "CMF-Portal-AI-Summary/1.0";
+            request.Timeout = request.ReadWriteTimeout = timeoutMilliseconds;
+            if (insights) request.ServicePoint.ConnectionLimit = Math.Max(request.ServicePoint.ConnectionLimit, DashboardRequestConcurrency);
+            ConfigureProxy(request, useGnai);
+            try
+            {
+                using (StreamWriter writer = new StreamWriter(request.GetRequestStream())) writer.Write(payload);
+                using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                using (StreamReader reader = new StreamReader(response.GetResponseStream())) return reader.ReadToEnd();
+            }
+            catch (WebException ex)
+            {
+                var response = ex.Response as HttpWebResponse;
+                if (insights && response != null && (int)response.StatusCode == 429)
+                {
+                    string retryAfter = response.Headers["Retry-After"];
+                    response.Close();
+                    throw new DashboardRateLimitException(retryAfter);
+                }
+
+                bool isTransient = response == null
+                    || (int)response.StatusCode == 429
+                    || (int)response.StatusCode == 502
+                    || (int)response.StatusCode == 503
+                    || (int)response.StatusCode == 504;
+                if (!insights && isTransient && attempt < maxAttempts)
+                {
+                    if (response != null) { try { response.Close(); } catch { } }
+                    System.Diagnostics.Trace.TraceWarning("AiSummaryService transient error (attempt {0}/{1}, status={2}): {3}", attempt, maxAttempts, ex.Status, ex.Message);
+                    Thread.Sleep(attempt == 1 ? 1000 : 2500);
+                    continue;
+                }
+                throw;
+            }
         }
-        catch (WebException ex)
-        {
-            var response = ex.Response as HttpWebResponse;
-            if (!insights || response == null || (int)response.StatusCode != 429) throw;
-            string retryAfter = response.Headers["Retry-After"];
-            response.Close();
-            throw new DashboardRateLimitException(retryAfter);
-        }
+        throw new InvalidOperationException("Model request failed after retries.");
     }
 
     private static string ExecuteDashboardAiRequest(Func<string> send, Action<TimeSpan> wait,
@@ -1164,16 +1194,16 @@ public static class AiSummaryService
     private static int ResolveAiRequestTimeoutMilliseconds()
     {
         int jsonTimeout = CmfAssistantConfigService.GetConfig().RequestTimeoutSeconds;
-        if (jsonTimeout > 0) return Math.Max(15, Math.Min(120, jsonTimeout)) * 1000;
-        return 30000;
+        if (jsonTimeout > 0) return Math.Max(90, Math.Min(180, jsonTimeout)) * 1000;
+        return 90000;
     }
 
-    private static string GetAiProviderCacheSignature()
+    private static string GetAiProviderCacheSignature(bool preferFastModel = false)
     {
         string gnaiToken = ResolveGnaiToken();
         string gnaiEndpoint = ResolveGnaiEndpoint();
-        string gnaiModel = ResolveGnaiModel();
-        return "GNAI|" + gnaiEndpoint + "|" + FirstNonEmpty(gnaiModel, "claude-4-5-sonnet") + "|" + ComputeHash(gnaiToken ?? string.Empty).Substring(0, 12);
+        string gnaiModel = preferFastModel ? CmfAssistantConfigService.ResolveFastSummaryModel() : ResolveGnaiModel();
+        return "GNAI|" + gnaiEndpoint + "|" + FirstNonEmpty(gnaiModel, "claude-sonnet-5-5") + "|fast:" + (preferFastModel ? "1" : "0") + "|" + ComputeHash(gnaiToken ?? string.Empty).Substring(0, 12);
     }
 
     private static string FirstNonEmpty(params string[] values)
@@ -1568,7 +1598,7 @@ public static class AiSummaryService
 
         if (response == null)
         {
-            return providerLabel + " request failed: no response from provider. Check endpoint/proxy/network access.";
+            return providerLabel + " request failed (" + webEx.Status + "): no response from provider. Check endpoint/proxy/network access.";
         }
 
         int statusCode = (int)response.StatusCode;
@@ -2586,6 +2616,231 @@ public static class AiSummaryService
 
     // Generate a concise sighting description for CMF Pending List display
     // Input: Sighting Title, Issue ID, Full Issue Description/Context
+    // Generates Problem Description (Ch 1), Current Status (Ch 2), and Impact Summary (Ch 3) in a single Sonnet call
+    // so all three chapters flow sequentially as one cohesive story with zero duplication.
+    public static SightingStoryBriefResponse GenerateSightingStoryBrief(string sightingId, string title, string impact, string contextDetails)
+    {
+        sightingId = SafeText(sightingId);
+        title = SafeText(title);
+        impact = SafeText(impact);
+        contextDetails = SafeText(contextDetails);
+        string resolvedPromotedId = ExtractPromotedIdFromContext(sightingId, contextDetails);
+
+        string hash = ComputeHash("sighting-story-brief-v8|" + GetAiProviderCacheSignature(false) + "|" + sightingId + "|" + title + "|" + impact + "|" + contextDetails);
+        string cacheKey = "sighting-story-brief:" + sightingId + ":" + hash;
+
+        using (CmfAssistantResponseCache.Enter(cacheKey))
+        {
+            SightingStoryBriefResponse cached = CmfAssistantResponseCache.Read<SightingStoryBriefResponse>(cacheKey);
+            if (cached != null && cached.Success)
+            {
+                cached.PromotedId = resolvedPromotedId;
+                return cached;
+            }
+
+            string prompt = BuildSightingStoryBriefPrompt(sightingId, title, impact, contextDetails);
+            string ch1 = string.Empty, ch2 = string.Empty, ch3 = string.Empty;
+            string lastError = string.Empty;
+            bool parsedOk = false;
+
+            // Up to 2 attempts: delimited section format is immune to quotes/newlines, and retries recover transient slips.
+            for (int attempt = 1; attempt <= 2; attempt++)
+            {
+                string modelOutput;
+                string modelError;
+                bool ok = TryGenerateWithGitHubModel(
+                    sightingId,
+                    string.Empty,
+                    title,
+                    string.Empty,
+                    string.Empty,
+                    contextDetails,
+                    out modelOutput,
+                    out modelError,
+                    prompt,
+                    "You are a senior CMF reviewer writing a cohesive 3-chapter sighting brief (Problem Description, Current Status, Impact Summary) in simple, everyday English. Write Chapter 1, then Chapter 2, then Chapter 3 sequentially using the exact section headers ===PROBLEM_DESCRIPTION===, ===CURRENT_STATUS===, and ===IMPACT_SUMMARY=== with zero duplication across chapters.",
+                    preferFastModel: false);
+
+                if (!ok || string.IsNullOrWhiteSpace(modelOutput))
+                {
+                    lastError = string.IsNullOrWhiteSpace(modelError) ? "Empty model response." : modelError;
+                    System.Diagnostics.Trace.TraceWarning("GenerateSightingStoryBrief attempt {0} failed for {1}: {2}", attempt, sightingId, lastError);
+                    if (attempt < 2) { Thread.Sleep(1000); continue; }
+                    break;
+                }
+
+                if (TryParseSightingStoryBrief(modelOutput, out ch1, out ch2, out ch3))
+                {
+                    parsedOk = true;
+                    break;
+                }
+
+                lastError = "Unexpected section format from AI model.";
+                System.Diagnostics.Trace.TraceWarning("GenerateSightingStoryBrief parse failed (attempt {0}) for {1}", attempt, sightingId);
+                if (attempt < 2) { Thread.Sleep(500); }
+            }
+
+            if (!parsedOk)
+            {
+                string detail = string.IsNullOrWhiteSpace(lastError) ? string.Empty : (" (" + (lastError.Length > 140 ? lastError.Substring(0, 140) + "..." : lastError) + ")");
+                return new SightingStoryBriefResponse
+                {
+                    Success = false,
+                    IssueId = sightingId,
+                    PromotedId = resolvedPromotedId,
+                    Title = title,
+                    Message = "AI analysis failed or model response failed. Please click Retry." + detail
+                };
+            }
+
+            string cleanedCh1 = CleanupSightingDescription(ch1, title, contextDetails);
+            string cleanedCh2 = CleanupSightingFixStatus(ch2, contextDetails);
+            string cleanedCh3 = CleanupSightingImpactSummary(ch3);
+
+            SightingStoryBriefResponse result = new SightingStoryBriefResponse
+            {
+                Success = true,
+                IssueId = sightingId,
+                PromotedId = resolvedPromotedId,
+                Title = title,
+                ProblemDescription = cleanedCh1,
+                CurrentStatus = cleanedCh2,
+                ImpactSummary = cleanedCh3,
+                Message = "Sighting story brief generated."
+            };
+
+            if (CmfAssistantResponseCache.HasVerifiedSource(contextDetails))
+            {
+                CmfAssistantResponseCache.Write(cacheKey, result);
+            }
+            return result;
+        }
+    }
+
+    private static string BuildSightingStoryBriefPrompt(string sightingId, string title, string impact, string contextDetails)
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("Write a sequential 3-chapter sighting story in simple, everyday English for a CMF reviewer using the exact 3 section headers below.");
+        builder.AppendLine("Because you write all 3 chapters in order, NEVER repeat facts from an earlier chapter in a later chapter.");
+        builder.AppendLine();
+        builder.AppendLine("GLOBAL RULES:");
+        builder.AppendLine("- SCOPED CONTEXT: Source Chapters 1 (problemDescription) and 3 (impactSummary) STRICTLY from the Primary Sighting fields (ignore any [Promoted Bug Debug/Fix Update] or [Duplicate Check Metadata Only] sections). Chapter 2 (currentStatus) may use both Primary Sighting and [Promoted Bug Debug/Fix Update] for fix/workaround/validation status without contradicting the Primary Sighting's RVP repro status.");
+        builder.AppendLine("- Platform glossary (STRICT): PTL = Panther Lake, NVL = Nova Lake, LNL = Lunar Lake, ARL = Arrow Lake, RPL = Raptor Lake, WCL = Wildcat Lake, GNR = Granite Rapids. NEVER expand an acronym to the wrong platform family or invent a platform/CPU name not present in the sighting.");
+        builder.AppendLine("- STRICT FACTUAL FIDELITY: NEVER exaggerate or turn conditional/hypothetical comments into confirmed events. For example, if a comment says 'if you need, we can request again through our leader', do NOT write 'the company escalated to leadership' — only state escalations, blockages, or fixes that are explicitly confirmed.");
+        builder.AppendLine("- Write natural, grammatically complete sentences separated by periods (.) — NEVER use semicolons (;). Always capitalize company and brand names properly (Lenovo, Dell, HP, ASUS, Acer, Microsoft, Samsung, Intel).");
+        builder.AppendLine("- Do not include CMF tag names, numeric metric scores, raw memory addresses, or database field names.");
+        builder.AppendLine();
+        builder.AppendLine("CHAPTER 1 — problemDescription (STRICT 3-PART TEMPLATE, ZERO REPETITION BETWEEN PARTS):");
+        builder.AppendLine("1. Opening paragraph (1-2 concise sentences on first line): Start with the Component name in brackets (e.g. '[Display]' or '[Integrated Graphics]'), then state ONLY the problem — what action triggers what failure. Do NOT mention occurrence/unit counts, recovery, RVP status, or build/hardware details in the opening paragraph.");
+        builder.AppendLine("2. Blank line, then ALWAYS include BOTH bullets below in this exact order (never omit either bullet, never add a 3rd bullet):");
+        builder.AppendLine("   - **Frequency & recovery:** State how often the issue occurs across units, systems, or test cycles (noting conflicting counts if sources disagree). Then state the runtime recovery if mentioned in the ticket; if NO runtime recovery is mentioned in the ticket, explicitly write 'Recovery: NA.' (Never treat a BIOS/FW/driver update as runtime recovery.)");
+        builder.AppendLine("   - **Repro details:** Start with 'RVP repro: Yes. ', 'RVP repro: No. ', 'RVP repro: Unknown. ', or 'RVP repro: Blank. ', sourced STRICTLY from the primary sighting's own repro_on_rvp / Primary Sighting RVP Repro field (NEVER from promoted or merged tickets). Follow ONLY with other reproducibility environment details (customer units/boards, monitors/peripherals, OS, BIOS, driver, build/config). STRICTLY exclude problem symptom repetition, occurrence counts, recovery, root-cause explanations, patches, or fix versions.");
+        builder.AppendLine();
+        // Do not add hard word-count caps to Chapters 2 and 3 — guide length via structure and conciseness, matching Chapter 1.
+        builder.AppendLine("CHAPTER 2 — currentStatus (concise summary, STRICTLY 2 bullets ONLY — NO unlabeled intro line):");
+        builder.AppendLine("- **Fix & workaround:** State whether any candidate fix, patch, BIOS/FW/driver update, or workaround exists (citing promoted/merged ID if applicable), or summarize current investigation/debug activity. STRICT RULE ON 'ROOT CAUSE': NEVER write 'root cause' unless an explicit root cause is stated in the sighting fields (e.g., root_cause_description or fix_description).");
+        builder.AppendLine("- **Validation status:** State how the candidate fix or debug check performed in lab testing and what step remains next. Do NOT contradict the primary sighting's RVP repro status using promoted/merged ticket text.");
+        builder.AppendLine();
+        builder.AppendLine("CHAPTER 3 — impactSummary (concise summary, STRICTLY 2 bullets ONLY + optional Fix By line — NO unlabeled intro line):");
+        builder.AppendLine("- **Validation & customer blockage:** State clearly which customer program, validation suite, or milestone gate (FVT, SIT, QS, Image Freeze, Launch) is blocked or at risk right now, strictly grounded in confirmed facts.");
+        builder.AppendLine("- **Real-world & program risk:** Explain in plain everyday words what practical problem end users or the customer launch would face if unfixed (without repeating technical error codes, repro counts, or patch details from Chapters 1-2).");
+        builder.AppendLine("- Also search the HSD sighting Description / Problem Description in Issue Context for any useful customer, validation, milestone, or end-user impact details; if relevant impact information is found there, incorporate it into impactSummary. Otherwise rely on the Impact Field and remaining context.");
+        builder.AppendLine("- If a target timing or workweek exists in Must Fix For, Drivers, or Impact, add a separate final line in impactSummary: Fix By: <timing>. Otherwise omit that line.");
+        builder.AppendLine();
+        builder.AppendLine("OUTPUT FORMAT (use these exact 3 headers, no JSON, no markdown code fences, no extra headings):");
+        builder.AppendLine("===PROBLEM_DESCRIPTION===");
+        builder.AppendLine("<Chapter 1 opening paragraph, blank line, and 2 bullets>");
+        builder.AppendLine("===CURRENT_STATUS===");
+        builder.AppendLine("<Chapter 2 2 bullets>");
+        builder.AppendLine("===IMPACT_SUMMARY===");
+        builder.AppendLine("<Chapter 3 2 bullets and optional Fix By line>");
+        builder.AppendLine();
+        builder.AppendLine("Issue Title: " + title);
+        builder.AppendLine("Sighting ID: " + sightingId);
+        builder.AppendLine("Impact Field: " + (string.IsNullOrWhiteSpace(impact) ? "N/A" : impact));
+        if (!string.IsNullOrWhiteSpace(contextDetails))
+        {
+            builder.AppendLine();
+            builder.AppendLine("Issue Context:");
+            builder.AppendLine(contextDetails);
+        }
+        return builder.ToString();
+    }
+
+    private static bool TryParseSightingStoryBrief(string raw, out string problemDescription, out string currentStatus, out string impactSummary)
+    {
+        problemDescription = string.Empty;
+        currentStatus = string.Empty;
+        impactSummary = string.Empty;
+        if (string.IsNullOrWhiteSpace(raw)) return false;
+
+        string normalized = raw.Replace("\r\n", "\n").Replace("\r", "\n").Trim();
+
+        // 1. Primary: parse delimited ===PROBLEM_DESCRIPTION=== / ===CURRENT_STATUS=== / ===IMPACT_SUMMARY=== sections
+        System.Text.RegularExpressions.Match m1 = System.Text.RegularExpressions.Regex.Match(
+            normalized,
+            @"===\s*PROBLEM_DESCRIPTION\s*===\s*([\s\S]*?)(?====\s*CURRENT_STATUS\s*===|===\s*IMPACT_SUMMARY\s*===|\z)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        System.Text.RegularExpressions.Match m2 = System.Text.RegularExpressions.Regex.Match(
+            normalized,
+            @"===\s*CURRENT_STATUS\s*===\s*([\s\S]*?)(?====\s*IMPACT_SUMMARY\s*===|\z)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        System.Text.RegularExpressions.Match m3 = System.Text.RegularExpressions.Regex.Match(
+            normalized,
+            @"===\s*IMPACT_SUMMARY\s*===\s*([\s\S]*?)\z",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (m1.Success && m2.Success && m3.Success)
+        {
+            problemDescription = m1.Groups[1].Value.Trim();
+            currentStatus = m2.Groups[1].Value.Trim();
+            impactSummary = m3.Groups[1].Value.Trim();
+            if (!string.IsNullOrWhiteSpace(problemDescription)
+                && !string.IsNullOrWhiteSpace(currentStatus)
+                && !string.IsNullOrWhiteSpace(impactSummary))
+            {
+                return true;
+            }
+        }
+
+        // 2. Fallback: parse JSON if the model returned JSON
+        return TryParseSightingStoryBriefJson(normalized, out problemDescription, out currentStatus, out impactSummary);
+    }
+
+    private static bool TryParseSightingStoryBriefJson(string raw, out string problemDescription, out string currentStatus, out string impactSummary)
+    {
+        problemDescription = string.Empty;
+        currentStatus = string.Empty;
+        impactSummary = string.Empty;
+        if (string.IsNullOrWhiteSpace(raw)) return false;
+
+        string trimmed = raw.Trim();
+        int firstBrace = trimmed.IndexOf('{');
+        int lastBrace = trimmed.LastIndexOf('}');
+        if (firstBrace < 0 || lastBrace <= firstBrace) return false;
+        string json = trimmed.Substring(firstBrace, lastBrace - firstBrace + 1);
+
+        try
+        {
+            var serializer = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
+            var dict = serializer.DeserializeObject(json) as Dictionary<string, object>;
+            if (dict == null) return false;
+
+            object v1, v2, v3;
+            if (dict.TryGetValue("problemDescription", out v1) && v1 != null) problemDescription = Convert.ToString(v1).Trim();
+            if (dict.TryGetValue("currentStatus", out v2) && v2 != null) currentStatus = Convert.ToString(v2).Trim();
+            if (dict.TryGetValue("impactSummary", out v3) && v3 != null) impactSummary = Convert.ToString(v3).Trim();
+
+            return !string.IsNullOrWhiteSpace(problemDescription)
+                || !string.IsNullOrWhiteSpace(currentStatus)
+                || !string.IsNullOrWhiteSpace(impactSummary);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     // Output: Action-oriented description summarizing the core problem/impact/failure
     public static AiSummaryResponse GenerateSightingDescription(string sightingId, string title, string contextDetails)
     {
@@ -2594,7 +2849,7 @@ public static class AiSummaryService
         contextDetails = SafeText(contextDetails);
         string resolvedPromotedId = ExtractPromotedIdFromContext(sightingId, contextDetails);
 
-        string hash = ComputeHash("sighting-description-v34-plain-grammar|" + GetAiProviderCacheSignature() + "|" + sightingId + "|" + title + "|" + contextDetails);
+        string hash = ComputeHash("sighting-description-v34-plain-grammar|" + GetAiProviderCacheSignature(true) + "|" + sightingId + "|" + title + "|" + contextDetails);
         string cacheKey = "sighting-description:" + hash;
 
         using (CmfAssistantResponseCache.Enter(cacheKey))
@@ -2658,7 +2913,7 @@ public static class AiSummaryService
         title = SafeText(title);
         contextDetails = SafeText(contextDetails);
 
-        string hash = ComputeHash("sighting-fix-status-v4-plain-grammar|" + GetAiProviderCacheSignature() + "|" + sightingId + "|" + title + "|" + contextDetails);
+        string hash = ComputeHash("sighting-fix-status-v4-plain-grammar|" + GetAiProviderCacheSignature(true) + "|" + sightingId + "|" + title + "|" + contextDetails);
         string cacheKey = "sighting-fix-status:" + hash;
 
         using (CmfAssistantResponseCache.Enter(cacheKey))
@@ -2718,7 +2973,7 @@ public static class AiSummaryService
         impact = SafeText(impact);
         contextDetails = SafeText(contextDetails);
 
-        string hash = ComputeHash("sighting-impact-v24-plain-grammar|" + GetAiProviderCacheSignature() + "|" + sightingId + "|" + title + "|" + impact + "|" + contextDetails);
+        string hash = ComputeHash("sighting-impact-v24-plain-grammar|" + GetAiProviderCacheSignature(true) + "|" + sightingId + "|" + title + "|" + impact + "|" + contextDetails);
         string cacheKey = "sighting-impact:" + hash;
 
         using (CmfAssistantResponseCache.Enter(cacheKey))
@@ -2870,8 +3125,9 @@ public static class AiSummaryService
         builder.AppendLine("1. Opening sentence (1 plain-English sentence on the first line): Start with the Component name in brackets (for example '[Power Management]' or '[Display]'), then explain in simple words what user or test action triggers what failure on the system.");
         builder.AppendLine("2. Blank line, followed by 2 bullet lines in chronological order, each starting with '- ' and a short **bold** lead-in label:");
         builder.AppendLine("   - **Frequency & recovery:** Carry only new facts (do NOT repeat the trigger or failure symptom from the opening sentence). State how often the failure occurs in plain words (reporting any conflicting UUT/cycle counts if sources disagree) and how the user recovers at runtime (for example 'requires a system reboot to recover'). Never treat a BIOS/FW/driver update as runtime recovery.");
-        builder.AppendLine("   - **Repro details:** Start with 'RVP repro: Yes. ', 'RVP repro: No. ', 'RVP repro: Unknown. ', or 'RVP repro: Blank. ', followed ONLY by which customer units/boards and Intel RVP setups reproduce the issue and under what build/configuration. STRICTLY DO NOT include root-cause explanations, register/FSM names, patches, fix versions, or patch test results here — those belong exclusively in Current Status.");
+        builder.AppendLine("   - **Repro details:** Start with 'RVP repro: Yes. ', 'RVP repro: No. ', 'RVP repro: Unknown. ', or 'RVP repro: Blank. ', sourced STRICTLY from the primary sighting's own repro_on_rvp / Primary Sighting RVP Repro field (NEVER from any promoted issue or merged/duplicated target ticket). Follow ONLY with which customer units/boards and Intel RVP setups reproduce the issue and under what build/configuration. STRICTLY DO NOT include root-cause explanations, register/FSM names, patches, fix versions, or patch test results here — those belong exclusively in Current Status.");
         builder.AppendLine("Rules:");
+        builder.AppendLine("- Platform glossary (STRICT): PTL = Panther Lake, NVL = Nova Lake, LNL = Lunar Lake, ARL = Arrow Lake, RPL = Raptor Lake, WCL = Wildcat Lake, GNR = Granite Rapids. NEVER expand an acronym to the wrong platform family or invent a platform/CPU name not present in the sighting.");
         builder.AppendLine("- Keep the ENTIRE Problem Description (opening + 2 bullets) to 45-70 words total in clear, simple English.");
         builder.AppendLine("- Write natural, grammatically complete sentences separated by periods (.) — NEVER break or join sentences with semicolons (;). Always capitalize company and brand names properly (such as Lenovo, Dell, HP, ASUS, Acer, Microsoft, Samsung, Intel).");
         builder.AppendLine("- Translate low-level register/bitfield jargon into simple technical English (e.g., 'display power handshake timeout' instead of raw register paths).");
@@ -2894,11 +3150,14 @@ public static class AiSummaryService
     private static string BuildSightingFixStatusPrompt(string sightingId, string title, string contextDetails, string priorDescription = "")
     {
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine("Write Chapter 2 (Current Status) of the sighting story in simple, everyday English for a CMF reviewer.");
+        // Do not add hard word-count caps — guide length via structure and conciseness.
+        builder.AppendLine("Use 2 concise bullet points (each starting with '- ' and a **bold** lead-in labeewer.");
         builder.AppendLine("Use 2 short bullet points (each starting with '- ' and a **bold** lead-in label, 30-55 words total):");
         builder.AppendLine("- **Fix & workaround:** State whether any candidate fix, patch, BIOS/FW/driver update, or workaround has been identified or built (citing any promoted or merged issue ID if applicable), or summarize current investigation/debug activity if no fix exists yet. STRICT RULE ON 'ROOT CAUSE': NEVER use the word or phrase 'root cause' unless an explicit root cause is already stated in the sighting fields (such as client_platf.bug.root_cause_description or fix_description). If root cause is not explicitly documented in the ticket, DO NOT guess or write 'root cause'; instead describe the current investigation or fix status using only facts present in the sighting.");
         builder.AppendLine("- **Validation status:** State how the candidate fix or debug check performed in lab testing and what step remains next (such as customer verification, BKC integration, or log collection).");
         builder.AppendLine("Rules:");
+        builder.AppendLine("- Platform glossary (STRICT): PTL = Panther Lake, NVL = Nova Lake, LNL = Lunar Lake, ARL = Arrow Lake, RPL = Raptor Lake, WCL = Wildcat Lake, GNR = Granite Rapids. NEVER invent a platform/CPU family name not present in the sighting.");
+        builder.AppendLine("- Do NOT contradict the primary sighting's RVP repro status using promoted or merged ticket text.");
         builder.AppendLine("- Write plain, grammatically correct sentences separated by periods (.) — NEVER break or join sentences with semicolons (;), and always capitalize company names properly (Lenovo, Dell, HP, ASUS, Acer, Microsoft, Samsung, Intel).");
         builder.AppendLine("- Continue the story naturally from Problem Description — DO NOT repeat the symptom, trigger, customer board names, or RVP reproduction details already covered in Chapter 1.");
         builder.AppendLine("- Do NOT mention customer milestone/schedule impact here (that belongs in Impact Summary).");
@@ -2926,12 +3185,16 @@ public static class AiSummaryService
     private static string BuildSightingImpactPrompt(string sightingId, string title, string impact, string contextDetails, string priorDescription = "", string priorStatus = "")
     {
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine("Write Chapter 3 (Impact Summary) of the sighting story from an objective 3rd-person AI advisor perspective in simple, everyday English.");
+        // Do not add hard word-count caps — guide length via structure and conciseness.
+        builder.AppendLine("Use 2 concise bullet points (each starting with '- ' and a **bold** lead-in labeleveryday English.");
         builder.AppendLine("Use 2 short bullet points (each starting with '- ' and a **bold** lead-in label, 30-50 words total across both bullets):");
         builder.AppendLine("- **Validation & customer blockage:** State clearly which customer program, validation suite, or milestone gate (such as FVT, SIT, QS, Image Freeze, or Launch) is blocked or at risk right now.");
         builder.AppendLine("- **Real-world & program risk:** Explain in plain everyday words what practical problem end users or the customer launch would face if unfixed (without repeating technical error codes, repro counts, or patch details from Chapters 1-2).");
         builder.AppendLine("Rules:");
-        builder.AppendLine("- NEVER repeat error code, grammatically correct sentences separated by periods (.) — NEVER use semicolons (;), and always capitalize company names properly (Lenovo, Dell, HP, ASUS, Acer, Microsoft, Samsung, Intel)ure rates, cycle counts, RVP details, or patch versions already covered in Problem Description and Current Status.");
+        builder.AppendLine("- Also search the HSD sighting Description / Problem Description in Issue Context for any useful customer, validation, milestone, or end-user impact details; if relevant impact information is found there, incorporate it into the Impact Summary. If no useful impact detail is in the description, rely on the Impact Field and remaining context.");
+        builder.AppendLine("- Platform glossary (STRICT): PTL = Panther Lake, NVL = Nova Lake, LNL = Lunar Lake, ARL = Arrow Lake, RPL = Raptor Lake, WCL = Wildcat Lake, GNR = Granite Rapids. NEVER invent a platform/CPU family name not present in the sighting.");
+        builder.AppendLine("- Write natural, grammatically correct sentences separated by periods (.) — NEVER use semicolons (;), and always capitalize company names properly (Lenovo, Dell, HP, ASUS, Acer, Microsoft, Samsung, Intel).");
+        builder.AppendLine("- NEVER repeat error codes, failure rates, cycle counts, RVP details, or patch versions already covered in Problem Description and Current Status.");
         builder.AppendLine("- Write in simple, direct sentences with zero filler.");
         builder.AppendLine("- Do not include CMF tag names or numeric metric scores.");
         builder.AppendLine("- Do not put requested fix dates inside the bullets. If a target timing or workweek exists in Must Fix For, Drivers, or Impact, add a separate final line in this exact format: Fix By: <timing>. Otherwise omit that line.");
@@ -3059,14 +3322,22 @@ public static class AiSummaryService
 
         string[] lines = cleaned.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
         List<string> rawBullets = new List<string>();
+        List<string> labeledBullets = new List<string>();
         for (int i = 0; i < lines.Length; i++)
         {
             string line = System.Text.RegularExpressions.Regex.Replace(lines[i].Trim(), @"^\s*(?:[-*•]|\d+[.)])\s+", string.Empty).Trim();
-            if (!string.IsNullOrWhiteSpace(line)) rawBullets.Add(line);
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            rawBullets.Add(line);
+            if (System.Text.RegularExpressions.Regex.IsMatch(line, @"^\*\*[^*\r\n]+:\*\*"))
+            {
+                labeledBullets.Add(line);
+            }
         }
 
+        // If the model emitted labeled bullets plus an unlabeled preamble line, keep only the labeled bullets.
+        List<string> sourceBullets = labeledBullets.Count > 0 ? labeledBullets : rawBullets;
         List<string> bullets = new List<string>();
-        AddDescriptionPoints(bullets, rawBullets, 3);
+        AddDescriptionPoints(bullets, sourceBullets, 3);
         if (bullets.Count == 0) return PolishPlainSectionGrammar(BuildDeterministicFixStatus(string.Empty, contextDetails));
 
         StringBuilder output = new StringBuilder();
@@ -3165,22 +3436,43 @@ public static class AiSummaryService
 
     private static void EnsureSightingRecoveryDetail(List<string> bullets, string contextDetails)
     {
-        if (bullets == null || bullets.Count == 0) return;
-        if (HasRecoveryMechanismBullet(bullets)) return;
-
-        string recoveryClause = ExtractRecoveryClauseFromContext(contextDetails);
-        string capRecovery = string.IsNullOrWhiteSpace(recoveryClause) ? string.Empty : (char.ToUpperInvariant(recoveryClause[0]) + recoveryClause.Substring(1));
+        if (bullets == null) return;
+        bool hasFreqBullet = false;
+        int freqIdx = -1;
         for (int i = 0; i < bullets.Count; i++)
         {
             if (bullets[i].StartsWith("**Frequency & recovery:**", StringComparison.OrdinalIgnoreCase))
             {
-                string trimmed = bullets[i].TrimEnd('.', ';', ' ');
-                bullets[i] = trimmed + ". " + capRecovery + ".";
-                return;
+                hasFreqBullet = true;
+                freqIdx = i;
+                break;
             }
         }
 
-        bullets.Insert(0, "**Frequency & recovery:** " + capRecovery + ".");
+        string recoveryClause = ExtractRecoveryClauseFromContext(contextDetails);
+        bool hasRealRecovery = !string.IsNullOrWhiteSpace(recoveryClause)
+            && recoveryClause.IndexOf("not stated", StringComparison.OrdinalIgnoreCase) < 0
+            && recoveryClause.IndexOf("no runtime recovery", StringComparison.OrdinalIgnoreCase) < 0;
+        string recoveryText = hasRealRecovery
+            ? (char.ToUpperInvariant(recoveryClause[0]) + recoveryClause.Substring(1).TrimEnd('.') + ".")
+            : "Recovery: NA.";
+
+        if (hasFreqBullet)
+        {
+            if (!HasRecoveryMechanismBullet(new List<string> { bullets[freqIdx] })
+                && bullets[freqIdx].IndexOf("Recovery:", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                bullets[freqIdx] = bullets[freqIdx].TrimEnd('.', ';', ' ') + ". " + recoveryText;
+            }
+            return;
+        }
+
+        Dictionary<string, string> map = ParseContextDetails(contextDetails);
+        string reproField = FirstContextValue(map, "Reproducibility");
+        string freqText = !string.IsNullOrWhiteSpace(reproField)
+            ? ("Reported reproducibility is " + reproField.Trim().Replace("_", " ") + ".")
+            : "Occurrence rate is not specified in the ticket.";
+        bullets.Insert(0, "**Frequency & recovery:** " + freqText + " " + recoveryText);
     }
 
     private static void EnsureOpeningSentencePresent(List<string> opening, string title, string contextDetails)
@@ -3259,9 +3551,13 @@ public static class AiSummaryService
 
         for (int i = 0; i < bullets.Count; i++)
         {
-            if (bullets[i].StartsWith("**Repro details:**", StringComparison.OrdinalIgnoreCase))
+            System.Text.RegularExpressions.Match headingMatch = System.Text.RegularExpressions.Regex.Match(
+                bullets[i] ?? string.Empty,
+                @"^\s*\*\*(?:Repro(?:duction)?\s+details|RVP\s+repro(?:\s+status)?)(?::\s*[^*]*)?\*\*:?\s*",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (headingMatch.Success)
             {
-                string body = bullets[i].Substring("**Repro details:**".Length).Trim();
+                string body = (bullets[i] ?? string.Empty).Substring(headingMatch.Length).Trim();
                 body = System.Text.RegularExpressions.Regex.Replace(
                     body,
                     @"^RVP\s+repro(?:\s+status)?\s*(?:is\s+|:)?\s*[^;,.]+[;,.]\s*",
@@ -3349,9 +3645,10 @@ public static class AiSummaryService
 
     public static string ExtractPromotedIdFromContext(string sightingId, string contextDetails)
     {
+        // Strictly read Promoted ID from the explicit promoted_id field only; never scrape comments/text.
         if (string.IsNullOrWhiteSpace(contextDetails)) return "NA";
         Dictionary<string, string> map = ParseContextDetails(contextDetails);
-        string raw = FirstContextValue(map, "Promoted Issue ID", "Promoted ID", "Merge ID");
+        string raw = FirstContextValue(map, "Promoted Issue ID", "Promoted ID");
         if (!string.IsNullOrWhiteSpace(raw)
             && !string.Equals(raw.Trim(), "N/A", StringComparison.OrdinalIgnoreCase)
             && !string.Equals(raw.Trim(), "NA", StringComparison.OrdinalIgnoreCase)
@@ -3359,15 +3656,6 @@ public static class AiSummaryService
         {
             System.Text.RegularExpressions.Match idMatch = System.Text.RegularExpressions.Regex.Match(raw, @"\b(\d{8,14})\b");
             if (idMatch.Success) return idMatch.Groups[1].Value;
-        }
-
-        System.Text.RegularExpressions.Match commentMatch = System.Text.RegularExpressions.Regex.Match(
-            contextDetails,
-            @"(?:promoted\s+to\s+\w+\s*:\s*\S*?/|article-one/#/(?:article/)?)(\d{8,14})\b",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        if (commentMatch.Success && !string.Equals(commentMatch.Groups[1].Value, SafeText(sightingId).Trim(), StringComparison.OrdinalIgnoreCase))
-        {
-            return commentMatch.Groups[1].Value;
         }
 
         return "NA";
@@ -3624,6 +3912,35 @@ public static class AiSummaryService
         cleaned = NormalizeImpactSummaryBulletBreaks(cleaned);
         cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"[ \t]+", " ").Trim();
         cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\n{3,}", "\n").Trim();
+
+        // If labeled impact bullets exist, drop any unlabeled intro line so we don't render a duplicate unheaded 1st bullet.
+        string[] impactLines = cleaned.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        List<string> labeledImpact = new List<string>();
+        string fixByLine = string.Empty;
+        for (int i = 0; i < impactLines.Length; i++)
+        {
+            string raw = impactLines[i].Trim();
+            if (System.Text.RegularExpressions.Regex.IsMatch(raw, @"^Fix\s+By\s*:", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                fixByLine = raw;
+                continue;
+            }
+            string stripped = System.Text.RegularExpressions.Regex.Replace(raw, @"^\s*(?:[-*•]|\d+[.)])\s+", string.Empty).Trim();
+            if (System.Text.RegularExpressions.Regex.IsMatch(stripped, @"^\*\*[^*\r\n]+:\*\*"))
+            {
+                labeledImpact.Add("- " + stripped);
+            }
+        }
+        if (labeledImpact.Count > 0)
+        {
+            StringBuilder sbImpact = new StringBuilder();
+            for (int i = 0; i < labeledImpact.Count && i < 2; i++)
+            {
+                sbImpact.AppendLine(labeledImpact[i]);
+            }
+            if (!string.IsNullOrWhiteSpace(fixByLine)) sbImpact.AppendLine(fixByLine);
+            return PolishPlainSectionGrammar(sbImpact.ToString().Trim());
+        }
 
         return PolishPlainSectionGrammar(BuildImpactBulletSummary(cleaned, 4));
     }
