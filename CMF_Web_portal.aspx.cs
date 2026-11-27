@@ -2675,6 +2675,8 @@ ORDER BY group_name, CAST(src.cp_id AS VARCHAR(64))";
         btnShowGridView5.Visible = false;
         btnShowGridView6.Visible = false;
         btnShowGridView7.Visible = false;
+        btnShowGridView8.Visible = false;
+        lnkNavReports.Visible = false;
 
         bool isAdminMode = ddlUserMode != null &&
             string.Equals(ddlUserMode.SelectedValue, "admin", StringComparison.OrdinalIgnoreCase);
@@ -2684,6 +2686,13 @@ ORDER BY group_name, CAST(src.cp_id AS VARCHAR(64))";
 
         if (ddlFocusedView != null)
         {
+            ListItem reportsItem = ddlFocusedView.Items.FindByValue("reports");
+            if (reportsItem != null)
+            {
+                reportsItem.Enabled = false;
+                reportsItem.Attributes["style"] = "display:none;";
+            }
+
             ListItem configItem = ddlFocusedView.Items.FindByValue("config");
             if (configItem != null)
             {
@@ -2747,7 +2756,6 @@ ORDER BY group_name, CAST(src.cp_id AS VARCHAR(64))";
             case "issue":
             case "cmf":
             case "pending":
-            case "reports":
             case "config":
                 return normalized;
             default:
@@ -6152,53 +6160,12 @@ ORDER BY LTRIM(RTRIM(drivers))", con))
     }
 
     // ================================================================
-    //  REPORTS & ANALYTICS TAB
+    //  REPORTS & ANALYTICS TAB (REMOVED - REDIRECT TO HOME DASHBOARD)
     // ================================================================
 
     protected void btnShowGridView8_Click(object sender, EventArgs e)
     {
-        if (homeWelcomePanel != null)
-        {
-            homeWelcomePanel.Visible = false;
-        }
-
-        searchfilters.Visible = false;
-        SetMainDataWrapperVisible(false);
-        // Hide all data grids
-        overall_request_details.Visible = false;
-        GridView_design_open.Visible = false;
-        GridView_cmf_summary.Visible = false;
-        GridView_cmf_summary1.Visible = false;
-        GridView_milestone_map.Visible = false;
-        GridView_cmf_pending.Visible = false;
-        GridView_design_summary.Visible = false;
-        GridView_component_summary.Visible = false;
-        GridView_oem_summary.Visible = false;
-        GridView_notes.Visible = false;
-        GridView_comp.Visible = false;
-        tptdefdiv.Visible = false;
-        btnImportPopup.Visible = false;
-        // Hide all export buttons
-        btnExportToExcel.Visible = false;
-        btnExportToExcel_ig.Visible = false;
-        btnExportToExcel_des.Visible = false;
-        btnExportToExcel_des_summary.Visible = false;
-        btnExportToExcel_cmf_pending.Visible = false;
-        btnExportToExcel_oem.Visible = false;
-        // Pane headings
-        pane1.Visible = false; pane2.Visible = false; pane3.Visible = false;
-        pane4.Visible = false; pane5.Visible = false; pane6.Visible = false;
-        pane7.Visible = false; pane8.Visible = true; pane9.Visible = false;
-        fieldSelectorPanel.Visible = false;
-        issueListHeaderPanel.Visible = false;
-        cmf_pending_header_panel.Visible = false;
-        SetIssuePagerVisible(false);
-        configRulesPanel.Visible = false;
-        reportsPlaceholderPanel.Visible = false;
-        // Show chat-only reports panel
-        analyticsPanel.Visible = true;
-        SetActiveFocusedTab("reports");
-        InitializeSharedFilterPanel();
+        btnShowHomeDashboard_Click(sender, e);
     }
 
     protected void btnShowGridView9_Click(object sender, EventArgs e)

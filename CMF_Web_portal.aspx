@@ -18837,6 +18837,10 @@ td:nth-child(odd), th:nth-child(odd) {
         }
 
         function focusReportsAssistant(promptText) {
+            if (typeof openCmfPulseDrawer === 'function') {
+                openCmfPulseDrawer(promptText || '');
+                return false;
+            }
             var reportsLink = document.getElementById('lnkNavReports');
             var input = document.getElementById('reportsPromptInput');
             if (input) {
@@ -27910,7 +27914,7 @@ Submit
                             <asp:LinkButton ID="lnkNavCmfSummary" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView3_Click" Visible="false"><i class="fas fa-table-list" aria-hidden="true"></i><span>CMF Summary</span></asp:LinkButton>
                             <asp:LinkButton ID="lnkNavIssueList" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView1_Click" aria-label="Issue List" ToolTip="Issue List"><i class="fas fa-fire" aria-hidden="true"></i><span>Issue List</span></asp:LinkButton>
                             <asp:LinkButton ID="lnkNavPendingList" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView4_Click" aria-label="CMF Pending List" ToolTip="CMF Pending List"><i class="fas fa-hourglass-half" aria-hidden="true"></i><span>CMF Pending</span></asp:LinkButton>
-                            <asp:LinkButton ID="lnkNavReports" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView8_Click" aria-label="Reports and Analytics" ToolTip="Reports and Analytics"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Reports &amp; Analytics</span></asp:LinkButton>
+                            <asp:LinkButton ID="lnkNavReports" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView8_Click" Visible="false" aria-label="Reports and Analytics" ToolTip="Reports and Analytics"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Reports &amp; Analytics</span></asp:LinkButton>
                             <asp:LinkButton ID="lnkNavConfigRules" runat="server" CssClass="portal-nav-link" OnClick="btnShowGridView9_Click" Visible="false"><i class="fas fa-sliders-h" aria-hidden="true"></i><span>Rules</span></asp:LinkButton>
                         </div>
                     </aside>
@@ -28766,7 +28770,7 @@ Submit
                     <asp:Button ID="btnExportToExcel_des_summary" runat="server" Text="Export to Excel" OnClick="btnExportToExcel_Click_designsummary" CssClass="modern-button" />
                     <asp:Button ID="btnExportToExcel_cmf_pending" runat="server" Text="Export to Excel" OnClick="btnExportToExcel_Click_cmf_pending" CssClass="modern-button" />
                     <asp:Button ID="btnExportToExcel_oem" runat="server" Text="Export to Excel" OnClick="btnExportToExcel_Click_oem" CssClass="modern-button" Visible="false" />
-                    <asp:Button ID="btnShowGridView8" runat="server" Text="Reports &amp; Analytics" OnClick="btnShowGridView8_Click" CssClass="modern-button tab-pill" />
+                    <asp:Button ID="btnShowGridView8" runat="server" Text="Reports &amp; Analytics" OnClick="btnShowGridView8_Click" CssClass="modern-button tab-pill" Visible="false" />
                     <asp:Button ID="btnShowGridView9" runat="server" Text="Config/CMF Rules" OnClick="btnShowGridView9_Click" CssClass="modern-button tab-pill" Visible="false" />
         
                 </div>
