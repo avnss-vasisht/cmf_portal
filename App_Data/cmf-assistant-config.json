@@ -1,13 +1,11 @@
-﻿{
+{
   "version": "1.0",
   "gnai": {
     "endpoint": "https://gnai.intel.com/api/providers/anthropic/v1/messages",
     "anthropicEndpoint": "https://gnai.intel.com/api/providers/anthropic/v1/messages",
-    "primaryModel": "claude-4-5-sonnet",
-    "fastSummaryModel": "claude-4-5-haiku",
-    "fallbackModels": [
-      "claude-4-5-haiku"
-    ]
+    "primaryModel": "claude-sonnet-5-5",
+    "fastSummaryModel": "claude-sonnet-5-5",
+    "fallbackModels": []
   },
   "hsd": {
     "enabled": true,

@@ -2174,11 +2174,17 @@ ORDER BY group_name, CAST(src.cp_id AS VARCHAR(64))";
         List<string> unionParts = new List<string>();
         foreach (string tableName in GetOverallAggregateSourceTables())
         {
+            if (!CmfPlatformCatalog.IsAllowedPlatformTable(tableName)) continue;
             string basePlatform = tableName.Replace("_ALL_COMPONENTS_TABLE", string.Empty);
             string pendingTable = basePlatform + "_CMF_ASK";
+            if (!System.Text.RegularExpressions.Regex.IsMatch(pendingTable, @"\ACMF_[A-Z0-9]+(?:_[A-Z0-9]+)*_CMF_ASK\z", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                continue;
+            }
             if (SqlTableExists(connection, pendingTable))
             {
-                unionParts.Add("SELECT cp_id, status, component_group, date_cmf_ask, '" + tableName + "' AS source_platform FROM " + pendingTable + " WHERE " + GetDashboardDateFilter().BuildPendingPredicate(null));
+                string safeTableLiteral = tableName.Replace("'", "''");
+                unionParts.Add("SELECT cp_id, status, component_group, date_cmf_ask, '" + safeTableLiteral + "' AS source_platform FROM [dbo].[" + pendingTable + "] WHERE " + GetDashboardDateFilter().BuildPendingPredicate(null));
             }
         }
 
@@ -2889,26 +2895,46 @@ ORDER BY group_name, CAST(src.cp_id AS VARCHAR(64))";
         string packedArgument = Request["__EVENTARGUMENT"] ?? string.Empty;
         if (!string.IsNullOrWhiteSpace(packedArgument))
         {
-            string[] packedParts = packedArgument.Split(new[] { "||" }, StringSplitOptions.None);
-
-            if (string.IsNullOrWhiteSpace(action) && packedParts.Length > 0)
+            string trimmedPacked = packedArgument.Trim();
+            if (trimmedPacked.StartsWith("{", StringComparison.Ordinal))
             {
-                action = packedParts[0] ?? string.Empty;
+                try
+                {
+                    var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+                    var parsed = serializer.Deserialize<Dictionary<string, object>>(trimmedPacked);
+                    if (parsed != null)
+                    {
+                        if (string.IsNullOrWhiteSpace(action) && parsed.ContainsKey("action")) action = Convert.ToString(parsed["action"]) ?? string.Empty;
+                        if (string.IsNullOrWhiteSpace(arg1) && parsed.ContainsKey("arg1")) arg1 = Convert.ToString(parsed["arg1"]) ?? string.Empty;
+                        if (string.IsNullOrWhiteSpace(arg2) && parsed.ContainsKey("arg2")) arg2 = Convert.ToString(parsed["arg2"]) ?? string.Empty;
+                        if (string.IsNullOrWhiteSpace(arg3) && parsed.ContainsKey("arg3")) arg3 = Convert.ToString(parsed["arg3"]) ?? string.Empty;
+                    }
+                }
+                catch { }
             }
-
-            if (string.IsNullOrWhiteSpace(arg1) && packedParts.Length > 1)
+            else
             {
-                arg1 = HttpUtility.UrlDecode(packedParts[1] ?? string.Empty);
-            }
+                string[] packedParts = packedArgument.Split(new[] { "||" }, StringSplitOptions.None);
 
-            if (string.IsNullOrWhiteSpace(arg2) && packedParts.Length > 2)
-            {
-                arg2 = HttpUtility.UrlDecode(packedParts[2] ?? string.Empty);
-            }
+                if (string.IsNullOrWhiteSpace(action) && packedParts.Length > 0)
+                {
+                    action = packedParts[0] ?? string.Empty;
+                }
 
-            if (string.IsNullOrWhiteSpace(arg3) && packedParts.Length > 3)
-            {
-                arg3 = HttpUtility.UrlDecode(packedParts[3] ?? string.Empty);
+                if (string.IsNullOrWhiteSpace(arg1) && packedParts.Length > 1)
+                {
+                    arg1 = HttpUtility.UrlDecode(packedParts[1] ?? string.Empty);
+                }
+
+                if (string.IsNullOrWhiteSpace(arg2) && packedParts.Length > 2)
+                {
+                    arg2 = HttpUtility.UrlDecode(packedParts[2] ?? string.Empty);
+                }
+
+                if (string.IsNullOrWhiteSpace(arg3) && packedParts.Length > 3)
+                {
+                    arg3 = HttpUtility.UrlDecode(packedParts[3] ?? string.Empty);
+                }
             }
         }
 
@@ -10015,7 +10041,7 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @issueId", con))
 
                     string rawMergeId = NormalizeExternalArticleId(FirstNonEmptyColumnValue(row, "merge_id", "merged_id"));
                     string rawPromotedOnlyId = NormalizeExternalArticleId(FirstNonEmptyColumnValue(row, "promoted_id"));
-                    string promotedId = !string.IsNullOrWhiteSpace(rawPromotedOnlyId) ? rawPromotedOnlyId : rawMergeId;
+                    string promotedId = rawPromotedOnlyId;
                     if (string.IsNullOrWhiteSpace(promotedId))
                     {
                         builder.AppendLine("Promoted ID: N/A");
@@ -10058,10 +10084,17 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @issueId", con))
 
                     HsdArticleData hsdSighting = FetchCachedHsdArticle(cleanIssueId);
 
+                    // Authoritative primary sighting RVP repro strictly from the primary HSD sighting's repro_on_rvp field (AUD-12).
+                    if (hsdSighting != null && hsdSighting.FetchSuccess)
+                    {
+                        string primaryRvp = !string.IsNullOrWhiteSpace(hsdSighting.ReproOnRvp) ? hsdSighting.ReproOnRvp.Trim() : "Blank";
+                        builder.AppendLine("Primary Sighting RVP Repro: " + primaryRvp);
+                    }
+
                     string hsdSightingContext =
                         HsdPortalService.FormatForAiContext(
                             hsdSighting,
-                            "Sighting " + cleanIssueId);
+                            "Primary Sighting " + cleanIssueId);
 
                     if (!string.IsNullOrWhiteSpace(hsdSightingContext))
                         builder.AppendLine(hsdSightingContext);
@@ -10077,25 +10110,32 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @issueId", con))
                         }
                     }
 
-                    // Detect duplicated / merged target sighting ID from DB merge_id, HSD MergeId, or HSD comments/history
+                    // Detect duplicated / merged target sighting ID strictly from explicit DB merge_id or HSD MergeId (AUD-11).
                     string duplicatedTargetId = ResolveDuplicatedOrMergedTargetId(cleanIssueId, rawMergeId, hsdSighting, builder.ToString());
                     if (!string.IsNullOrWhiteSpace(duplicatedTargetId)
                         && !string.Equals(duplicatedTargetId, cleanIssueId, StringComparison.OrdinalIgnoreCase))
                     {
                         DataRow dupDbRow = LoadIssueRowById(con, effectivePlatformTable, duplicatedTargetId)
                             ?? LoadIssueRowByIdAcrossPlatforms(con, duplicatedTargetId);
-                        HsdArticleData hsdDup = FetchCachedHsdArticle(duplicatedTargetId);
+                        HsdArticleData hsdDup = FetchCachedHsdArticle(duplicatedTargetId, true);
                         AppendDuplicatedTargetContext(builder, duplicatedTargetId, dupDbRow, hsdDup);
                     }
 
                     if (hasDistinctPromoted && !string.Equals(cleanPromotedId, duplicatedTargetId, StringComparison.OrdinalIgnoreCase))
                     {
-                        HsdArticleData hsdPromoted = FetchCachedHsdArticle(cleanPromotedId);
+                        HsdArticleData hsdPromoted = FetchCachedHsdArticle(cleanPromotedId, true);
                         if (hsdPromoted != null && hsdPromoted.FetchSuccess)
                         {
-                            string hsdPromotedContext = HsdPortalService.FormatForAiContext(hsdPromoted, "Promoted Issue " + cleanPromotedId);
-                            if (!string.IsNullOrWhiteSpace(hsdPromotedContext))
-                                builder.AppendLine(hsdPromotedContext);
+                            // Scoped context: pass ONLY fix/status/debug fields from Promoted Issue for Chapter 2 (Current Status),
+                            // preventing symptom/OEM/RVP bleed into Problem Description, Impact Summary, and Recommendation scoring.
+                            builder.AppendLine();
+                            builder.AppendLine("--- Promoted Bug " + cleanPromotedId + " [Promoted Bug Debug/Fix Update - Use ONLY for Chapter 2 Current Status] ---");
+                            builder.AppendLine("Promoted Bug ID: " + cleanPromotedId);
+                            if (!string.IsNullOrWhiteSpace(hsdPromoted.Status)) builder.AppendLine("Promoted Bug Status: " + hsdPromoted.Status.Trim());
+                            if (!string.IsNullOrWhiteSpace(hsdPromoted.FixedVersion)) builder.AppendLine("Promoted Bug Fixed Version: " + hsdPromoted.FixedVersion.Trim());
+                            if (!string.IsNullOrWhiteSpace(hsdPromoted.FixDescription)) builder.AppendLine("Promoted Bug Fix Description: " + hsdPromoted.FixDescription.Trim());
+                            if (!string.IsNullOrWhiteSpace(hsdPromoted.InvestigationHistory)) builder.AppendLine("Promoted Bug Investigation History: " + hsdPromoted.InvestigationHistory.Trim());
+                            if (!string.IsNullOrWhiteSpace(hsdPromoted.SysdebugForum)) builder.AppendLine("Promoted Bug Debug Notes: " + hsdPromoted.SysdebugForum.Trim());
                         }
                     }
 
@@ -10365,8 +10405,20 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
             }
 
             string hsdContext = BuildPendingRecommendationContext(NormalizePlatformForLookup(resolvedPlatform), cpId, true);
+            if (IsLiveHsdContextUnavailable(hsdContext))
+            {
+                return new CmfRecommendationResponse
+                {
+                    Success = false,
+                    CpId = cpId,
+                    Title = title,
+                    Message = "HSD Live API response has failed. Please refresh the portal."
+                };
+            }
             title = ResolveSightingTitle(cpId, title, hsdContext);
             impact = ResolveSightingImpact(cpId, impact, hsdContext);
+            reproOnRvp = ResolvePrimarySightingRvpRepro(cpId, reproOnRvp);
+            reproducibility = ResolvePrimarySightingReproducibility(cpId, reproducibility);
 
             CmfRecommendationRequest request = new CmfRecommendationRequest
             {
@@ -10433,8 +10485,18 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
             }
 
             string hsdContext = BuildPendingRecommendationContext(resolvedPlatform, cpId);
+            if (IsLiveHsdContextUnavailable(hsdContext))
+            {
+                return new SightingQualityAssessmentResponse
+                {
+                    Success = false,
+                    CpId = cpId,
+                    Message = "HSD Live API response has failed. Please refresh the portal."
+                };
+            }
             title = ResolveSightingTitle(cpId, title, hsdContext);
             impact = ResolveSightingImpact(cpId, impact, hsdContext);
+            reproOnRvp = ResolvePrimarySightingRvpRepro(cpId, reproOnRvp);
 
             CmfRecommendationRequest request = new CmfRecommendationRequest
             {
@@ -10451,7 +10513,13 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
                 HsdContext = hsdContext
             };
 
-            return CmfRecommendationService.GenerateSightingQualityAssessment(request);
+            SightingQualityAssessmentResponse sqaResult = CmfRecommendationService.GenerateSightingQualityAssessment(request);
+            if (sqaResult != null)
+            {
+                sqaResult.PromotedId = AiSummaryService.ExtractPromotedIdFromContext(cpId, hsdContext);
+                sqaResult.MergeId = ResolvePrimarySightingMergeId(cpId, hsdContext);
+            }
+            return sqaResult;
         }
         catch (Exception ex)
         {
@@ -10461,6 +10529,32 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
                 Message = "Sighting quality assessment failed: " + ex.Message
             };
         }
+    }
+
+    private static string ResolvePrimarySightingRvpRepro(string cpId, string fallbackRvp)
+    {
+        if (!string.IsNullOrWhiteSpace(cpId))
+        {
+            HsdArticleData primary = FetchCachedHsdArticle(cpId.Trim());
+            if (primary != null && primary.FetchSuccess)
+            {
+                return string.IsNullOrWhiteSpace(primary.ReproOnRvp) ? string.Empty : primary.ReproOnRvp.Trim();
+            }
+        }
+        return fallbackRvp ?? string.Empty;
+    }
+
+    private static string ResolvePrimarySightingReproducibility(string cpId, string fallbackRepro)
+    {
+        if (!string.IsNullOrWhiteSpace(cpId))
+        {
+            HsdArticleData primary = FetchCachedHsdArticle(cpId.Trim());
+            if (primary != null && primary.FetchSuccess)
+            {
+                return string.IsNullOrWhiteSpace(primary.Reproducibility) ? string.Empty : primary.Reproducibility.Trim();
+            }
+        }
+        return fallbackRepro ?? string.Empty;
     }
 
     [WebMethod]
@@ -10499,6 +10593,16 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
                 };
             }
 
+            string hsdContext = BuildPendingRecommendationContext(resolvedPlatform, cpId);
+            if (IsLiveHsdContextUnavailable(hsdContext))
+            {
+                return new SightingQualityValidationTraceResponse
+                {
+                    Success = false,
+                    Message = "HSD Live API response has failed. Please refresh the portal."
+                };
+            }
+
             CmfRecommendationRequest request = new CmfRecommendationRequest
             {
                 CpId = cpId,
@@ -10511,7 +10615,7 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
                 Reproducibility = reproducibility,
                 CustomerDetail = customerDetail,
                 CustomerOwner = customerOwner,
-                HsdContext = BuildPendingRecommendationContext(resolvedPlatform, cpId)
+                HsdContext = hsdContext
             };
 
             return CmfRecommendationService.GenerateSightingQualityValidationTrace(request);
@@ -10666,20 +10770,71 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
         if (!string.IsNullOrWhiteSpace(cpId))
         {
             HsdArticleData article = FetchCachedHsdArticle(cpId.Trim());
-            if (article != null && !string.IsNullOrWhiteSpace(article.CustomerImpact))
+            if (article != null && !string.IsNullOrWhiteSpace(article.Impact))
             {
-                return article.CustomerImpact.Trim();
+                return article.Impact.Trim();
             }
         }
         if (!string.IsNullOrWhiteSpace(contextDetails))
         {
-            System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(contextDetails, @"(?:Customer Impact|Impact|impact):\s*([^\r\n]+)");
+            System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(contextDetails, @"(?:^|\n)\s*Impact:\s*([^\r\n]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             if (m.Success && !string.IsNullOrWhiteSpace(m.Groups[1].Value))
             {
                 return m.Groups[1].Value.Trim();
             }
         }
         return string.Empty;
+    }
+
+    [WebMethod]
+    public static SightingStoryBriefResponse GetSightingStoryBrief(string cpId, string title, string impact, string platform)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(cpId))
+            {
+                return new SightingStoryBriefResponse
+                {
+                    Success = false,
+                    Message = "Sighting ID is required."
+                };
+            }
+
+            string contextDetails = BuildPendingRecommendationContext(platform, cpId);
+            if (IsLiveHsdContextUnavailable(contextDetails))
+            {
+                return new SightingStoryBriefResponse
+                {
+                    Success = false,
+                    IssueId = cpId,
+                    PromotedId = "NA",
+                    Title = title,
+                    Message = "HSD Live API response has failed. Please refresh the portal."
+                };
+            }
+            title = ResolveSightingTitle(cpId, title, contextDetails);
+            impact = ResolveSightingImpact(cpId, impact, contextDetails);
+
+            SightingStoryBriefResponse response = AiSummaryService.GenerateSightingStoryBrief(cpId, title, impact, contextDetails);
+            if (response != null)
+            {
+                if (string.IsNullOrWhiteSpace(response.Title))
+                {
+                    response.Title = title;
+                }
+                response.MergeId = ResolvePrimarySightingMergeId(cpId, contextDetails);
+            }
+            return response;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.TraceWarning("GetSightingStoryBrief failed for {0}: {1}", cpId, ex.Message);
+            return new SightingStoryBriefResponse
+            {
+                Success = false,
+                Message = "AI analysis failed or model response failed. Please click Retry."
+            };
+        }
     }
 
     [WebMethod]
@@ -10697,25 +10852,71 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
             }
 
             string contextDetails = BuildPendingRecommendationContext(platform, cpId);
+            if (IsLiveHsdContextUnavailable(contextDetails))
+            {
+                return new AiSummaryResponse
+                {
+                    Success = false,
+                    Message = "HSD Live API response has failed. Please refresh the portal."
+                };
+            }
             title = ResolveSightingTitle(cpId, title, contextDetails);
 
             // Call the AI service to generate the sighting description
             AiSummaryResponse response = AiSummaryService.GenerateSightingDescription(cpId, title, contextDetails);
-            if (response != null && string.IsNullOrWhiteSpace(response.Title))
+            if (response != null)
             {
-                response.Title = title;
+                if (string.IsNullOrWhiteSpace(response.Title))
+                {
+                    response.Title = title;
+                }
+                response.MergeId = ResolvePrimarySightingMergeId(cpId, contextDetails);
             }
 
             return response;
         }
         catch (Exception ex)
         {
+            System.Diagnostics.Trace.TraceWarning("GetSightingDescription failed for {0}: {1}", cpId, ex.Message);
             return new AiSummaryResponse
             {
                 Success = false,
                 Message = "Failed to generate sighting description: " + ex.Message
             };
         }
+    }
+
+    private static string ResolvePrimarySightingMergeId(string cpId, string contextDetails)
+    {
+        string cleanCurrent = (cpId ?? string.Empty).Trim();
+        if (!string.IsNullOrWhiteSpace(cleanCurrent))
+        {
+            HsdArticleData primary = FetchCachedHsdArticle(cleanCurrent);
+            if (primary != null && primary.FetchSuccess)
+            {
+                string hsdMergeId = NormalizeExternalArticleId(primary.MergeId);
+                if (!string.IsNullOrWhiteSpace(hsdMergeId) && !string.Equals(hsdMergeId, cleanCurrent, StringComparison.OrdinalIgnoreCase))
+                {
+                    return hsdMergeId;
+                }
+            }
+        }
+        if (!string.IsNullOrWhiteSpace(contextDetails))
+        {
+            System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(
+                contextDetails,
+                @"(?:^|\n)\s*(?:Merge\s*ID|Merged\s*ID|DB\s+merge_id|DB\s+merged_id)\s*:\s*(\d{8,14})\b",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (m.Success)
+            {
+                string id = m.Groups[1].Value.Trim();
+                if (!string.Equals(id, cleanCurrent, StringComparison.OrdinalIgnoreCase))
+                {
+                    return id;
+                }
+            }
+        }
+        return string.Empty;
     }
 
     [WebMethod]
@@ -10733,6 +10934,14 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
             }
 
             string contextDetails = BuildPendingRecommendationContext(platform, cpId);
+            if (IsLiveHsdContextUnavailable(contextDetails))
+            {
+                return new AiSummaryResponse
+                {
+                    Success = false,
+                    Message = "HSD Live API response has failed. Please refresh the portal."
+                };
+            }
             title = ResolveSightingTitle(cpId, title, contextDetails);
 
             return AiSummaryService.GenerateSightingFixStatus(cpId, title, contextDetails);
@@ -10762,6 +10971,14 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
             }
 
             string contextDetails = BuildPendingRecommendationContext(platform, cpId);
+            if (IsLiveHsdContextUnavailable(contextDetails))
+            {
+                return new AiSummaryResponse
+                {
+                    Success = false,
+                    Message = "HSD Live API response has failed. Please refresh the portal."
+                };
+            }
             title = ResolveSightingTitle(cpId, title, contextDetails);
             impact = ResolveSightingImpact(cpId, impact, contextDetails);
 
@@ -10849,6 +11066,51 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
     }
 
     [WebMethod]
+    public static object GetScoringRulesConfig()
+    {
+        return CmfAssistantConfigService.GetScoringRulesStructured();
+    }
+
+    [WebMethod]
+    public static object SaveScoringRubricLevel(string dimensionId, int scoreLevel, string leadText, List<string> items)
+    {
+        string msg;
+        bool ok = CmfAssistantConfigService.UpdateScoringRubricLevel(dimensionId, scoreLevel, leadText, items, out msg);
+        return new Dictionary<string, object>
+        {
+            { "success", ok },
+            { "message", msg },
+            { "config", ok ? CmfAssistantConfigService.GetScoringRulesStructured() : null }
+        };
+    }
+
+    [WebMethod]
+    public static object AddScoringRubricSymptom(string dimensionId, int scoreLevel, string symptomText)
+    {
+        string msg;
+        bool ok = CmfAssistantConfigService.AddScoringRubricSymptom(dimensionId, scoreLevel, symptomText, out msg);
+        return new Dictionary<string, object>
+        {
+            { "success", ok },
+            { "message", msg },
+            { "config", ok ? CmfAssistantConfigService.GetScoringRulesStructured() : null }
+        };
+    }
+
+    [WebMethod]
+    public static object SaveScoringGuardrails(double cmfOkMinScore, double cmfReviewMinScore, List<Dictionary<string, string>> guardrails, Dictionary<string, bool> mandatoryReqs)
+    {
+        string msg;
+        bool ok = CmfAssistantConfigService.SaveGuardrailsAndThresholds(cmfOkMinScore, cmfReviewMinScore, guardrails, mandatoryReqs, out msg);
+        return new Dictionary<string, object>
+        {
+            { "success", ok },
+            { "message", msg },
+            { "config", ok ? CmfAssistantConfigService.GetScoringRulesStructured() : null }
+        };
+    }
+
+    [WebMethod]
     public static CmfSightingChatResponse AskCmfSightingQuestion(string cpId, string title, string question, string platform, List<CmfSightingChatTurn> history)
     {
         try
@@ -10862,19 +11124,21 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
                 };
             }
 
-            if (!IsAllowedOrOverallPlatform(platform))
+            string contextDetails = BuildPendingRecommendationContext(platform, cpId);
+            if (IsLiveHsdContextUnavailable(contextDetails))
             {
                 return new CmfSightingChatResponse
                 {
                     Success = false,
-                    Message = "Invalid platform input for sighting chat."
+                    Message = "HSD Live API response has failed. Please refresh the portal."
                 };
             }
-
-            return AiSummaryService.GenerateSightingFollowUpAnswer(cpId, title, BuildPendingRecommendationContext(platform, cpId), question, history);
+            title = ResolveSightingTitle(cpId, title, contextDetails);
+            return AiSummaryService.GenerateSightingFollowUpAnswer(cpId, title, contextDetails, question, history);
         }
         catch (Exception ex)
         {
+            System.Diagnostics.Trace.TraceWarning("AskCmfSightingQuestion failed for {0}: {1}", cpId, ex.Message);
             return new CmfSightingChatResponse
             {
                 Success = false,
@@ -10891,8 +11155,9 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
             InvalidateSightingDataCache(cpId);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Trace.TraceWarning("InvalidateSightingCache failed for {0}: {1}", cpId, ex.Message);
             return false;
         }
     }
@@ -10903,20 +11168,39 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
         string clean = cpId.Trim();
         try
         {
-            HttpRuntime.Cache.Remove("cmf-assistant-hsd-article:" + clean);
-            HttpRuntime.Cache.Remove("cmf-assistant-hsd-context-v3:" + clean);
-            HttpRuntime.Cache.Remove("cmf-assistant-hsd-evidence-v3:" + clean);
-            HttpRuntime.Cache.Remove("cmf-assistant-hsd-context-v2:" + clean);
-            HttpRuntime.Cache.Remove("cmf-assistant-hsd-evidence-v2:" + clean);
+            // Capture any correlated MergeId/PromotedId before evicting the primary HSD article cache (AUD-25).
+            List<string> correlatedIds = new List<string> { clean };
+            HsdArticleData cachedPrimary = HttpRuntime.Cache["cmf-assistant-hsd-article:" + clean] as HsdArticleData;
+            if (cachedPrimary != null)
+            {
+                string mergeId = NormalizeExternalArticleId(cachedPrimary.MergeId);
+                if (!string.IsNullOrWhiteSpace(mergeId) && !correlatedIds.Contains(mergeId)) correlatedIds.Add(mergeId);
+                string promotedId = NormalizeExternalArticleId(cachedPrimary.PromotedId);
+                if (!string.IsNullOrWhiteSpace(promotedId) && !correlatedIds.Contains(promotedId)) correlatedIds.Add(promotedId);
+            }
+
+            foreach (string id in correlatedIds)
+            {
+                HttpRuntime.Cache.Remove("cmf-assistant-hsd-article:" + id);
+                HttpRuntime.Cache.Remove("cmf-assistant-hsd-context-v3:" + id);
+                HttpRuntime.Cache.Remove("cmf-assistant-hsd-evidence-v3:" + id);
+                HttpRuntime.Cache.Remove("cmf-assistant-hsd-context-v2:" + id);
+                HttpRuntime.Cache.Remove("cmf-assistant-hsd-evidence-v2:" + id);
+            }
 
             System.Collections.IDictionaryEnumerator enumerator = HttpRuntime.Cache.GetEnumerator();
             List<string> keysToRemove = new List<string>();
             while (enumerator.MoveNext())
             {
                 string k = enumerator.Key as string;
-                if (k != null && (k.EndsWith(":" + clean, StringComparison.OrdinalIgnoreCase) || k.Contains(":" + clean + ":") || k.Contains(":" + clean)))
+                if (k == null) continue;
+                foreach (string id in correlatedIds)
                 {
-                    keysToRemove.Add(k);
+                    if (k.EndsWith(":" + id, StringComparison.OrdinalIgnoreCase) || k.Contains(":" + id + ":") || k.Contains(":" + id))
+                    {
+                        keysToRemove.Add(k);
+                        break;
+                    }
                 }
             }
             foreach (string k in keysToRemove)
@@ -10928,33 +11212,40 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
             AiSummaryService.InvalidateSightingSummaryCache(clean);
             CmfAssistantResponseCache.InvalidateSighting(clean);
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Trace.TraceWarning("InvalidateSightingDataCache failed for {0}: {1}", cpId, ex.Message);
         }
     }
 
-    private static HsdArticleData FetchCachedHsdArticle(string articleId)
+    private static HsdArticleData FetchCachedHsdArticle(string articleId, bool lightweightReference = false)
     {
         if (string.IsNullOrWhiteSpace(articleId)) return null;
         string normalizedId = articleId.Trim();
-        string cacheKey = "cmf-assistant-hsd-article:" + normalizedId;
+        string cacheKey = (lightweightReference ? "cmf-assistant-hsd-ref:" : "cmf-assistant-hsd-article:") + normalizedId;
         HsdArticleData cached = HttpRuntime.Cache[cacheKey] as HsdArticleData;
         if (cached != null) return cached;
+        if (lightweightReference)
+        {
+            HsdArticleData fullCached = HttpRuntime.Cache["cmf-assistant-hsd-article:" + normalizedId] as HsdArticleData;
+            if (fullCached != null) return fullCached;
+        }
 
         try
         {
-            HsdArticleData article = HsdPortalService.FetchArticle(normalizedId);
+            HsdArticleData article = HsdPortalService.FetchArticle(normalizedId, false, false, lightweightReference);
             if (article != null && article.FetchSuccess)
             {
                 int refreshSeconds = CmfAssistantConfigService.GetConfig().HsdCacheRefreshSeconds;
-                if (refreshSeconds <= 0) refreshSeconds = 15;
-                refreshSeconds = Math.Max(5, Math.Min(15, refreshSeconds));
+                if (refreshSeconds <= 0) refreshSeconds = 60;
+                refreshSeconds = Math.Max(30, Math.Min(120, refreshSeconds));
                 HttpRuntime.Cache.Insert(cacheKey, article, null, DateTime.UtcNow.AddSeconds(refreshSeconds), System.Web.Caching.Cache.NoSlidingExpiration);
             }
             return article;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Trace.TraceWarning("FetchCachedHsdArticle failed for {0}: {1}", normalizedId, ex.Message);
             return null;
         }
     }
@@ -10974,7 +11265,11 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
             article.ClosedReason ?? string.Empty,
             article.FixedVersion ?? string.Empty,
             article.Description ?? string.Empty,
+            article.Impact ?? string.Empty,
             article.CustomerImpact ?? string.Empty,
+            article.SocStepping ?? string.Empty,
+            article.StepsToReproduce ?? string.Empty,
+            article.ReproOnRvp ?? string.Empty,
             article.FixDescription ?? string.Empty,
             article.Comments != null ? article.Comments.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0",
             article.Comments != null && article.Comments.Count > 0 ? (article.Comments[0] ?? string.Empty) : string.Empty
@@ -10992,6 +11287,7 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
 
     private static string ResolveDuplicatedOrMergedTargetId(string currentCpId, string dbMergeId, HsdArticleData hsdSighting, string fullContext)
     {
+        // Require explicit merge_id from DB or HSD field only; never infer duplicates from speculative comments (AUD-11).
         string cleanCurrent = (currentCpId ?? string.Empty).Trim();
         string fromDb = NormalizeExternalArticleId(dbMergeId);
         if (!string.IsNullOrWhiteSpace(fromDb) && !string.Equals(fromDb, cleanCurrent, StringComparison.OrdinalIgnoreCase))
@@ -11008,28 +11304,6 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(fullContext))
-        {
-            string scrubbed = System.Text.RegularExpressions.Regex.Replace(
-                fullContext,
-                @"\b(?:not\s+a\s+duplicate|not\s+duplicate|no\s+duplicate|is\s+not\s+duplicated|not\s+merged)\b",
-                " ",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-
-            System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(
-                scrubbed,
-                @"\b(?:duplicate(?:d)?\s*(?:of|with|to|into|in|under|by|issue|sighting|hsd|bug|ticket|id)?|dup\s*(?:of|with|to|id|hsd)?|merged?\s*(?:to|into|with)\s*(?:sighting|issue|hsd|bug|article|id)?|same\s+(?:issue|bug|root\s+cause|sighting)\s+as)\s*[:#\-]?\s*(?:https?://\S+/#/)?(?:HSD|sighting|issue|bug|article|ticket|#|\s)*(\d{8,14})\b",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            if (m.Success)
-            {
-                string extracted = m.Groups[1].Value.Trim();
-                if (!string.Equals(extracted, cleanCurrent, StringComparison.OrdinalIgnoreCase))
-                {
-                    return extracted;
-                }
-            }
-        }
-
         return string.Empty;
     }
 
@@ -11037,104 +11311,37 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
     {
         if (builder == null || string.IsNullOrWhiteSpace(duplicatedTargetId)) return;
 
-        string dbSysdebug = dupDbRow != null ? FirstNonEmptyColumnValue(dupDbRow, "sysdebug") : string.Empty;
+        // Strictly check ONLY the direct merged sighting under client_platf/client_plat tenant and its actual sysdebug field (no sysdebug_forum, no PromotedId, no parent MergeId; AUD-08..10).
+        string hsdTenant = (hsdDup != null && hsdDup.FetchSuccess) ? (hsdDup.Tenant ?? string.Empty) : string.Empty;
         string hsdSysdebug = (hsdDup != null && hsdDup.FetchSuccess) ? (hsdDup.Sysdebug ?? string.Empty) : string.Empty;
-        string hsdSysdebugForum = (hsdDup != null && hsdDup.FetchSuccess) ? (hsdDup.SysdebugForum ?? string.Empty) : string.Empty;
+        bool isClientPlatform = HsdPortalService.IsClientPlatformTenant(hsdDup);
+        bool hasCustomerMustFix = HsdPortalService.HasCustomerMustFixFlag(hsdDup);
 
-        if (string.IsNullOrWhiteSpace(hsdSysdebugForum) && hsdDup != null && hsdDup.FetchSuccess)
+        string duplicateStatusExplanation;
+        if (hsdDup == null || !hsdDup.FetchSuccess)
         {
-            if (!string.IsNullOrWhiteSpace(hsdDup.FixDescription))
-            {
-                hsdSysdebugForum = "Fix Description: " + hsdDup.FixDescription;
-            }
-            else if (!string.IsNullOrWhiteSpace(hsdDup.InvestigationHistory))
-            {
-                hsdSysdebugForum = "Investigation History: " + hsdDup.InvestigationHistory;
-            }
-            else if (hsdDup.Comments != null && hsdDup.Comments.Count > 0)
-            {
-                hsdSysdebugForum = "Latest Update: " + hsdDup.Comments[hsdDup.Comments.Count - 1];
-            }
+            duplicateStatusExplanation = "No (merge ID " + duplicatedTargetId + " could not be fetched from HSD to verify client platform tenant and sysdebug)";
         }
-
-        string combinedSysdebug = (dbSysdebug + " | " + hsdSysdebug + " | " + hsdSysdebugForum).Trim(' ', '|');
-        bool hasCustomerMustFix = combinedSysdebug.IndexOf("customer_must_fix", StringComparison.OrdinalIgnoreCase) >= 0
-            || HsdPortalService.HasCustomerMustFixFlag(hsdDup);
-
-        // Check if merged ID has a promoted ID (e.g. 14028632633 promoted to 16032445254)
-        string promotedId = hsdDup != null ? NormalizeExternalArticleId(hsdDup.PromotedId) : string.Empty;
-        if (string.IsNullOrWhiteSpace(promotedId) && !string.IsNullOrWhiteSpace(hsdSysdebugForum))
+        else if (!isClientPlatform)
         {
-            System.Text.RegularExpressions.Match pm = System.Text.RegularExpressions.Regex.Match(hsdSysdebugForum, @"\b(1[4-9]\d{8,9})\b");
-            if (pm.Success && !string.Equals(pm.Groups[1].Value, duplicatedTargetId, StringComparison.OrdinalIgnoreCase))
-            {
-                promotedId = pm.Groups[1].Value;
-            }
+            duplicateStatusExplanation = "No (merge ID " + duplicatedTargetId + " is under tenant '" + (string.IsNullOrWhiteSpace(hsdTenant) ? "unknown" : hsdTenant) + "', not client_platf.bug / client_plat.bug)";
         }
-        if (!string.IsNullOrWhiteSpace(promotedId) && !string.Equals(promotedId, duplicatedTargetId, StringComparison.OrdinalIgnoreCase))
+        else if (hasCustomerMustFix)
         {
-            HsdArticleData promotedHsd = FetchCachedHsdArticle(promotedId);
-            if (promotedHsd != null && promotedHsd.FetchSuccess)
-            {
-                string promForum = promotedHsd.SysdebugForum;
-                if (string.IsNullOrWhiteSpace(promForum) && !string.IsNullOrWhiteSpace(promotedHsd.FixDescription))
-                    promForum = "Fix Description: " + promotedHsd.FixDescription;
-                if (!string.IsNullOrWhiteSpace(promForum))
-                {
-                    hsdSysdebugForum = (string.IsNullOrWhiteSpace(hsdSysdebugForum) ? "" : (hsdSysdebugForum + " | "))
-                        + "[Promoted " + promotedId + " Forum]: " + promForum;
-                }
-                if (HsdPortalService.HasCustomerMustFixFlag(promotedHsd))
-                {
-                    hasCustomerMustFix = true;
-                    if (hsdSysdebug.IndexOf("customer_must_fix", StringComparison.OrdinalIgnoreCase) < 0)
-                    {
-                        hsdSysdebug = string.IsNullOrWhiteSpace(hsdSysdebug) ? "customer_must_fix (via promoted " + promotedId + ")" : (hsdSysdebug + "; customer_must_fix (via promoted " + promotedId + ")");
-                    }
-                }
-            }
+            duplicateStatusExplanation = "Yes (merge ID " + duplicatedTargetId + " is under client_platf/client_plat tenant and has cmf_ask_status / customer_must_fix in sysdebug)";
         }
-
-        if (!hasCustomerMustFix)
+        else
         {
-            string transitiveMergeId = NormalizeExternalArticleId(
-                !string.IsNullOrWhiteSpace(hsdDup != null ? hsdDup.MergeId : null)
-                    ? hsdDup.MergeId
-                    : (dupDbRow != null ? FirstNonEmptyColumnValue(dupDbRow, "merge_id", "merged_id") : string.Empty));
-            if (!string.IsNullOrWhiteSpace(transitiveMergeId) && !string.Equals(transitiveMergeId, duplicatedTargetId, StringComparison.OrdinalIgnoreCase))
-            {
-                HsdArticleData transitiveHsd = FetchCachedHsdArticle(transitiveMergeId);
-                if (HsdPortalService.HasCustomerMustFixFlag(transitiveHsd))
-                {
-                    hasCustomerMustFix = true;
-                    hsdSysdebug = string.IsNullOrWhiteSpace(hsdSysdebug) ? "customer_must_fix (via parent sighting " + transitiveMergeId + ")" : (hsdSysdebug + "; customer_must_fix (via parent sighting " + transitiveMergeId + ")");
-                }
-            }
+            duplicateStatusExplanation = "No (merge ID " + duplicatedTargetId + " is under client_platf/client_plat tenant, but sysdebug does not contain cmf_ask_status / customer_must_fix)";
         }
 
         builder.AppendLine();
-        builder.AppendLine("--- Duplicated / Merged Target Sighting " + duplicatedTargetId + " ---");
+        builder.AppendLine("--- Duplicated / Merged Target Sighting " + duplicatedTargetId + " [Duplicate Check Metadata Only - Do NOT use for Primary Symptoms, RVP Repro, or Scoring] ---");
         builder.AppendLine("Duplicated Target Sighting ID: " + duplicatedTargetId);
         builder.AppendLine("Duplicated Target HSD Link: https://hsdes.intel.com/appstore/article/#/" + duplicatedTargetId);
-        builder.AppendLine("Duplicated Target Sysdebug: " + (string.IsNullOrWhiteSpace(hsdSysdebug) ? (string.IsNullOrWhiteSpace(dbSysdebug) ? "N/A" : dbSysdebug) : hsdSysdebug));
-        builder.AppendLine("Duplicated Target Sysdebug Forum: " + (string.IsNullOrWhiteSpace(hsdSysdebugForum) ? "N/A" : hsdSysdebugForum));
-        builder.AppendLine("Duplicated Target Has customer_must_fix: " + (hasCustomerMustFix ? "Yes (customer_must_fix is written in sysdebug/sysdebug_forum of duplicated sighting " + duplicatedTargetId + ")" : "No"));
-
-        if (dupDbRow != null)
-        {
-            AppendSummaryContextLine(builder, "Duplicated Target DB Title", dupDbRow, "title");
-            AppendSummaryContextLine(builder, "Duplicated Target DB Status", dupDbRow, "status", "cmf_status");
-            AppendSummaryContextLine(builder, "Duplicated Target DB CMF Request", dupDbRow, "cmf_request");
-        }
-
-        if (hsdDup != null && hsdDup.FetchSuccess)
-        {
-            string dupHsdBlock = HsdPortalService.FormatForAiContext(hsdDup, "Duplicated / Merged Sighting " + duplicatedTargetId);
-            if (!string.IsNullOrWhiteSpace(dupHsdBlock))
-            {
-                builder.AppendLine(dupHsdBlock);
-            }
-        }
+        builder.AppendLine("Duplicated Target Tenant: " + (string.IsNullOrWhiteSpace(hsdTenant) ? "Unknown" : hsdTenant));
+        builder.AppendLine("Duplicated Target Sysdebug: " + (string.IsNullOrWhiteSpace(hsdSysdebug) ? "N/A" : hsdSysdebug));
+        builder.AppendLine("Duplicated Target Has customer_must_fix: " + duplicateStatusExplanation);
     }
 
     private static string BuildPendingHsdContext(string cpId, bool evidenceLed = false)
@@ -11156,7 +11363,7 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
             string dupId = ResolveDuplicatedOrMergedTargetId(cpId.Trim(), string.Empty, article, sb.ToString());
             if (!string.IsNullOrWhiteSpace(dupId))
             {
-                HsdArticleData hsdDup = FetchCachedHsdArticle(dupId);
+                HsdArticleData hsdDup = FetchCachedHsdArticle(dupId, true);
                 AppendDuplicatedTargetContext(sb, dupId, null, hsdDup);
             }
 
@@ -11178,49 +11385,81 @@ WHERE CAST(main.cp_id AS VARCHAR(50)) = @lookupIssueId", connection))
     private static string BuildPendingRecommendationContext(string platformTable, string cpId, bool evidenceLed = false)
     {
         if (string.IsNullOrWhiteSpace(cpId)) return string.Empty;
+        string cleanCpId = cpId.Trim();
         string resolvedPlatform = NormalizePlatformForLookup(platformTable);
-        string cacheKey = "cmf-assistant-full-context-v3:" + resolvedPlatform + ":" + cpId.Trim();
+        string cacheKey = "cmf-assistant-full-context-v4:" + resolvedPlatform + ":" + cleanCpId;
         using (CmfAssistantResponseCache.Enter(cacheKey))
         {
             string cached = HttpRuntime.Cache[cacheKey] as string;
             if (cached != null) return cached;
 
             StringBuilder builder = new StringBuilder();
-            string dbContext = BuildIssueSummaryContext(resolvedPlatform, cpId);
-            if (!string.IsNullOrWhiteSpace(dbContext))
-            {
-                builder.AppendLine(dbContext);
-            }
+            HsdArticleData article = FetchCachedHsdArticle(cleanCpId);
 
-            HsdArticleData article = FetchCachedHsdArticle(cpId.Trim());
             if (article != null && article.FetchSuccess)
             {
-                string fingerprintLine = "HSD Source Fingerprint: " + ComputeStableHsdFingerprint(article);
-                if (builder.ToString().IndexOf(fingerprintLine, StringComparison.OrdinalIgnoreCase) < 0)
+                // HSD-first lean context: avoid redundant/stale SQL DB round-trips when live HSD succeeds.
+                string primaryRvp = !string.IsNullOrWhiteSpace(article.ReproOnRvp) ? article.ReproOnRvp.Trim() : "Blank";
+                builder.AppendLine("Primary Sighting RVP Repro: " + primaryRvp);
+
+                string promotedId = NormalizeExternalArticleId(article.PromotedId);
+                builder.AppendLine("Promoted ID: " + (!string.IsNullOrWhiteSpace(promotedId) && !string.Equals(promotedId, cleanCpId, StringComparison.OrdinalIgnoreCase) ? promotedId : "N/A"));
+
+                string hsdSightingContext = HsdPortalService.FormatForAiContext(article, "Primary Sighting " + cleanCpId);
+                if (!string.IsNullOrWhiteSpace(hsdSightingContext))
                 {
-                    bool isRealDbContext = !string.IsNullOrWhiteSpace(dbContext) && dbContext.IndexOf("was not found in", StringComparison.OrdinalIgnoreCase) < 0;
-                    if (!isRealDbContext)
+                    builder.AppendLine(hsdSightingContext);
+                }
+
+                string dupId = ResolveDuplicatedOrMergedTargetId(cleanCpId, string.Empty, article, builder.ToString());
+                if (!string.IsNullOrWhiteSpace(dupId) && !string.Equals(dupId, cleanCpId, StringComparison.OrdinalIgnoreCase))
+                {
+                    HsdArticleData hsdDup = FetchCachedHsdArticle(dupId, true);
+                    AppendDuplicatedTargetContext(builder, dupId, null, hsdDup);
+                }
+
+                if (!string.IsNullOrWhiteSpace(promotedId)
+                    && !string.Equals(promotedId, cleanCpId, StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(promotedId, dupId, StringComparison.OrdinalIgnoreCase))
+                {
+                    HsdArticleData hsdPromoted = FetchCachedHsdArticle(promotedId, true);
+                    if (hsdPromoted != null && hsdPromoted.FetchSuccess)
                     {
-                        string hsdContext = BuildPendingHsdContext(cpId);
-                        if (!string.IsNullOrWhiteSpace(hsdContext)) builder.AppendLine(hsdContext);
-                    }
-                    else
-                    {
-                        builder.AppendLine(fingerprintLine);
+                        builder.AppendLine();
+                        builder.AppendLine("--- Promoted Bug " + promotedId + " [Promoted Bug Debug/Fix Update - Use ONLY for Chapter 2 Current Status] ---");
+                        builder.AppendLine("Promoted Bug ID: " + promotedId);
+                        if (!string.IsNullOrWhiteSpace(hsdPromoted.Status)) builder.AppendLine("Promoted Bug Status: " + hsdPromoted.Status.Trim());
+                        if (!string.IsNullOrWhiteSpace(hsdPromoted.FixedVersion)) builder.AppendLine("Promoted Bug Fixed Version: " + hsdPromoted.FixedVersion.Trim());
+                        if (!string.IsNullOrWhiteSpace(hsdPromoted.FixDescription)) builder.AppendLine("Promoted Bug Fix Description: " + hsdPromoted.FixDescription.Trim());
+                        if (!string.IsNullOrWhiteSpace(hsdPromoted.InvestigationHistory)) builder.AppendLine("Promoted Bug Investigation History: " + hsdPromoted.InvestigationHistory.Trim());
+                        if (!string.IsNullOrWhiteSpace(hsdPromoted.SysdebugForum)) builder.AppendLine("Promoted Bug Debug Notes: " + hsdPromoted.SysdebugForum.Trim());
                     }
                 }
+
+                builder.AppendLine("HSD Source Fingerprint: " + ComputeStableHsdFingerprint(article));
+            }
+            else
+            {
+                // SQL DB fallback intentionally removed for CMF Analysis: if live HSD API fails, do not score stale/incomplete DB rows.
+                return "External Evidence Status: Unavailable";
             }
 
             string context = builder.ToString().Trim();
             if (!string.IsNullOrWhiteSpace(context))
             {
                 int refreshSeconds = CmfAssistantConfigService.GetConfig().HsdCacheRefreshSeconds;
-                if (refreshSeconds <= 0) refreshSeconds = 15;
-                refreshSeconds = Math.Max(5, Math.Min(15, refreshSeconds));
+                if (refreshSeconds <= 0) refreshSeconds = 120;
+                refreshSeconds = Math.Max(30, Math.Min(180, refreshSeconds));
                 HttpRuntime.Cache.Insert(cacheKey, context, null, DateTime.UtcNow.AddSeconds(refreshSeconds), System.Web.Caching.Cache.NoSlidingExpiration);
             }
             return context;
         }
+    }
+
+    private static bool IsLiveHsdContextUnavailable(string context)
+    {
+        return string.IsNullOrWhiteSpace(context)
+            || context.IndexOf("External Evidence Status: Unavailable", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     [WebMethod(EnableSession = true)]
@@ -13864,11 +14103,21 @@ firstPatternCaseStatements +
             }
             else
             {
-                // Modify the query to join the designTable with the ALL_COMPONENTS_TABLE
+                if (!CmfPlatformCatalog.IsAllowedPlatformTable(allComponentsTable)
+                    || !System.Text.RegularExpressions.Regex.IsMatch(designTable, @"\ACMF_[A-Z0-9]+(?:_[A-Z0-9]+)*_CMF_ASK\z", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                {
+                    GridView_cmf_pending.DataSource = new DataTable();
+                    GridView_cmf_pending.DataBind();
+                    UpdateCmfPendingKpis();
+                    UpdateCmfPendingAccessibilityLinks();
+                    return;
+                }
+                string safePlatformLiteral = platformSelection.Replace("'", "''");
+                // Align Single-Platform query with Overall: LEFT JOIN to issue table, bracketed identifiers, datetime-safe ordering.
                 main_query = @"
             SELECT 
                 d.cp_id, 
-                '" + platformSelection + @"' AS source_platform,
+                '" + safePlatformLiteral + @"' AS source_platform,
                 d.title, 
                 d.component, 
                 d.component_group,
@@ -13889,11 +14138,11 @@ firstPatternCaseStatements +
                     WHEN d.cmf_request = 'cmf_ok' AND ISNULL(a.sysdebug, '') NOT LIKE '%customer_must_fix%' THEN 'CMF CHAIR'
                     ELSE 'NA'
                 END AS pending_reason
-            FROM " + designTable + @" AS d
-            JOIN " + allComponentsTable + @" AS a ON d.cp_id = a.cp_id
+            FROM [dbo].[" + designTable + @"] AS d
+            LEFT JOIN [dbo].[" + allComponentsTable + @"] AS a ON d.cp_id = a.cp_id
             LEFT JOIN (" + pendingIdstMappingSql + @") AS m ON m.component = a.component_group
             WHERE d.status NOT IN ('complete', 'rejected')
-            ORDER BY d.date_cmf_ask DESC";
+            ORDER BY TRY_CONVERT(datetime, d.date_cmf_ask) DESC, d.cp_id DESC";
             }
 
             using (SqlCommand cmd = CmfPlatformCatalog.CreateReadCommand(main_query, con))

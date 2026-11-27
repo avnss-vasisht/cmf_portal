@@ -4,40 +4,50 @@ This repository contains an ASP.NET Web Forms CMF portal demo that runs locally 
 
 ## What's New in `updated_recommendation`
 
-1. **Modular JSON Configuration & Plugin Architecture (`App_Data/cmf-assistant-config.json` & `App_Code/CmfAssistantConfigService.cs`):**
-  - Keeps SQL and the portal-wide GNAI API key/proxy/timeout settings in `Web.config`. GNAI endpoints, primary/fast/fallback models, HSD enrichment, Reports Python path, unused Syncfusion license placeholder, scoring rules, guardrails, feedback and jargon remain in the hot-reloading JSON file. `CmfAssistantConfigService` supplies both sources to existing consumers.
-  - **Required Files to Run:** Ensure both **`App_Data/cmf-assistant-config.json`** and **`Web.config`** are present. Configure SQL and shared GNAI credentials in the local `Web.config`; the separate legacy JSON credential override file is no longer read.
+1. **Modular JSON Configuration (`App_Data/cmf-assistant-config.json` & `App_Code/CmfAssistantConfigService.cs`):**
+   - Keeps SQL and portal-wide GNAI API key/proxy/timeout settings in `Web.config`. GNAI endpoints, unified primary/fast model (`claude-sonnet-5-5`, no silent fallback downgrade), HSD enrichment, Reports Python path, scoring rules, guardrails, feedback, and jargon mappings live in the hot-reloading `App_Data/cmf-assistant-config.json`.
+   - **Why Dashboard AI Insights uses a separate `App_Data/dashboard-ai-config.json`:** Dashboard AI Insights runs multi-batch generation and independent semantic verification with its own provider-bound cache signature (`BuildDashboardAiProviderSignature`), allowing independent model upgrades and cache invalidation.
+   - **Required Files to Run:** Ensure **`App_Data/cmf-assistant-config.json`**, **`App_Data/dashboard-ai-config.json`**, and **`Web.config`** are present. Legacy `cmf-recommendation-rules.txt` and empty seed feedback files have been removed.
 
-2. **6-Category / 4-Point Scoring Mechanism & 5 Gating Guardrails (`App_Code/CmfRecommendationService.cs`):**
-   - **4-Point Scale (`1` to `4`):** `Overall Score = (S * 0.20) + (O * 0.15) + (D * 0.15) + (R * 0.10) + (B * 0.20) + (CX * 0.20)`.
+2. **5-Category / 4-Point Scoring Mechanism, 6 Priority Guardrails & `Low Confidence` Calibration (`App_Code/CmfRecommendationService.cs`):**
+   - **4-Point Scale (`1` to `4`):** `Overall Score = (S * 0.30) + (O * 0.15) + (D * 0.10) + (B * 0.30) + (RVP * 0.15)` (`Severity`, `Occurrence`, `Detection / Trigger Scope`, `Business Impact`, `RVP Repro Status`).
    - **5-Tag Disposition Model:**
-     - `CMF_OK` (`Approve`): Weighted score `>= 3.50/4` with minimum conditions `B >= 3` and `D >= 3`.
-     - `CMF_REVIEW` (`Review`): Weighted score `2.75 - 3.49/4` or capped/escalated by a gating guardrail.
-     - `CMF_REJECT` (`Reject`): Weighted score `< 2.75/4` with complete evidence and no mandatory escalation.
-     - `CMF_INCOMPLETE` (`Incomplete`): Condition-based override when core metric evidence is missing (Guardrail #3).
-     - `CMF_DUPLICATE` (`Duplicate`): Condition-based override when a duplicate sighting or merge ID is identified.
-   - **5 Gating Guardrails:**
-     - *Low business or narrow trigger cap:* If `B <= 2` or `D <= 2`, capped at `CMF_REVIEW`.
-     - *Mandatory escalation:* Safety, security/privacy, data loss/corruption, permanent HW damage, or certification/WHQL blocker is at least `CMF_REVIEW`.
-     - *Incomplete evidence:* Missing core category evidence returns `CMF_INCOMPLETE`.
-     - *High normal-flow UX exception:* Persistent normal-flow issue with `B = 4`, `CX = 4`, and `D = 4` qualifies as `CMF_OK` when weighted score `>= 3.50` even if `Severity = 3`.
-     - *Occurrence discipline:* Uses actual fail/attempt cycles and unit/configuration counts without inflating `Occurrence` for symptom severity.
+     - `CMF_OK` (`Approve`): Priority 1 (`S >= 3` AND (`B >= 3` OR `RVP = Yes`)) OR Priority 2 (`Score >= 3.50`).
+     - `CMF_REVIEW` (`Review`): Priority 3 (`S >= 3`), Priority 4 (`B >= 3`), Priority 5 (`Score >= 2.75`), or when a decision-critical metric (`S` or `B`) is flagged as **`Low Confidence`** (internal `Borderline` — unlisted scenario in active scoring guidelines).
+     - `CMF_REJECT` (`Reject`): Priority 6 (otherwise; `RVP = Yes` alone does not qualify).
+     - `CMF_INCOMPLETE` (`Incomplete`): Missing core metric / SQA evidence (hybrid SQA: 7 deterministic fields + LLM check of HSD description for `Steps to Reproduce` when `to_reproduce` is blank).
+     - `CMF_DUPLICATE` (`Duplicate`): Merge ID points to a target sighting under the `client_platf` tenant with `customer_must_fix` / CMF status. Non-`client_platf` merge IDs display a clear `Duplicate check` note in AI Recommendation instead of falsely marking `CMF_DUPLICATE`.
+   - **`Low Confidence` Badge & Styled Tooltip (`CMF_Web_portal.aspx`):** Displays a **`Low Confidence`** pill on any metric where the LLM could not find a direct match in the active scoring guidelines, with a styled dark popover tooltip showing the exact LLM-generated reason.
 
-3. **One-Click Excel (`.xlsx`) Scoring Guidelines Importer (`Config/CMF Rules` Tab):**
-   - Upload an updated `CMF_6_Category_Scoring_Mechanism.xlsx` file in the Admin **Config/CMF Rules** tab to automatically parse Sheet 1 (`1-4` rubrics and weights) and Sheet 2 (CMF Disposition Table and Gating Guardrails) via `EPPlus.dll` and update `App_Data/cmf-assistant-config.json`.
+3. **3-Tab Admin "CMF Qualification Rules" Workspace (`Config/CMF Rules` Tab):**
+   - Replaced the raw single-textbox rules editor with a structured 3-tab Admin UI backed directly by `App_Data/cmf-assistant-config.json` (with automatic cache invalidation on save):
+     - **Tab 1 — Scoring Rubrics & Symptoms:** Quick-Add bar (`Dimension` + `Score 4–1` + `Symptom/Condition`), dimension selector pills (`S`, `O`, `D`, `B`, `RVP`), and per-score cards (`Score 4`–`1`) for editing definitions, adding/editing/removing individual symptom items, and saving live to JSON.
+     - **Tab 2 — Guardrails & Thresholds:** Editable `CMF_OK Min Score`, `CMF_REVIEW Min Score`, mandatory requirement checkboxes, and editable/addable/deletable `gatingGuardrails` table saved live to JSON.
+     - **Tab 3 — Excel Import & Jargon Manager:** One-click `.xlsx` Scoring Guidelines bulk importer (replaces `scoringRules` in JSON via `EPPlus.dll`, preserving `jargonMappings`) plus Platform/SKU/Component Jargon Synonym manager.
 
-4. **AI CMF Assistant Drawer & Scenario Feedback Learning (`CMF Pending` Tab):**
-   - **Problem Description (`App_Code/AiSummaryService.cs`):** Enforces `[Component]` in the opening sentence, reconciles conflicting cycle/UUT counts, and restricts `**Repro details:**` strictly to reproduction details (`RVP repro: Yes/No;` + customer/lab reproduction status and builds) without debug/root-cause leakage.
-   - **Dedicated `Current Status` Section:** Summarizes candidate fixes, workarounds, and validation status (with promoted issue ID attribution).
-   - **Promoted ID Header Link & Click-Only Score Guide Tooltip:** Displays `Promoted ID: <ID/NA>` next to `Sighting ID` and shows the `Score to Tag Guide (Out of 4)` tooltip when clicking the `i` icon.
-   - **Mandatory `RVP repro` Reasoning:** Explicitly evaluates and cites `RVP repro` status (`Yes` = platform-wide risk across OEM customer units; `No` = isolated to customer unit without penalizing the 6-category score).
-   - **Scenario-Based Feedback Log (`App_Code/CmfFeedbackMemoryService.cs` & `App_Data/cmf-feedback-memory.json`):** Appends every reviewer feedback submission as a reusable scenario lesson (`SCN-...`) for future recommendations.
+4. **Cohesive Single-Call 3-Chapter Sighting Story Brief & HSD Enrichment (`App_Code/AiSummaryService.cs` & `App_Code/HsdPortalService.cs`):**
+   - Generates **Problem Description** (Chapter 1), **Current Status** (Chapter 2), and **Impact Summary** (Chapter 3) in a single Sonnet call (`sighting-story-brief-v8`) with zero cross-chapter duplication and no hard word-count caps on Chapters 2 & 3 (guided by a strict 2-bullet structure).
+   - Scopes Chapters 1 & 3 strictly to the Primary Sighting fields (preventing promoted/merged ticket leakage), while Chapter 2 incorporates promoted bug fix/validation updates without contradicting the primary sighting's `RVP repro` status.
+   - Displays `Sighting ID`, `Promoted ID`, and `Merge ID` links in the AI CMF Assistant header, and uses lightweight reference fetches for promoted/merged tickets to speed up HSD enrichment.
 
-5. **Global `Ask CMF Pulse` Assistant & Native Executive PowerPoint (`.pptx`) Generator (`App_Code/CmfGlobalAssistantService.cs` & `App_Code/CmfExecutivePptxService.cs`):**
+5. **Portal-Wide `"Intel Clear"` Typography, Security Hardening & One-Click Launcher:**
+   - Updated `--portal-font-ui` in `Content/cmf-portal-theme.css` to `"Intel Clear", sans-serif;` across all tabs, modals, and drawers while keeping all existing sizes, weights, and layout unchanged.
+   - Hardened popup snapshot sanitization in `Scripts/cmf-portal-main.js` (DOM template stripping of unsafe tags/event handlers) and switched async popup dispatch arguments to JSON serialization.
+   - Added `Start_CMF_Portal.bat` for one-click local launch on IIS Express (`http://localhost:8080/CMF_Web_portal.aspx`).
+
+6. **Global `Ask CMF Pulse` Assistant & Native Executive PowerPoint (`.pptx`) Generator (`App_Code/CmfGlobalAssistantService.cs` & `App_Code/CmfExecutivePptxService.cs`):**
    - Accessible across all portal tabs via the bottom-right **`Ask CMF Pulse`** button (`Analyze. Generate. Assist.`).
-   - **Multi-Tab Q&A & Family/SKU Rollups:** Answers questions across Dashboard KPIs, Issue List sightings, CMF Summary TPT/Designs/SW Image Freeze/OEMs/Drivers, CMF Pending items/age buckets, Reports workweeks/closed reasons, and Config rules. Reports both **Family Totals (`NVL (Nova Lake)`)** and **individual SKU breakdowns (`NVL-H`, `NVL-S`, `NVL-Hx` vs `PTL`)**.
-   - **3-Layer Hybrid Jargon Scaling:** Combines dynamic SQL discovery + fuzzy Levenshtein matching, LLM semantic mapping, and self-learning synonym persistence via chat, feedback notes, or the Admin UI.
-   - **Custom PPT Report Templates & Native 16:9 `.pptx` Generation:** Supports preset and uploaded/saved custom slide blueprints (`App_Data/reports-assistant/pulse-templates.json`) + natural prompts to generate 4-slide widescreen PowerPoint decks using `DocumentFormat.OpenXml` and inline ECharts visuals, plus a dedicated Pulse scenario feedback log (`App_Data/cmf-pulse-feedback.json`).
+   - Supports multi-tab Q&A, Family/SKU rollups, 3-layer hybrid jargon scaling, custom PPT slide templates (`App_Data/reports-assistant/pulse-templates.json`), and native 16:9 `.pptx` generation via `DocumentFormat.OpenXml`.
+
+### What Is Hardcoded in Code (Not Driven by `cmf-assistant-config.json`)
+
+Everything related to scoring rubrics, symptoms, dimension weights, `cmfOkMinScore` / `cmfReviewMinScore`, mandatory requirement flags, `gatingGuardrails` prompt text, `permutationAnalysis`, GNAI endpoints/models, HSD settings, and jargon synonyms is read dynamically from `App_Data/cmf-assistant-config.json`. Only the following behaviors are hardcoded in C#/CSS/JS:
+
+- **Priority 1–6 Post-Scoring Disposition Gate (`App_Code/CmfRecommendationService.cs`):** The deterministic C# fallback enforces `Priority 1` (`S >= 3 && (B >= 3 || RVP == 4) -> CMF_OK`), `Priority 2` (`Weighted Score >= cmfOkMinScore -> CMF_OK`), `Priority 3` (`S >= 3 -> CMF_REVIEW`), `Priority 4` (`B >= 3 -> CMF_REVIEW`), `Priority 5` (`Weighted Score >= cmfReviewMinScore -> CMF_REVIEW`), and `Priority 6` (`Otherwise -> CMF_REJECT`), plus auto-routing `Borderline` (`Low Confidence`) on `S` or `B` to `CMF_REVIEW`. *(Numeric thresholds `cmfOkMinScore`/`cmfReviewMinScore` and `permutationAnalysis` overrides are still read from JSON.)*
+- **Duplicate Tenant Qualification Rule (`App_Code/HsdPortalService.cs` & `App_Code/CmfRecommendationService.cs`):** `CMF_DUPLICATE` only applies when the merged target sighting belongs to the `client_platf` / `client_plat` / `client_platform` tenant and carries `customer_must_fix` / CMF status.
+- **3-Chapter Sighting Story Brief Template & Cache Version (`App_Code/AiSummaryService.cs`):** The 3-chapter layout (`===PROBLEM_DESCRIPTION===`, `===CURRENT_STATUS===`, `===IMPACT_SUMMARY===`), 2-bullet cap per chapter, primary-sighting context scoping, and cache version key (`sighting-story-brief-v8`) are defined in code.
+- **Hybrid SQA Field Rules (`App_Code/CmfRecommendationService.cs`):** The 7 deterministic SQA fields and the LLM fallback check for `Steps to Reproduce` when `to_reproduce` is blank are defined in code.
+- **UI Font, Badge Label & Local Launcher Port:** `--portal-font-ui: "Intel Clear", sans-serif;` (`Content/cmf-portal-theme.css`), the `Low Confidence` UI pill label (`CMF_Web_portal.aspx`), and local IIS Express port `8080` (`Start_CMF_Portal.bat`).
 
 ## Prerequisites
 

@@ -13,6 +13,7 @@ public static class CmfAssistantResponseCache
     public static bool HasVerifiedSource(string context)
     {
         if (string.IsNullOrEmpty(context)) return false;
+        if (context.IndexOf("External Evidence Status: Unavailable", StringComparison.OrdinalIgnoreCase) >= 0) return false;
         return context.IndexOf("HSD Source Fingerprint:", StringComparison.Ordinal) >= 0
             || context.IndexOf("--- CMF Portal Database ---", StringComparison.Ordinal) >= 0;
     }

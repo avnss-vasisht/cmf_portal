@@ -364,10 +364,12 @@ function dispatchPopupAsyncFlow(action, arg1, arg2, arg3, fallbackEventTarget, f
         arg2Input.value = arg2 || '';
         arg3Input.value = arg3 || '';
 
-        var packedArgument = String(action || '')
-            + '||' + encodeURIComponent(String(arg1 || ''))
-            + '||' + encodeURIComponent(String(arg2 || ''))
-            + '||' + encodeURIComponent(String(arg3 || ''));
+        var packedArgument = JSON.stringify({
+            action: String(action || ''),
+            arg1: String(arg1 || ''),
+            arg2: String(arg2 || ''),
+            arg3: String(arg3 || '')
+        });
 
         __doPostBack(dispatchTarget, packedArgument);
         return false;
@@ -397,9 +399,31 @@ function isElementVisibleForPopupSnapshot(element) {
 }
 
 function sanitizePopupSnapshotMarkup(html) {
-    return String(html || '')
-        .replace(/\sid="[^"]*"/gi, '')
-        .replace(/\sfor="[^"]*"/gi, '');
+    var raw = String(html || '');
+    if (typeof document === 'undefined' || !document.createElement) {
+        return raw.replace(/\sid="[^"]*"/gi, '').replace(/\sfor="[^"]*"/gi, '');
+    }
+    var template = document.createElement('template');
+    template.innerHTML = raw;
+    var dangerous = template.content.querySelectorAll('script, iframe, object, embed');
+    for (var i = 0; i < dangerous.length; i++) {
+        dangerous[i].remove();
+    }
+    var allNodes = template.content.querySelectorAll('*');
+    for (var j = 0; j < allNodes.length; j++) {
+        var el = allNodes[j];
+        el.removeAttribute('id');
+        el.removeAttribute('for');
+        var attrs = Array.prototype.slice.call(el.attributes || []);
+        for (var k = 0; k < attrs.length; k++) {
+            var name = attrs[k].name.toLowerCase();
+            var val = String(attrs[k].value || '').trim().toLowerCase();
+            if (name.indexOf('on') === 0 || ((name === 'href' || name === 'src') && val.indexOf('javascript:') === 0)) {
+                el.removeAttribute(attrs[k].name);
+            }
+        }
+    }
+    return template.innerHTML;
 }
 
 function buildPopupFlowSnapshotHtml() {

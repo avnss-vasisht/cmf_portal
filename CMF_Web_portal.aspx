@@ -722,9 +722,9 @@
         }
 
         .cmf-rules-editor-shell {
-            display: grid;
-            grid-template-columns: minmax(0, 1.4fr) minmax(280px, .8fr);
-            gap: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
 
         .cmf-rules-card {
@@ -736,6 +736,268 @@
             color: #143a5a;
             font-size: 16px;
             font-weight: 700;
+        }
+
+        .cmf-rules-tabs-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            border-bottom: 1px solid #dbe5f0;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+        }
+
+        .cmf-rules-tab-btn {
+            padding: 7px 14px;
+            border-radius: 8px;
+            border: 1px solid #d5dfeb;
+            background: #f8fafc;
+            color: #334155;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .cmf-rules-tab-btn:hover {
+            background: #edf5ff;
+            border-color: #93c5fd;
+            color: #005fc7;
+        }
+
+        .cmf-rules-tab-btn.is-active {
+            background: #0073ed;
+            border-color: #0073ed;
+            color: #ffffff;
+        }
+
+        .cmf-rules-tab-pane {
+            display: none;
+        }
+
+        .cmf-rules-tab-pane.is-active {
+            display: block;
+        }
+
+        .cmf-rules-quick-add {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            padding: 10px 12px;
+            border: 1px solid #dbe5f0;
+            border-radius: 8px;
+            background: #f8fafc;
+            margin-bottom: 14px;
+        }
+
+        .cmf-rules-quick-add-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #1e3a60;
+            margin-right: 4px;
+        }
+
+        .cmf-rules-input,
+        .cmf-rules-select {
+            padding: 6px 9px;
+            font-size: 12.5px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #ffffff;
+            color: #1e293b;
+            box-sizing: border-box;
+        }
+
+        .cmf-rules-dim-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .cmf-rules-dim-pill {
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .cmf-rules-dim-pill:hover {
+            border-color: #0073ed;
+            color: #0073ed;
+        }
+
+        .cmf-rules-dim-pill.is-active {
+            background: #edf5ff;
+            border-color: #0073ed;
+            color: #005fc7;
+            font-weight: 700;
+        }
+
+        .cmf-rules-level-card {
+            border: 1px solid #dbe5f0;
+            border-radius: 10px;
+            background: #ffffff;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+        }
+
+        .cmf-rules-level-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .cmf-rules-score-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 9px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+        }
+
+        .cmf-rules-score-badge.score-4 { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .cmf-rules-score-badge.score-3 { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
+        .cmf-rules-score-badge.score-2 { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+        .cmf-rules-score-badge.score-1 { background: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; }
+
+        .cmf-rules-lead-input {
+            width: 100%;
+            min-height: 46px;
+            padding: 7px 10px;
+            border: 1px solid #d5dfeb;
+            border-radius: 6px;
+            font-size: 12.5px;
+            line-height: 1.45;
+            color: #1e293b;
+            background: #fbfdff;
+            resize: vertical;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        .cmf-rules-symptom-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .cmf-rules-symptom-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .cmf-rules-symptom-input {
+            flex: 1;
+            min-width: 0;
+            padding: 6px 9px;
+            border: 1px solid #dbe5f0;
+            border-radius: 6px;
+            font-size: 12.5px;
+            line-height: 1.4;
+            color: #1e293b;
+            background: #ffffff;
+        }
+
+        .cmf-rules-btn-sm {
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            color: #334155;
+            font-size: 11.5px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .cmf-rules-btn-sm:hover {
+            background: #edf5ff;
+            border-color: #0073ed;
+            color: #005fc7;
+        }
+
+        .cmf-rules-btn-sm.is-danger {
+            color: #b91c1c;
+            border-color: #fecaca;
+            background: #fef2f2;
+        }
+
+        .cmf-rules-btn-sm.is-danger:hover {
+            background: #fee2e2;
+            border-color: #f87171;
+        }
+
+        .cmf-rules-btn-sm.is-primary {
+            background: #0073ed;
+            border-color: #0073ed;
+            color: #ffffff;
+        }
+
+        .cmf-rules-btn-sm.is-primary:hover {
+            background: #005fc7;
+        }
+
+        .cmf-rules-add-inline {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .cmf-rules-guardrail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 12.5px;
+        }
+
+        .cmf-rules-guardrail-table th,
+        .cmf-rules-guardrail-table td {
+            border: 1px solid #dbe5f0;
+            padding: 7px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .cmf-rules-guardrail-table th {
+            background: #f1f5f9;
+            color: #1e3a60;
+            font-weight: 700;
+        }
+
+        .cmf-rules-ui-banner {
+            display: none;
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            border-radius: 7px;
+            font-size: 12.5px;
+            font-weight: 600;
+        }
+
+        .cmf-rules-ui-banner.is-ok {
+            display: block;
+            background: #ecfdf5;
+            border: 1px solid #6ee7b7;
+            color: #065f46;
+        }
+
+        .cmf-rules-ui-banner.is-err {
+            display: block;
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
         }
 
         .cmf-rules-editor {
@@ -2541,6 +2803,16 @@
     color: #111827;
     font-size: 12px;
     font-weight: 700;
+    line-height: 1.35;
+}
+
+#cmfAssistantMergeIdContainer {
+    align-items: center;
+    gap: 6px;
+    color: #111827;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: normal;
     line-height: 1.35;
 }
 
@@ -11267,6 +11539,8 @@ td:nth-child(odd), th:nth-child(odd) {
     }
 
     .cmf-assistant-metric-chip {
+        position: relative;
+        overflow: visible;
         border: 1px solid #d8e2ee;
         border-radius: 8px;
         padding: 8px 10px;
@@ -11276,6 +11550,84 @@ td:nth-child(odd), th:nth-child(odd) {
         flex-direction: column;
         justify-content: center;
         box-sizing: border-box;
+    }
+
+    .cmf-borderline-badge {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 5px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        color: #92400e;
+        font-family: var(--portal-font-ui);
+        font-size: 10.5px;
+        font-weight: 700;
+        line-height: 1.25;
+        cursor: help;
+        outline: none;
+    }
+
+    .cmf-borderline-badge:focus-visible {
+        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+    }
+
+    .cmf-borderline-tooltip {
+        position: absolute;
+        left: 0;
+        bottom: calc(100% + 8px);
+        width: max-content;
+        max-width: 280px;
+        padding: 8px 10px;
+        border-radius: 7px;
+        background: #1e293b;
+        color: #f8fafc;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.26);
+        font-family: var(--portal-font-ui);
+        font-size: 11.5px;
+        font-weight: 400;
+        line-height: 1.45;
+        white-space: normal;
+        word-wrap: break-word;
+        text-align: left;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(4px);
+        transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+        pointer-events: none;
+        z-index: 9999;
+    }
+
+    .cmf-borderline-tooltip::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 14px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #1e293b transparent transparent transparent;
+    }
+
+    .cmf-assistant-metric-chip:nth-child(3n) .cmf-borderline-tooltip {
+        left: auto;
+        right: 0;
+    }
+
+    .cmf-assistant-metric-chip:nth-child(3n) .cmf-borderline-tooltip::after {
+        left: auto;
+        right: 14px;
+    }
+
+    .cmf-borderline-badge:hover .cmf-borderline-tooltip,
+    .cmf-borderline-badge:focus .cmf-borderline-tooltip,
+    .cmf-borderline-badge:focus-visible .cmf-borderline-tooltip {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
     }
 
     .cmf-assistant-metric-chip.is-high {
@@ -17769,16 +18121,18 @@ td:nth-child(odd), th:nth-child(odd) {
 
             if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessmentSkeleton();
 
-            await fetch('CMF_Web_portal.aspx/GetSightingDescription', {
+            // Run the 1-call Sonnet 3-chapter story in parallel with SQA -> Recommendation (SQA always completes before Recommendation).
+            var storyPromise = fetch('CMF_Web_portal.aspx/GetSightingStoryBrief', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json; charset=utf-8' },
-                body: JSON.stringify({ cpId: payload.cpId, title: payload.title, platform: payload.platform })
+                body: JSON.stringify({ cpId: payload.cpId, title: payload.title, impact: payload.impact, platform: payload.platform })
             })
             .then(function (response) { return response.json(); })
             .then(function (data) {
                 if (window._cmfSightingChatPayload !== sightingSession) return;
                 var result = data && data.d ? data.d : data;
                 updateCmfAssistantPromotedId((result && result.PromotedId) ? result.PromotedId : 'NA');
+                updateCmfAssistantMergeId(result ? result.MergeId : '');
                 if (result && result.Title) {
                     var titleElem = document.getElementById('cmfRecTitle');
                     if (titleElem && (!titleElem.textContent || titleElem.textContent === 'N/A' || titleElem.textContent === 'Loading...' || titleElem.textContent === '-' || titleElem.textContent !== result.Title)) {
@@ -17788,126 +18142,110 @@ td:nth-child(odd), th:nth-child(odd) {
                     if (window._cmfSightingChatPayload) window._cmfSightingChatPayload.title = result.Title;
                     payload.title = result.Title;
                 }
-                if (!sightingDescriptionNode) return;
                 if (!result || result.Success !== true) {
-                    sightingDescriptionNode.innerHTML = '<span class="sighting-description-error">Description unavailable.</span>';
+                    var storyErrText = (result && result.Message) ? result.Message : 'AI analysis failed or model response failed. Please click Retry.';
+                    var storyErr = '<span class="sighting-description-error">' + escapeHtml(storyErrText) + '</span>';
+                    if (sightingDescriptionNode) sightingDescriptionNode.innerHTML = storyErr;
+                    if (fixStatusNode) fixStatusNode.innerHTML = storyErr;
+                    if (impactSummaryNode) impactSummaryNode.innerHTML = storyErr;
                     return;
                 }
-                sightingDescriptionNode.innerHTML = renderIssueDescriptionText(result.Summary || 'No description available.');
+                if (sightingDescriptionNode) sightingDescriptionNode.innerHTML = renderIssueDescriptionText(result.ProblemDescription || 'No description available.');
+                if (fixStatusNode) fixStatusNode.innerHTML = renderIssueDescriptionText(result.CurrentStatus || 'No fix status available.');
+                if (impactSummaryNode) impactSummaryNode.innerHTML = renderImpactSummaryText(result.ImpactSummary || 'No impact summary available.');
             })
             .catch(function () {
                 if (window._cmfSightingChatPayload !== sightingSession) return;
                 updateCmfAssistantPromotedId('NA');
-                if (sightingDescriptionNode) sightingDescriptionNode.innerHTML = '<span class="sighting-description-error">Description unavailable.</span>';
+                updateCmfAssistantMergeId('');
+                var storyErr = '<span class="sighting-description-error">AI analysis failed or model response failed. Please click Retry.</span>';
+                if (sightingDescriptionNode) sightingDescriptionNode.innerHTML = storyErr;
+                if (fixStatusNode) fixStatusNode.innerHTML = storyErr;
+                if (impactSummaryNode) impactSummaryNode.innerHTML = storyErr;
             });
 
-            if (window._cmfSightingChatPayload !== sightingSession) return;
-            await fetch('CMF_Web_portal.aspx/GetSightingFixStatus', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json; charset=utf-8' },
-                body: JSON.stringify({ cpId: payload.cpId, title: payload.title, platform: payload.platform })
-            })
-            .then(function (response) { return response.json(); })
-            .then(function (data) {
+            var sqaAndRecPromise = (async function () {
+                var sqaFailMessage = '';
                 if (window._cmfSightingChatPayload !== sightingSession) return;
-                var result = data && data.d ? data.d : data;
-                if (!fixStatusNode) return;
-                if (!result || result.Success !== true) {
-                    fixStatusNode.innerHTML = '<span class="sighting-description-error">Fix status unavailable.</span>';
-                    return;
-                }
-                fixStatusNode.innerHTML = renderIssueDescriptionText(result.Summary || 'No fix status available.');
-            })
-            .catch(function () {
-                if (window._cmfSightingChatPayload !== sightingSession) return;
-                if (fixStatusNode) fixStatusNode.innerHTML = '<span class="sighting-description-error">Fix status unavailable.</span>';
-            });
+                await fetch('CMF_Web_portal.aspx/GetSightingQualityAssessment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    body: JSON.stringify(payload)
+                })
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    if (window._cmfSightingChatPayload !== sightingSession) return;
+                    var result = data && data.d ? data.d : data;
+                    if (!result || result.Success !== true) {
+                        sqaFailMessage = (result && result.Message) ? result.Message : 'Sighting quality assessment unavailable.';
+                        if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessmentUnavailable(sqaFailMessage);
+                        return;
+                    }
+                    if (typeof result.PromotedId === 'string') updateCmfAssistantPromotedId(result.PromotedId || 'NA');
+                    if (typeof result.MergeId === 'string') updateCmfAssistantMergeId(result.MergeId);
+                    qualityAssessmentSucceeded = true;
+                    if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessment(result, payload);
+                })
+                .catch(function () {
+                    if (window._cmfSightingChatPayload !== sightingSession) return;
+                    sqaFailMessage = 'HSD Live API response has failed. Please refresh the portal.';
+                    if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessmentUnavailable(sqaFailMessage);
+                });
 
-            if (window._cmfSightingChatPayload !== sightingSession) return;
-            await fetch('CMF_Web_portal.aspx/GetSightingImpactSummary', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json; charset=utf-8' },
-                body: JSON.stringify({ cpId: payload.cpId, title: payload.title, impact: payload.impact, platform: payload.platform })
-            })
-            .then(function (response) { return response.json(); })
-            .then(function (data) {
                 if (window._cmfSightingChatPayload !== sightingSession) return;
-                var result = data && data.d ? data.d : data;
-                if (!impactSummaryNode) return;
-                if (!result || result.Success !== true) {
-                    impactSummaryNode.innerHTML = '<span class="sighting-description-error">Impact summary unavailable.</span>';
-                    return;
-                }
-                impactSummaryNode.innerHTML = renderImpactSummaryText(result.Summary || 'No impact summary available.');
-            })
-            .catch(function () {
-                if (window._cmfSightingChatPayload !== sightingSession) return;
-                if (impactSummaryNode) impactSummaryNode.innerHTML = '<span class="sighting-description-error">Impact summary unavailable.</span>';
-            });
-
-            if (window._cmfSightingChatPayload !== sightingSession) return;
-            await fetch('CMF_Web_portal.aspx/GetSightingQualityAssessment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json; charset=utf-8' },
-                body: JSON.stringify(payload)
-            })
-            .then(function (response) { return response.json(); })
-            .then(function (data) {
-                if (window._cmfSightingChatPayload !== sightingSession) return;
-                var result = data && data.d ? data.d : data;
-                if (!result || result.Success !== true) {
-                    if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessmentUnavailable();
-                    return;
-                }
-                qualityAssessmentSucceeded = true;
-                if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessment(result, payload);
-            })
-            .catch(function () {
-                if (window._cmfSightingChatPayload !== sightingSession) return;
-                if (qualityAssessmentNode) qualityAssessmentNode.innerHTML = renderSightingQualityAssessmentUnavailable();
-            });
-
-            if (window._cmfSightingChatPayload !== sightingSession) return;
-            if (!qualityAssessmentSucceeded) {
-                if (recommendationNode) recommendationNode.innerHTML = '<span class="sighting-description-error">CMF recommendation unavailable: sighting quality assessment could not be completed.</span>';
-                if (evidenceNode) evidenceNode.textContent = 'Retry CMF Analysis to complete the SQA completeness check.';
-                updateCmfAssistantTag('Unavailable');
-                return;
-            }
-            function applyRecommendationResult(recResult) {
-                if (!recResult || recResult.Success !== true) {
-                    if (evidenceNode) evidenceNode.textContent = (recResult && recResult.Message) ? recResult.Message : 'Unable to generate CMF recommendation.';
-                    if (recommendationNode) recommendationNode.innerHTML = '<span class="sighting-description-error">CMF recommendation unavailable.</span>';
+                if (!qualityAssessmentSucceeded) {
+                    var recUnavailableMsg = sqaFailMessage || 'CMF recommendation unavailable: sighting quality assessment could not be completed.';
+                    if (recommendationNode) {
+                        recommendationNode.innerHTML = '<div class="cmf-assistant-warning-banner" role="alert" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:6px;background:#fff4e5;border:1px solid #f0b429;color:#7a4f01;font-size:12px;">'
+                            + '<span>' + escapeHtml(recUnavailableMsg) + '</span>'
+                            + '<button type="button" class="btn btn-xs btn-warning" onclick="if (typeof refreshCmfAnalysis === \'function\') { refreshCmfAnalysis(event); }">Refresh</button>'
+                            + '</div>';
+                    }
+                    if (evidenceNode) evidenceNode.textContent = recUnavailableMsg;
                     updateCmfAssistantTag('Unavailable');
                     return;
                 }
-                if (qualityNode) qualityNode.textContent = 'Sighting quality and CMF readiness';
-                updatePendingRecommendationBadge(payload.cpId, recResult.Recommendation, recResult.OverallQualityScore);
-                updateCmfAssistantTag(recResult.Recommendation);
-                if (recommendationNode) recommendationNode.innerHTML = renderCmfAssistantRecommendation(recResult, payload);
-                if (evidenceNode) evidenceNode.innerHTML = renderMergedCmfRecommendation(recResult, payload);
-            }
-            if (evidenceNode) {
-                evidenceNode.innerHTML = '<div class="ai-skeleton-loader"><div style="font-size:13px;font-weight:600;color:#5c7087;">&#10024; Assessing sighting quality and CMF readiness...</div><div class="ai-skeleton-line ai-skeleton-title" style="width:55%;"></div><div class="ai-skeleton-line" style="width:95%;"></div><div class="ai-skeleton-line" style="width:88%;"></div></div>';
-            }
+                function applyRecommendationResult(recResult) {
+                    if (!recResult || recResult.Success !== true) {
+                        var errMsg = (recResult && recResult.Message) ? recResult.Message : 'AI analysis failed or model response failed. Please click Retry.';
+                        if (evidenceNode) evidenceNode.textContent = errMsg;
+                        if (recommendationNode) {
+                            recommendationNode.innerHTML = '<div class="cmf-assistant-warning-banner" role="alert" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:6px;background:#fff4e5;border:1px solid #f0b429;color:#7a4f01;font-size:12px;">'
+                                + '<span>' + escapeHtml(errMsg) + '</span>'
+                                + '<button type="button" class="btn btn-xs btn-warning" onclick="if (typeof refreshCmfAnalysis === \'function\') { refreshCmfAnalysis(event); }">Retry</button>'
+                                + '</div>';
+                        }
+                        updateCmfAssistantTag('Unavailable');
+                        return;
+                    }
+                    if (qualityNode) qualityNode.textContent = 'Sighting quality and CMF readiness';
+                    updatePendingRecommendationBadge(payload.cpId, recResult.Recommendation, recResult.OverallQualityScore);
+                    updateCmfAssistantTag(recResult.Recommendation);
+                    if (recommendationNode) recommendationNode.innerHTML = renderCmfAssistantRecommendation(recResult, payload);
+                    if (evidenceNode) evidenceNode.innerHTML = renderMergedCmfRecommendation(recResult, payload);
+                }
+                if (evidenceNode) {
+                    evidenceNode.innerHTML = '<div class="ai-skeleton-loader"><div style="font-size:13px;font-weight:600;color:#5c7087;">&#10024; Assessing sighting quality and CMF readiness...</div><div class="ai-skeleton-line ai-skeleton-title" style="width:55%;"></div><div class="ai-skeleton-line" style="width:95%;"></div><div class="ai-skeleton-line" style="width:88%;"></div></div>';
+                }
 
-            await fetch('CMF_Web_portal.aspx/GetCmfPendingRecommendation', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json; charset=utf-8' },
-                body: JSON.stringify(payload)
-            })
-            .then(function (response) { return response.json(); })
-            .then(function (data) {
-                if (window._cmfSightingChatPayload !== sightingSession) return;
-                var recResult = data && data.d ? data.d : data;
-                applyRecommendationResult(recResult);
-            })
-            .catch(function () {
-                if (window._cmfSightingChatPayload !== sightingSession) return;
-                if (recommendationNode) recommendationNode.innerHTML = '<span class="sighting-description-error">CMF recommendation unavailable.</span>';
-                if (evidenceNode) evidenceNode.textContent = 'Error while calling CMF recommendation service.';
-                updateCmfAssistantTag('Unavailable');
-            });
+                await fetch('CMF_Web_portal.aspx/GetCmfPendingRecommendation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    body: JSON.stringify(payload)
+                })
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    if (window._cmfSightingChatPayload !== sightingSession) return;
+                    var recResult = data && data.d ? data.d : data;
+                    applyRecommendationResult(recResult);
+                })
+                .catch(function () {
+                    if (window._cmfSightingChatPayload !== sightingSession) return;
+                    applyRecommendationResult({ Success: false, Message: 'AI analysis failed or model response failed. Please click Retry.' });
+                });
+            })();
+
+            await Promise.all([storyPromise, sqaAndRecPromise]);
 
         }
 
@@ -18258,18 +18596,8 @@ td:nth-child(odd), th:nth-child(odd) {
                 return;
             }
 
-            var cpIdToInvalidate = (window._cmfSightingChatPayload && window._cmfSightingChatPayload.cpId)
-                || (window._cmfCurrentModalPayload && window._cmfCurrentModalPayload.cpId);
-            if (cpIdToInvalidate) {
-                try {
-                    fetch('CMF_Web_portal.aspx/InvalidateSightingCache', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json; charset=utf-8' },
-                        body: JSON.stringify({ cpId: cpIdToInvalidate })
-                    });
-                } catch (e) { }
-            }
-
+            // Do NOT invalidate caches on close so re-opening the same ticket loads immediately with consistent data.
+            // Explicit Refresh button handles manual cache invalidation; HSD fingerprint handles live HSD edits automatically.
             drawerBg.classList.remove('show');
             drawer.classList.remove('show');
             stopCmfSightingChat();
@@ -24487,6 +24815,16 @@ td:nth-child(odd), th:nth-child(odd) {
             window.CMF_PORTAL.currentSightingQualityAssessment = { assessment: assessment, payload: payload };
             var scoreOutOfTen = formatSqaScoreOutOfTen(score);
 
+            var hasPartialImpact = false;
+            var sqaFields = (assessment && assessment.fields) ? assessment.fields : [];
+            for (var fi = 0; fi < sqaFields.length; fi++) {
+                var f = sqaFields[fi] || {};
+                if (String(f.fieldName || '').trim().toLowerCase() === 'impact' && String(f.status || '').trim().toLowerCase() === 'partial') {
+                    hasPartialImpact = true;
+                    break;
+                }
+            }
+
             var html = '<section class="cmf-assistant-feature-card cmf-quality-assessment-card ' + qualityStateClass + '">';
             html += '<div class="cmf-assistant-feature-head" style="margin-bottom:0;">';
             html += '<div><h3>Sighting Quality Assessment</h3></div>';
@@ -24495,6 +24833,12 @@ td:nth-child(odd), th:nth-child(odd) {
             html += '<button type="button" class="cmf-quality-refresh-btn" onclick="refreshSightingQualityAssessment(event)" title="Refresh SQA from HSD" aria-label="Refresh SQA from HSD"><span aria-hidden="true">&#8635;</span><span>Refresh</span></button>';
             html += '<button type="button" class="cmf-quality-details-btn" onclick="showSightingQualityDetails()">View details</button>';
             html += '</div></div>';
+            if (result.HsdWarning) {
+                html += '<div style="margin-top:6px; font-size:11.5px; color:#0b4f8a; background:#eef6ff; border:1px solid #84c5f4; border-radius:6px; padding:5px 8px;"><strong>HSD Unavailable (DB fallback):</strong> ' + escapeHtml(result.HsdWarning) + ' HSD-only fields (SoC Stepping, Steps to Reproduce) may appear missing until live HSD is reachable.</div>';
+            }
+            if (hasPartialImpact) {
+                html += '<div style="margin-top:6px; font-size:11.5px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:5px 8px;">CMF Owners/iDST: Please request the sighting owner to complete the Impact details.</div>';
+            }
             html += '</section>';
             return html;
         }
@@ -24505,8 +24849,9 @@ td:nth-child(odd), th:nth-child(odd) {
             '</section>';
         }
 
-        function renderSightingQualityAssessmentUnavailable() {
-            return '<section class="cmf-assistant-feature-card cmf-quality-assessment-card"><div class="cmf-assistant-feature-head"><div><h3>Sighting Quality Assessment</h3></div></div><div class="sighting-description-error">Sighting quality assessment unavailable.</div></section>';
+        function renderSightingQualityAssessmentUnavailable(message) {
+            var msg = message || 'Sighting quality assessment unavailable.';
+            return '<section class="cmf-assistant-feature-card cmf-quality-assessment-card"><div class="cmf-assistant-feature-head"><div><h3>Sighting Quality Assessment</h3></div></div><div class="sighting-description-error">' + escapeHtml(msg) + '</div></section>';
         }
 
         async function refreshSightingQualityAssessment(event) {
@@ -25057,11 +25402,21 @@ td:nth-child(odd), th:nth-child(odd) {
             var evidence = summarizeSqaEvidenceMeaning(field, status);
             var evidenceValue = summarizeSqaEvidenceValue(field);
             var hasMissingEvidence = status === 'Missing' || isGenericMissingSqaReason(cleanSqaReasonText(field.characteristic));
+            if (status === 'Complete'
+                && String(field.fieldName || '').trim().toLowerCase() === 'steps to reproduce'
+                && (/fetched from the (?:hsd |problem )?description|found in (?:hsd |problem )?description/i.test(String(field.characteristic || ''))
+                    || /^(?:hsd |problem )?description\s*:/i.test(String(field.evidence || '').trim()))) {
+                return 'Steps to reproduce were fetched from the HSD Description section because the to_reproduce field was blank or incomplete.';
+            }
             if (status === 'Missing') {
                 return buildSqaNaturalSqaReason('missing', insight, evidence, evidenceValue, hasMissingEvidence);
             }
             if (status === 'Partial') {
-                return buildSqaNaturalSqaReason('partial', insight, evidence, evidenceValue, hasMissingEvidence);
+                var partialReason = buildSqaNaturalSqaReason('partial', insight, evidence, evidenceValue, hasMissingEvidence);
+                if (String(field.fieldName || '').trim().toLowerCase() === 'impact') {
+                    partialReason += ' CMF Owners/iDST: Please request the sighting owner to complete the Impact details.';
+                }
+                return partialReason;
             }
             if (status === 'Conflicting') {
                 return buildSqaNaturalSqaReason('conflicting', insight, evidence, evidenceValue, hasMissingEvidence);
@@ -25098,14 +25453,12 @@ td:nth-child(odd), th:nth-child(odd) {
             text = cleanSqaEvidenceValueForSentence(text);
             text = text.replace(/\s*;\s*/g, '; ');
             if (/^no usable value found/i.test(text)) return '';
-            if (text.length > 150) text = text.slice(0, 147).replace(/\s+\S*$/, '') + '...';
             return text;
         }
 
         function cleanSqaEvidenceValueForSentence(value) {
             var text = String(value || '').replace(/\s+/g, ' ').trim();
             text = text.replace(/\[[^\]]+\]/g, ' ').replace(/\s+/g, ' ').trim();
-            text = text.replace(/\b(blocking|customer|stress\s+test|fvt)\b/gi, ' ').replace(/\s+/g, ' ').trim();
             text = text.replace(/\bthe units occur hang when run\b/i, 'the units hang during the run');
             text = text.replace(/\boccur hang\b/i, 'hangs');
             text = text.replace(/\brun\b$/i, 'run');
@@ -25525,12 +25878,23 @@ td:nth-child(odd), th:nth-child(odd) {
             payload = payload || {};
             var recommendation = normalizeCmfRecommendationLabel(result.Recommendation || 'CMF_REVIEW');
             var rules = normalizeCmfDimensionScores(result.RuleScores || []);
-            var score = calculateDisplayedCmfScore(rules);
-            if (!score) score = normalizeWeightedCmfScore(result.OverallQualityScore || 0);
+            var score = normalizeWeightedCmfScore(result.OverallQualityScore || 0);
+            if (!score) score = calculateDisplayedCmfScore(rules);
             var scoreDisplay = formatWeightedCmfScore(score) || '0.0';
             var scorePercent = Math.max(0, Math.min(100, (parseFloat(scoreDisplay) / 4) * 100));
             var reasons = buildCmfAssistantRecommendationReasoning(recommendation, score, rules, result.Evidence || '', payload);
             var html = '<div class="cmf-assistant-rec-shell">';
+            if (result.UsedFallback) {
+                html += '<div class="cmf-assistant-warning-banner" role="alert" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;margin-bottom:8px;border-radius:6px;background:#fff4e5;border:1px solid #f0b429;color:#7a4f01;font-size:12px;">'
+                    + '<span><strong>Fallback Mode (AI unavailable):</strong> Deterministic rules were used because the AI service timed out or was unavailable.</span>'
+                    + '<button type="button" class="btn btn-xs btn-warning" onclick="if (typeof refreshCmfAnalysis === \'function\') { refreshCmfAnalysis(event); }">Retry AI</button>'
+                    + '</div>';
+            }
+            if (result.HsdWarning) {
+                html += '<div class="cmf-assistant-warning-banner" role="status" style="padding:8px 10px;margin-bottom:8px;border-radius:6px;background:#eef6ff;border:1px solid #84c5f4;color:#0b4f8a;font-size:12px;">'
+                    + '<strong>HSD Retrieval Notice:</strong> ' + escapeHtml(result.HsdWarning)
+                    + '</div>';
+            }
             html += '<div class="cmf-assistant-rec-top">';
             html += '<div class="cmf-assistant-overall-score" aria-label="Overall Score ' + escapeHtml(scoreDisplay) + ' out of 4">';
             html += '<span>Overall Score <button type="button" class="cmf-score-info-icon" onclick="toggleCmfScoreBandTooltip(event)" aria-label="Show Score to Tag Guide" aria-expanded="false">i</button></span>';
@@ -25539,7 +25903,7 @@ td:nth-child(odd), th:nth-child(odd) {
             html += '</div>';
             html += renderCmfMetricChips(rules);
             html += '</div>';
-            html += '<div class="cmf-assistant-reasoning-box"><h4>Reasoning</h4>' + renderCmfReasoningBullets(reasons) + '</div>';
+            html += '<div class="cmf-assistant-reasoning-box"><h4>AI Recommendation</h4>' + renderCmfReasoningBullets(reasons) + '</div>';
             html += renderCmfRecommendationFeedbackBar(recommendation, payload);
             html += '</div>';
             return html;
@@ -25594,6 +25958,32 @@ td:nth-child(odd), th:nth-child(odd) {
             if (promotedLinkNode) {
                 promotedLinkNode.removeAttribute('href');
                 promotedLinkNode.style.display = 'none';
+            }
+            updateCmfAssistantMergeId('');
+        }
+
+        function updateCmfAssistantMergeId(mergeId) {
+            var container = document.getElementById('cmfAssistantMergeIdContainer');
+            var mergeIdNode = document.getElementById('cmfAssistantMergeId');
+            var mergeLinkNode = document.getElementById('cmfAssistantMergeHsdLink');
+            var clean = String(mergeId || '').trim();
+            var hasMerge = clean && clean.toUpperCase() !== 'NA' && clean.toUpperCase() !== 'N/A' && clean !== '-';
+            if (container) {
+                container.style.display = hasMerge ? 'inline-flex' : 'none';
+            }
+            if (mergeIdNode) {
+                mergeIdNode.textContent = hasMerge ? clean : '';
+            }
+            if (mergeLinkNode) {
+                if (hasMerge) {
+                    mergeLinkNode.href = 'https://hsdes.intel.com/appstore/article/#/' + encodeURIComponent(clean);
+                    mergeLinkNode.style.display = 'inline-flex';
+                    mergeLinkNode.setAttribute('aria-label', 'Open merged issue ' + clean + ' in HSD');
+                    mergeLinkNode.setAttribute('title', 'Open merged issue ' + clean + ' in HSD');
+                } else {
+                    mergeLinkNode.removeAttribute('href');
+                    mergeLinkNode.style.display = 'none';
+                }
             }
         }
 
@@ -26018,7 +26408,9 @@ td:nth-child(odd), th:nth-child(odd) {
             if (!list.length) list = ['No reasoning returned; review the score details and issue evidence.'];
             var points = list.slice(0, 6);
             for (var pointIndex = 0; pointIndex < points.length; pointIndex++) {
-                html += '<li>' + renderAssistantRichText(points[pointIndex]) + '</li>';
+                var rendered = renderAssistantRichText(points[pointIndex])
+                    .replace(/\s*(<strong>Note<\/strong>\s*-)/i, '<br/>$1');
+                html += '<li>' + rendered + '</li>';
             }
             return html + '</ul></div>';
         }
@@ -26037,9 +26429,15 @@ td:nth-child(odd), th:nth-child(odd) {
                     key = factor.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
                 }
                 seenFactors[key] = true;
+                var isBorderline = String(rule.MatchConfidence || '').trim().toLowerCase() === 'borderline';
+                var borderlineTip = String(rule.BorderlineNote || '').trim() || 'No direct match in active scoring guidelines';
+                var borderlineBadge = isBorderline
+                    ? '<span class="cmf-borderline-badge" tabindex="0">Low Confidence<span class="cmf-borderline-tooltip" role="tooltip">' + escapeHtml(borderlineTip) + '</span></span>'
+                    : '';
                 html += '<div class="cmf-assistant-metric-chip ' + escapeHtml(getCmfMetricScoreClass(score)) + '">';
                 html += '<div class="cmf-assistant-metric-main"><span class="cmf-assistant-metric-name">' + escapeHtml(buildCmfMetricDisplayName(rule)) + '</span><span class="cmf-assistant-metric-value">' + escapeHtml(score) + '/4</span></div>';
                 html += '<div class="cmf-assistant-metric-factor">' + escapeHtml(factor) + '</div>';
+                if (borderlineBadge) html += '<div>' + borderlineBadge + '</div>';
                 html += '</div>';
             }
             return html + '</div>';
@@ -26048,20 +26446,23 @@ td:nth-child(odd), th:nth-child(odd) {
         function calculateDisplayedCmfScore(rules) {
             var weights = { S: 0.30, O: 0.15, D: 0.10, B: 0.30, RVP: 0.15 };
             var total = 0;
+            var weightSum = 0;
             var metricCount = 0;
             var seen = {};
             for (var i = 0; i < (rules || []).length; i++) {
                 var rule = rules[i] || {};
                 var id = String(rule.RuleId || '').toUpperCase();
-                if (!weights.hasOwnProperty(id)) continue;
+                if (!weights.hasOwnProperty(id) || seen[id]) continue;
                 var scoreText = normalizeDimensionScore(rule.Score);
-                if (!scoreText || seen[id]) return 0;
+                if (!scoreText) continue;
                 var score = parseInt(scoreText, 10);
                 total += score * weights[id];
+                weightSum += weights[id];
                 seen[id] = true;
                 metricCount++;
             }
-            return metricCount === 5 ? total : 0;
+            if (metricCount === 5) return total;
+            return weightSum > 0 ? (total / weightSum) : 0;
         }
 
         function buildCmfAssistantRecommendationReasoning(recommendation, score, rules, evidenceText, payload) {
@@ -26328,37 +26729,19 @@ td:nth-child(odd), th:nth-child(odd) {
             if (id === 'O') {
                 var occ = humanizeCmfOccurrenceFactor(contextText);
                 if (occ) return occ;
-                return score >= 4 ? '100% consistent' : (score === 3 ? '10-40% occasional' : '5% sporadic');
-            }
-            if (id === 'S') {
-                if (/display blank|screen blank|goes blank|monitor blank/.test(lower)) return 'Intermittent display blank';
-                if (/daisy chain|tbt|thunderbolt/.test(lower) && /not recognized|cannot be recognized|lost/.test(lower)) return 'TBT daisy chain device lost';
-                if (/bsod|blue screen/.test(lower)) return 'BSOD stop code crash';
-                if (/hang|freeze|stuck|lockup/.test(lower)) return 'System hard hang';
-                if (/black screen|blank|no display|no video/.test(lower)) return 'Display goes black / no video';
-                return score >= 4 ? 'Critical feature failure' : (score === 3 ? 'Intermittent display blank' : 'Secondary feature degradation');
-            }
-            if (id === 'D') {
-                if (/s4|s3|s5|s0ix|hibernate|resume|sleep|powercycle/.test(lower)) return 'S4 cycling';
-                if (/tbt|thunderbolt|usb4|usb-c|type-c|dock|plug/.test(lower)) return 'Device plug / reconnect flow';
-                return score >= 4 ? 'Desktop idle / normal boot' : 'S4 cycling';
-            }
-            if (id === 'B') {
-                if (/p1-showstopper|p1 showstopper|showstopper|ats p1/.test(lower)) return 'P1 showstopper';
-                if (/launch|fcs|start ship|mass production|prq/.test(lower)) return 'Launch gate blocker';
-                if (/fvt|sit|phase exit|validation/.test(lower)) return 'Validation gate at risk';
-                return score >= 4 ? 'P1 showstopper' : 'Validation gate delayed';
+                return 'Occurrence details in sighting';
             }
             if (id === 'RVP') {
-                if (score >= 4 || /yes|repro/i.test(lower)) return 'Confirmed on RVP';
+                if (score >= 4 || /\byes\b/i.test(lower)) return 'Confirmed on RVP';
                 if (score === 1 || /\bno\b/i.test(lower)) return 'Isolated to customer unit';
                 if (/unknown/i.test(lower)) return 'Unknown';
                 return 'Blank';
             }
-            if (id === 'CX') {
-                if (/hang|freeze|lockup|unusable/.test(lower)) return 'Laptop becomes unusable';
-                return score >= 4 ? 'Severe disruption to user flow' : 'Noticeable user annoyance';
-            }
+            // Do not run frontend keyword regexes or fabricate symptoms/rates/priorities from numeric scores (AUD-01, AUD-02, AUD-03).
+            if (id === 'S') return 'Severity details in sighting';
+            if (id === 'D') return 'Trigger scenario in sighting';
+            if (id === 'B') return 'Business impact in sighting';
+            if (id === 'CX') return 'Customer experience in sighting';
             return 'Evidence reviewed';
         }
 
@@ -26367,14 +26750,10 @@ td:nth-child(odd), th:nth-child(odd) {
             var score = parseInt(normalizeDimensionScore((rule || {}).Score || '1'), 10);
             var evaluation = String((rule || {}).Evaluation || '').replace(/\s+/g, ' ').trim();
             if (id === 'RVP') {
-                if (score >= 4 || /yes|repro/i.test(evaluation)) return 'Confirmed on RVP';
+                if (score >= 4 || /\byes\b/i.test(evaluation)) return 'Confirmed on RVP';
                 if (score === 1 || /\bno\b/i.test(evaluation)) return 'Isolated to customer unit';
                 if (/unknown/i.test(evaluation)) return 'Unknown';
                 return 'Blank';
-            }
-            if (id === 'O') {
-                var humanizedOcc = humanizeCmfOccurrenceFactor(evaluation);
-                if (humanizedOcc) return humanizedOcc;
             }
             var evidence = evaluation.match(/\bEvidence\s*:\s*([\s\S]*)$/i);
             if (!evaluation || (evidence && /^(?:missing evidence|evidence not stated in ticket)[.!]?$/i.test(evidence[1].trim()))) {
@@ -26383,26 +26762,14 @@ td:nth-child(odd), th:nth-child(odd) {
             }
             var match = evaluation.match(/^Contributing factor\s*:\s*([\s\S]*?)(?:\.\s*Evidence\s*:|$)/i);
             var factor = (match ? match[1] : (evidence ? '' : evaluation)).replace(/[.!]+$/g, '').trim();
-            var humanizedFactor = humanizeCmfOccurrenceFactor(factor);
-            if (humanizedFactor) return humanizedFactor;
+            if (id === 'O' && factor) {
+                return factor.replace(/[.,;:]+$/, '');
+            }
             factor = factor.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-            if (!factor || factor.length > 84 || factor.split(/\s+/).length > 10 || /^(?:(?:low|medium|moderate|high|very high|frequent|very frequent|critical)\s*[-:]|workaround clarity$|functional impact evidence$|business exposure$|customer visibility$|repro frequency$|detection evidence$|specific factor unavailable$)/i.test(factor)) {
+            if (!factor || /^(?:(?:low|medium|moderate|high|very high|frequent|very frequent|critical)\s*[-:]|workaround clarity$|functional impact evidence$|business exposure$|customer visibility$|repro frequency$|detection evidence$|specific factor unavailable$)/i.test(factor)) {
                 return buildDistinctClientMetricFactor(id, score, evaluation);
             }
-            factor = factor.replace(/_/g, ' ');
-
-            // If factor is a full sentence, distill into crisp phrase
-            var clauseMatch = factor.match(/^([^,;—–]+)/);
-            if (clauseMatch) factor = clauseMatch[1].trim();
-
-            var words = factor.split(/\s+/);
-            if (words.length > 5) {
-                var trimmed = words.slice(0, 5);
-                while (trimmed.length > 2 && /^(?:are|is|was|were|the|a|an|and|or|in|at|to|for|of|with|by|from|below|under|causes?|terminates?)$/i.test(trimmed[trimmed.length - 1])) {
-                    trimmed.pop();
-                }
-                factor = trimmed.join(' ');
-            }
+            // Preserve the LLM's grounded contributing factor without a hard 5-word cutoff (AUD-15).
             return factor.replace(/[.,;:]+$/, '');
         }
 
@@ -27881,38 +28248,406 @@ Submit
                             <div class="cmf-rules-editor-shell">
                                 <div class="portal-surface-card cmf-rules-card">
                                     <h3 class="cmf-rules-title">CMF Qualification Rules</h3>
-                                    <asp:TextBox ID="txtCmfRules" runat="server" TextMode="MultiLine" CssClass="cmf-rules-editor" />
-                                    <div class="cmf-rules-actions">
+                                    <asp:Label ID="lblCmfRulesStatus" runat="server" CssClass="cmf-rules-status" />
+                                    <div id="cmfRulesUiBanner" class="cmf-rules-ui-banner"></div>
+
+                                    <div class="cmf-rules-tabs-bar" role="tablist">
+                                        <button type="button" class="cmf-rules-tab-btn is-active" data-rules-tab="rubrics" onclick="switchCmfRulesTab('rubrics')">1. Scoring Rubrics &amp; Symptoms</button>
+                                        <button type="button" class="cmf-rules-tab-btn" data-rules-tab="guardrails" onclick="switchCmfRulesTab('guardrails')">2. Guardrails &amp; Thresholds</button>
+                                        <button type="button" class="cmf-rules-tab-btn" data-rules-tab="import" onclick="switchCmfRulesTab('import')">3. Excel Import &amp; Jargon Manager</button>
+                                    </div>
+
+                                    <!-- TAB 1: Scoring Rubrics & Symptoms -->
+                                    <div id="cmfRulesTabRubrics" class="cmf-rules-tab-pane is-active">
+                                        <div class="cmf-rules-quick-add">
+                                            <span class="cmf-rules-quick-add-label">Quick Add Symptom / Condition:</span>
+                                            <select id="cmfQuickDimSelect" class="cmf-rules-select" style="min-width:150px;"></select>
+                                            <select id="cmfQuickScoreSelect" class="cmf-rules-select" style="width:110px;">
+                                                <option value="4">Score 4</option>
+                                                <option value="3">Score 3</option>
+                                                <option value="2" selected="selected">Score 2</option>
+                                                <option value="1">Score 1</option>
+                                            </select>
+                                            <input id="cmfQuickSymptomInput" type="text" class="cmf-rules-input" style="flex:1;min-width:240px;" placeholder="e.g. BIOS POST time slower by 2-5s with 1 DIMM, system still boots" />
+                                            <button type="button" class="cmf-rules-btn-sm is-primary" onclick="cmfRulesQuickAddSymptom()">+ Add Symptom</button>
+                                        </div>
+
+                                        <div id="cmfRulesDimPills" class="cmf-rules-dim-pills"></div>
+                                        <div id="cmfRulesLevelsContainer">
+                                            <div style="color:#64748b;font-size:12.5px;padding:10px 0;">Loading scoring rubrics from cmf-assistant-config.json...</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- TAB 2: Guardrails & Thresholds -->
+                                    <div id="cmfRulesTabGuardrails" class="cmf-rules-tab-pane">
+                                        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-bottom:14px;padding:10px 12px;border:1px solid #dbe5f0;border-radius:8px;background:#f8fafc;">
+                                            <div>
+                                                <label for="cmfOkMinScoreInput" style="display:block;font-size:12px;font-weight:700;color:#1e3a60;margin-bottom:4px;">CMF_OK Min Score (out of 4)</label>
+                                                <input id="cmfOkMinScoreInput" type="number" step="0.05" min="1" max="4" class="cmf-rules-input" style="width:130px;" />
+                                            </div>
+                                            <div>
+                                                <label for="cmfReviewMinScoreInput" style="display:block;font-size:12px;font-weight:700;color:#1e3a60;margin-bottom:4px;">CMF_REVIEW Min Score (out of 4)</label>
+                                                <input id="cmfReviewMinScoreInput" type="number" step="0.05" min="1" max="4" class="cmf-rules-input" style="width:130px;" />
+                                            </div>
+                                            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding-bottom:4px;">
+                                                <label style="font-size:12px;color:#334155;display:inline-flex;align-items:center;gap:5px;"><input id="chkReqComponent" type="checkbox" /> Component in Description</label>
+                                                <label style="font-size:12px;color:#334155;display:inline-flex;align-items:center;gap:5px;"><input id="chkReqRvpDesc" type="checkbox" /> RVP Repro in Description</label>
+                                                <label style="font-size:12px;color:#334155;display:inline-flex;align-items:center;gap:5px;"><input id="chkReqPromoted" type="checkbox" /> Promoted ID in Header</label>
+                                                <label style="font-size:12px;color:#334155;display:inline-flex;align-items:center;gap:5px;"><input id="chkReqRvpReason" type="checkbox" /> RVP Repro in Reasoning</label>
+                                            </div>
+                                        </div>
+
+                                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                                            <span style="font-size:13px;font-weight:700;color:#143a5a;">Gating Guardrails (Priority Order)</span>
+                                            <button type="button" class="cmf-rules-btn-sm" onclick="cmfRulesAddGuardrailRow()">+ Add Guardrail</button>
+                                        </div>
+                                        <table class="cmf-rules-guardrail-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:24%;">Priority / Name</th>
+                                                    <th style="width:42%;">Condition / Rule</th>
+                                                    <th style="width:26%;">Rationale</th>
+                                                    <th style="width:8%;">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="cmfRulesGuardrailsBody"></tbody>
+                                        </table>
+                                        <div class="cmf-rules-actions">
+                                            <button type="button" class="modern-button" onclick="cmfRulesSaveGuardrails()">Save Guardrails &amp; Thresholds</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- TAB 3: Excel Import & Jargon Manager -->
+                                    <div id="cmfRulesTabImport" class="cmf-rules-tab-pane">
+                                        <p class="cmf-rules-note" style="margin-top:0;">Upload an updated CMF Scoring Guidelines workbook (<strong>.xlsx</strong>) for bulk updates to <code>cmf-assistant-config.json</code> (rubrics, weights, disposition bands, and guardrails).</p>
+                                        <div style="margin:10px 0 16px 0;padding:12px;border:1px solid #dbe5f0;border-radius:8px;background:#f8fafc;">
+                                            <label style="font-size:12px;font-weight:700;color:#1e3a60;display:block;margin-bottom:6px;">Upload Scoring Guidelines Excel (.xlsx):</label>
+                                            <asp:FileUpload ID="fuScoringExcel" runat="server" accept=".xlsx" style="font-size:12px;margin-bottom:8px;" />
+                                            <div>
+                                                <asp:Button ID="btnImportScoringExcel" runat="server" Text="Import Excel &amp; Update JSON" CssClass="modern-button" OnClick="btnImportScoringExcel_Click" />
+                                            </div>
+                                        </div>
+                                        <div style="padding:12px;border:1px solid #dbe5f0;border-radius:8px;background:#f8fafc;">
+                                            <label style="font-size:12px;font-weight:700;color:#1e3a60;display:block;margin-bottom:6px;">Add Platform / Component Jargon Synonym:</label>
+                                            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                                                <asp:DropDownList ID="ddlJargonCategory" runat="server" style="padding:5px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;">
+                                                    <asp:ListItem Text="Platform Family (e.g. NVL, PTL)" Value="platformFamilies" />
+                                                    <asp:ListItem Text="Platform SKU (e.g. NVL-H)" Value="platformSkus" />
+                                                    <asp:ListItem Text="Component (e.g. Audio, iGFX (Graphics))" Value="componentSynonyms" />
+                                                </asp:DropDownList>
+                                                <asp:TextBox ID="txtJargonTarget" runat="server" placeholder="Target Code (e.g. NVL or Audio)" style="padding:5px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;width:150px;" />
+                                                <asp:TextBox ID="txtJargonSynonym" runat="server" placeholder="Synonym (e.g. novalake or soundwire)" style="padding:5px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;width:170px;" />
+                                                <asp:Button ID="btnAddJargonMapping" runat="server" Text="Save Synonym" CssClass="modern-button" OnClick="btnAddJargonMapping_Click" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Legacy hidden controls preserved for server-side compatibility -->
+                                    <div style="display:none;">
+                                        <asp:TextBox ID="txtCmfRules" runat="server" TextMode="MultiLine" CssClass="cmf-rules-editor" />
                                         <asp:Button ID="btnSaveCmfRules" runat="server" Text="Save Rules" CssClass="modern-button" OnClick="btnSaveCmfRules_Click" />
                                         <asp:Button ID="btnResetCmfRules" runat="server" Text="Reset Defaults" CssClass="modern-button" OnClick="btnResetCmfRules_Click" />
                                     </div>
-                                    <asp:Label ID="lblCmfRulesStatus" runat="server" CssClass="cmf-rules-status" />
-                                </div>
-                                <div class="portal-surface-card cmf-rules-card">
-                                    <h3 class="cmf-rules-title">Import Scoring Guidelines (.xlsx) &amp; Jargon Manager</h3>
-                                    <p class="cmf-rules-note">Upload an updated CMF Scoring Guidelines workbook (<strong>.xlsx</strong>) to automatically update <code>cmf-assistant-config.json</code> (rubrics, weights, disposition bands, and guardrails) without editing JSON manually.</p>
-                                    <div style="margin:10px 0 16px 0;padding:10px;border:1px solid #dbe5f0;border-radius:8px;background:#f8fafc;">
-                                        <label style="font-size:12px;font-weight:700;color:#1e3a60;display:block;margin-bottom:6px;">Upload Scoring Guidelines Excel (.xlsx):</label>
-                                        <asp:FileUpload ID="fuScoringExcel" runat="server" accept=".xlsx" style="font-size:12px;margin-bottom:8px;" />
-                                        <div>
-                                            <asp:Button ID="btnImportScoringExcel" runat="server" Text="Import Excel &amp; Update JSON" CssClass="modern-button" OnClick="btnImportScoringExcel_Click" />
-                                        </div>
-                                    </div>
-                                    <div style="padding:10px;border:1px solid #dbe5f0;border-radius:8px;background:#f8fafc;">
-                                        <label style="font-size:12px;font-weight:700;color:#1e3a60;display:block;margin-bottom:6px;">Add Platform / Component Jargon Synonym:</label>
-                                        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
-                                            <asp:DropDownList ID="ddlJargonCategory" runat="server" style="padding:5px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;">
-                                                <asp:ListItem Text="Platform Family (e.g. NVL, PTL)" Value="platformFamilies" />
-                                                <asp:ListItem Text="Platform SKU (e.g. NVL-H)" Value="platformSkus" />
-                                                <asp:ListItem Text="Component (e.g. Audio, iGFX (Graphics))" Value="componentSynonyms" />
-                                            </asp:DropDownList>
-                                            <asp:TextBox ID="txtJargonTarget" runat="server" placeholder="Target Code (e.g. NVL or Audio)" style="padding:5px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;width:150px;" />
-                                            <asp:TextBox ID="txtJargonSynonym" runat="server" placeholder="Synonym (e.g. novalake or soundwire)" style="padding:5px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;width:170px;" />
-                                            <asp:Button ID="btnAddJargonMapping" runat="server" Text="Save Synonym" CssClass="modern-button" OnClick="btnAddJargonMapping_Click" />
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
+                            <script type="text/javascript">
+                                (function () {
+                                    var cmfRulesState = { config: null, activeDimId: 'S' };
+
+                                    function esc(v) {
+                                        return String(v == null ? '' : v)
+                                            .replace(/&/g, '&amp;')
+                                            .replace(/</g, '&lt;')
+                                            .replace(/>/g, '&gt;')
+                                            .replace(/"/g, '&quot;');
+                                    }
+
+                                    function showBanner(ok, text) {
+                                        var el = document.getElementById('cmfRulesUiBanner');
+                                        if (!el) return;
+                                        el.className = 'cmf-rules-ui-banner ' + (ok ? 'is-ok' : 'is-err');
+                                        el.textContent = text || '';
+                                    }
+
+                                    function postWebMethod(method, payload) {
+                                        return fetch('CMF_Web_portal.aspx/' + method, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                                            body: JSON.stringify(payload || {})
+                                        }).then(function (r) { return r.json(); }).then(function (j) { return j && j.d ? j.d : j; });
+                                    }
+
+                                    window.switchCmfRulesTab = function (tabName) {
+                                        var map = { rubrics: 'cmfRulesTabRubrics', guardrails: 'cmfRulesTabGuardrails', import: 'cmfRulesTabImport' };
+                                        var btns = document.querySelectorAll('.cmf-rules-tab-btn');
+                                        for (var i = 0; i < btns.length; i++) {
+                                            btns[i].classList.toggle('is-active', btns[i].getAttribute('data-rules-tab') === tabName);
+                                        }
+                                        Object.keys(map).forEach(function (k) {
+                                            var pane = document.getElementById(map[k]);
+                                            if (pane) pane.classList.toggle('is-active', k === tabName);
+                                        });
+                                    };
+
+                                    function renderAll() {
+                                        var cfg = cmfRulesState.config;
+                                        if (!cfg || !cfg.dimensions) return;
+
+                                        var quickSel = document.getElementById('cmfQuickDimSelect');
+                                        if (quickSel) {
+                                            var opts = '';
+                                            for (var i = 0; i < cfg.dimensions.length; i++) {
+                                                var d = cfg.dimensions[i];
+                                                opts += '<option value="' + esc(d.id) + '"' + (d.id === cmfRulesState.activeDimId ? ' selected' : '') + '>' + esc(d.name) + ' (' + esc(d.id) + ')</option>';
+                                            }
+                                            quickSel.innerHTML = opts;
+                                        }
+
+                                        var pillsEl = document.getElementById('cmfRulesDimPills');
+                                        if (pillsEl) {
+                                            var pHtml = '';
+                                            for (var i = 0; i < cfg.dimensions.length; i++) {
+                                                var d = cfg.dimensions[i];
+                                                var activeCls = d.id === cmfRulesState.activeDimId ? ' is-active' : '';
+                                                pHtml += '<button type="button" class="cmf-rules-dim-pill' + activeCls + '" onclick="cmfRulesSelectDim(\'' + esc(d.id) + '\')">'
+                                                    + esc(d.name) + ' (' + esc(d.id) + ' &middot; ' + esc(d.weight) + '%)</button>';
+                                            }
+                                            pillsEl.innerHTML = pHtml;
+                                        }
+
+                                        renderActiveDimensionLevels();
+                                        renderGuardrailsTab();
+                                    }
+
+                                    window.cmfRulesSelectDim = function (dimId) {
+                                        cmfRulesState.activeDimId = dimId;
+                                        renderAll();
+                                    };
+
+                                    function renderActiveDimensionLevels() {
+                                        var container = document.getElementById('cmfRulesLevelsContainer');
+                                        var cfg = cmfRulesState.config;
+                                        if (!container || !cfg || !cfg.dimensions) return;
+                                        var dim = null;
+                                        for (var i = 0; i < cfg.dimensions.length; i++) {
+                                            if (cfg.dimensions[i].id === cmfRulesState.activeDimId) { dim = cfg.dimensions[i]; break; }
+                                        }
+                                        if (!dim && cfg.dimensions.length > 0) {
+                                            dim = cfg.dimensions[0];
+                                            cmfRulesState.activeDimId = dim.id;
+                                        }
+                                        if (!dim) { container.innerHTML = ''; return; }
+
+                                        var html = '';
+                                        var levels = dim.levels || [];
+                                        for (var l = 0; l < levels.length; l++) {
+                                            var lvl = levels[l];
+                                            var score = lvl.score;
+                                            var items = lvl.items || [];
+                                            html += '<div class="cmf-rules-level-card" data-dim="' + esc(dim.id) + '" data-score="' + esc(score) + '">';
+                                            html += '<div class="cmf-rules-level-header">';
+                                            html += '<div style="display:flex;align-items:center;gap:8px;"><span class="cmf-rules-score-badge score-' + esc(score) + '">Score ' + esc(score) + ' / ' + esc(cfg.scaleMax || 4) + '</span>'
+                                                + '<span style="font-size:12px;color:#64748b;">' + items.length + ' symptom / condition ' + (items.length === 1 ? 'item' : 'items') + '</span></div>';
+                                            html += '<button type="button" class="cmf-rules-btn-sm is-primary" onclick="cmfRulesSaveLevel(\'' + esc(dim.id) + '\',' + score + ')">Save Score ' + score + ' Changes</button>';
+                                            html += '</div>';
+
+                                            html += '<label style="display:block;font-size:11.5px;font-weight:700;color:#475569;margin-bottom:4px;">Score Definition / Summary:</label>';
+                                            html += '<textarea class="cmf-rules-lead-input" id="cmfLead_' + esc(dim.id) + '_' + score + '">' + esc(lvl.leadText || '') + '</textarea>';
+
+                                            html += '<label style="display:block;font-size:11.5px;font-weight:700;color:#475569;margin-bottom:4px;">Symptoms &amp; Conditions:</label>';
+                                            html += '<div class="cmf-rules-symptom-list" id="cmfItems_' + esc(dim.id) + '_' + score + '">';
+                                            for (var k = 0; k < items.length; k++) {
+                                                html += '<div class="cmf-rules-symptom-row">';
+                                                html += '<input type="text" class="cmf-rules-symptom-input" value="' + esc(items[k]) + '" />';
+                                                html += '<button type="button" class="cmf-rules-btn-sm is-danger" onclick="cmfRulesRemoveItemRow(this, \'' + esc(dim.id) + '\', ' + score + ')">Remove</button>';
+                                                html += '</div>';
+                                            }
+                                            html += '</div>';
+
+                                            html += '<div class="cmf-rules-add-inline">';
+                                            html += '<input type="text" class="cmf-rules-input" style="flex:1;" id="cmfNewItem_' + esc(dim.id) + '_' + score + '" placeholder="Add a new symptom or condition for Score ' + score + '..." />';
+                                            html += '<button type="button" class="cmf-rules-btn-sm" onclick="cmfRulesAddInlineSymptom(\'' + esc(dim.id) + '\',' + score + ')">+ Add</button>';
+                                            html += '</div>';
+                                            html += '</div>';
+                                        }
+                                        container.innerHTML = html;
+                                    }
+
+                                    window.cmfRulesRemoveItemRow = function (btn, dimId, score) {
+                                        var row = btn && btn.parentNode;
+                                        if (row && row.parentNode) row.parentNode.removeChild(row);
+                                        window.cmfRulesSaveLevel(dimId, score);
+                                    };
+
+                                    window.cmfRulesSaveLevel = function (dimId, score) {
+                                        var leadEl = document.getElementById('cmfLead_' + dimId + '_' + score);
+                                        var listEl = document.getElementById('cmfItems_' + dimId + '_' + score);
+                                        var leadText = leadEl ? leadEl.value : '';
+                                        var items = [];
+                                        if (listEl) {
+                                            var inputs = listEl.querySelectorAll('.cmf-rules-symptom-input');
+                                            for (var i = 0; i < inputs.length; i++) {
+                                                var val = (inputs[i].value || '').trim();
+                                                if (val) items.push(val);
+                                            }
+                                        }
+                                        postWebMethod('SaveScoringRubricLevel', {
+                                            dimensionId: dimId,
+                                            scoreLevel: score,
+                                            leadText: leadText,
+                                            items: items
+                                        }).then(function (res) {
+                                            if (res && res.success) {
+                                                if (res.config) cmfRulesState.config = res.config;
+                                                renderAll();
+                                                showBanner(true, res.message || 'Saved.');
+                                            } else {
+                                                showBanner(false, (res && res.message) || 'Failed to save rubric level.');
+                                            }
+                                        }).catch(function (err) {
+                                            showBanner(false, 'Error saving rubric level: ' + err);
+                                        });
+                                    };
+
+                                    window.cmfRulesAddInlineSymptom = function (dimId, score) {
+                                        var input = document.getElementById('cmfNewItem_' + dimId + '_' + score);
+                                        var text = input ? input.value.trim() : '';
+                                        if (!text) { showBanner(false, 'Please enter a symptom or condition before adding.'); return; }
+                                        postWebMethod('AddScoringRubricSymptom', {
+                                            dimensionId: dimId,
+                                            scoreLevel: score,
+                                            symptomText: text
+                                        }).then(function (res) {
+                                            if (res && res.success) {
+                                                if (res.config) cmfRulesState.config = res.config;
+                                                renderAll();
+                                                showBanner(true, res.message || 'Symptom added.');
+                                            } else {
+                                                showBanner(false, (res && res.message) || 'Failed to add symptom.');
+                                            }
+                                        }).catch(function (err) {
+                                            showBanner(false, 'Error adding symptom: ' + err);
+                                        });
+                                    };
+
+                                    window.cmfRulesQuickAddSymptom = function () {
+                                        var dimSel = document.getElementById('cmfQuickDimSelect');
+                                        var scoreSel = document.getElementById('cmfQuickScoreSelect');
+                                        var input = document.getElementById('cmfQuickSymptomInput');
+                                        var dimId = dimSel ? dimSel.value : 'S';
+                                        var score = scoreSel ? parseInt(scoreSel.value, 10) : 2;
+                                        var text = input ? input.value.trim() : '';
+                                        if (!text) { showBanner(false, 'Please enter a symptom or condition to add.'); return; }
+                                        cmfRulesState.activeDimId = dimId;
+                                        postWebMethod('AddScoringRubricSymptom', {
+                                            dimensionId: dimId,
+                                            scoreLevel: score,
+                                            symptomText: text
+                                        }).then(function (res) {
+                                            if (res && res.success) {
+                                                if (input) input.value = '';
+                                                if (res.config) cmfRulesState.config = res.config;
+                                                renderAll();
+                                                showBanner(true, res.message || 'Symptom added.');
+                                            } else {
+                                                showBanner(false, (res && res.message) || 'Failed to add symptom.');
+                                            }
+                                        }).catch(function (err) {
+                                            showBanner(false, 'Error adding symptom: ' + err);
+                                        });
+                                    };
+
+                                    function renderGuardrailsTab() {
+                                        var cfg = cmfRulesState.config;
+                                        if (!cfg) return;
+                                        var okEl = document.getElementById('cmfOkMinScoreInput');
+                                        var revEl = document.getElementById('cmfReviewMinScoreInput');
+                                        if (okEl) okEl.value = cfg.cmfOkMinScore != null ? cfg.cmfOkMinScore : 3.5;
+                                        if (revEl) revEl.value = cfg.cmfReviewMinScore != null ? cfg.cmfReviewMinScore : 2.75;
+
+                                        var m = cfg.mandatoryRequirements || {};
+                                        var c1 = document.getElementById('chkReqComponent'); if (c1) c1.checked = !!m.requireComponentInDescription;
+                                        var c2 = document.getElementById('chkReqRvpDesc'); if (c2) c2.checked = !!m.requireRvpReproInDescription;
+                                        var c3 = document.getElementById('chkReqPromoted'); if (c3) c3.checked = !!m.requirePromotedIdInHeader;
+                                        var c4 = document.getElementById('chkReqRvpReason'); if (c4) c4.checked = !!m.requireRvpReproInReasoning;
+
+                                        var tbody = document.getElementById('cmfRulesGuardrailsBody');
+                                        if (!tbody) return;
+                                        var rows = cfg.gatingGuardrails || [];
+                                        var html = '';
+                                        for (var i = 0; i < rows.length; i++) {
+                                            html += buildGuardrailRowHtml(rows[i].id, rows[i].name, rows[i].rule, rows[i].rationale);
+                                        }
+                                        tbody.innerHTML = html;
+                                    }
+
+                                    function buildGuardrailRowHtml(id, name, rule, rationale) {
+                                        return '<tr data-gr-id="' + esc(id || '') + '">'
+                                            + '<td><input type="text" class="cmf-rules-input cmf-gr-name" style="width:100%;" value="' + esc(name || '') + '" /></td>'
+                                            + '<td><input type="text" class="cmf-rules-input cmf-gr-rule" style="width:100%;" value="' + esc(rule || '') + '" /></td>'
+                                            + '<td><input type="text" class="cmf-rules-input cmf-gr-rationale" style="width:100%;" value="' + esc(rationale || '') + '" /></td>'
+                                            + '<td><button type="button" class="cmf-rules-btn-sm is-danger" onclick="this.closest(\'tr\').remove()">Delete</button></td>'
+                                            + '</tr>';
+                                    }
+
+                                    window.cmfRulesAddGuardrailRow = function () {
+                                        var tbody = document.getElementById('cmfRulesGuardrailsBody');
+                                        if (!tbody) return;
+                                        tbody.insertAdjacentHTML('beforeend', buildGuardrailRowHtml('', 'New Priority Guardrail', '', ''));
+                                    };
+
+                                    window.cmfRulesSaveGuardrails = function () {
+                                        var okVal = parseFloat((document.getElementById('cmfOkMinScoreInput') || {}).value || '3.5');
+                                        var revVal = parseFloat((document.getElementById('cmfReviewMinScoreInput') || {}).value || '2.75');
+                                        var tbody = document.getElementById('cmfRulesGuardrailsBody');
+                                        var guardrails = [];
+                                        if (tbody) {
+                                            var trs = tbody.querySelectorAll('tr');
+                                            for (var i = 0; i < trs.length; i++) {
+                                                guardrails.push({
+                                                    id: trs[i].getAttribute('data-gr-id') || ('priority_' + (i + 1)),
+                                                    name: (trs[i].querySelector('.cmf-gr-name') || {}).value || '',
+                                                    rule: (trs[i].querySelector('.cmf-gr-rule') || {}).value || '',
+                                                    rationale: (trs[i].querySelector('.cmf-gr-rationale') || {}).value || ''
+                                                });
+                                            }
+                                        }
+                                        var mandatoryReqs = {
+                                            requireComponentInDescription: !!(document.getElementById('chkReqComponent') || {}).checked,
+                                            requireRvpReproInDescription: !!(document.getElementById('chkReqRvpDesc') || {}).checked,
+                                            requirePromotedIdInHeader: !!(document.getElementById('chkReqPromoted') || {}).checked,
+                                            requireRvpReproInReasoning: !!(document.getElementById('chkReqRvpReason') || {}).checked
+                                        };
+                                        postWebMethod('SaveScoringGuardrails', {
+                                            cmfOkMinScore: okVal,
+                                            cmfReviewMinScore: revVal,
+                                            guardrails: guardrails,
+                                            mandatoryReqs: mandatoryReqs
+                                        }).then(function (res) {
+                                            if (res && res.success) {
+                                                if (res.config) cmfRulesState.config = res.config;
+                                                renderAll();
+                                                showBanner(true, res.message || 'Guardrails saved.');
+                                            } else {
+                                                showBanner(false, (res && res.message) || 'Failed to save guardrails.');
+                                            }
+                                        }).catch(function (err) {
+                                            showBanner(false, 'Error saving guardrails: ' + err);
+                                        });
+                                    };
+
+                                    postWebMethod('GetScoringRulesConfig', {}).then(function (res) {
+                                        if (res && res.success) {
+                                            cmfRulesState.config = res;
+                                            renderAll();
+                                        } else {
+                                            showBanner(false, (res && res.message) || 'Could not load scoring rules.');
+                                        }
+                                    }).catch(function (err) {
+                                        showBanner(false, 'Error loading scoring rules: ' + err);
+                                    });
+                                })();
+                            </script>
                         </asp:Panel>
 
                         <asp:Panel ID="reportsPlaceholderPanel" runat="server" Visible="false" CssClass="portal-tab-shell">
@@ -28091,7 +28826,7 @@ Submit
                         </div>
                     </div>
                     <div class="cmf-assistant-context" aria-label="Sighting context">
-                        <div class="cmf-assistant-context-line">Sighting ID: <strong id="cmfAssistantSightingId">-</strong><a id="cmfAssistantHsdLink" class="cmf-assistant-hsd-link" href="#" target="_blank" rel="noopener noreferrer" title="Open sighting in HSD" aria-label="Open sighting in HSD"><i class="fas fa-external-link-alt" aria-hidden="true"></i></a><span class="cmf-assistant-context-sep" aria-hidden="true">|</span>Promoted ID: <strong id="cmfAssistantPromotedId">NA</strong><a id="cmfAssistantPromotedHsdLink" class="cmf-assistant-hsd-link" href="#" target="_blank" rel="noopener noreferrer" title="Open promoted issue in HSD" aria-label="Open promoted issue in HSD" style="display:none"><i class="fas fa-external-link-alt" aria-hidden="true"></i></a></div>
+                        <div class="cmf-assistant-context-line">Sighting ID: <strong id="cmfAssistantSightingId">-</strong><a id="cmfAssistantHsdLink" class="cmf-assistant-hsd-link" href="#" target="_blank" rel="noopener noreferrer" title="Open sighting in HSD" aria-label="Open sighting in HSD"><i class="fas fa-external-link-alt" aria-hidden="true"></i></a><span class="cmf-assistant-context-sep" aria-hidden="true">|</span>Promoted ID: <strong id="cmfAssistantPromotedId">NA</strong><a id="cmfAssistantPromotedHsdLink" class="cmf-assistant-hsd-link" href="#" target="_blank" rel="noopener noreferrer" title="Open promoted issue in HSD" aria-label="Open promoted issue in HSD" style="display:none"><i class="fas fa-external-link-alt" aria-hidden="true"></i></a><span id="cmfAssistantMergeIdContainer" style="display:none"><span class="cmf-assistant-context-sep" aria-hidden="true">|</span>Merge ID: <strong id="cmfAssistantMergeId"></strong><a id="cmfAssistantMergeHsdLink" class="cmf-assistant-hsd-link" href="#" target="_blank" rel="noopener noreferrer" title="Open merged issue in HSD" aria-label="Open merged issue in HSD" style="display:none"><i class="fas fa-external-link-alt" aria-hidden="true"></i></a></span></div>
                         <span id="cmfAssistantRecTag" class="cmf-assistant-rec-tag">CMF_Tag</span>
                         <div class="cmf-assistant-context-line cmf-assistant-context-title-line">Title: <strong id="cmfRecTitle" class="cmf-rec-title-text">-</strong></div>
                     </div>
